@@ -1,6 +1,7 @@
 package server
 
 import (
+	"http/router"
 	"net"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ type Server struct {
 	address  string
 	port     int32
 	listener net.Listener
+	router   *router.Router
 }
 
 // Comment

@@ -17,6 +17,7 @@ type Request struct {
 	body     []byte
 	Conn     *net.Conn
 }
+
 type headerInfo struct {
 	method   string
 	path     string
