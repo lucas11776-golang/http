@@ -59,32 +59,27 @@ type content struct {
 }
 
 // Comment
-func getContent(arr []string) *content {
+func getContent(arr []string) (*content, error) {
 	content := content{
 		headers: make(types.Headers),
 	}
 
-	isBody := false
-
-	for _, line := range arr {
+	for i, line := range arr {
 		if line == "" {
-			isBody = true
-			continue
+			content.body = []byte(strings.Trim(strings.Join(arr[i:], "\r\n"), "\r\n"))
+			break
 		}
 
-		if isBody && line != "" {
-			content.body = []byte(line)
-			continue
+		header := strings.Split(line, ":")
+
+		if len(header) != 2 {
+			return nil, fmt.Errorf("Invalid header %s", header[0])
 		}
 
-		if line != "" {
-			header := strings.Split(line, ":")
-
-			content.headers[strings.ToLower(header[0])] = strings.Trim(header[1], " ")
-		}
+		content.headers[strings.ToLower(header[0])] = strings.Trim(header[1], " ")
 	}
 
-	return &content
+	return &content, nil
 }
 
 // Comment
@@ -96,7 +91,11 @@ func ParseHttp(http string) (*Request, error) {
 		return nil, err
 	}
 
-	content := getContent(arr[1:])
+	content, err := getContent(arr[1:])
+
+	if err != nil {
+		return nil, err
+	}
 
 	return &Request{
 		method:   header.method,
