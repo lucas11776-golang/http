@@ -7,7 +7,7 @@ import (
 )
 
 type Server struct {
-	host     string
+	address  string
 	port     int32
 	listener net.Listener
 }
@@ -20,10 +20,11 @@ func Serve(host string, port int32) (*Server, error) {
 		return nil, err
 	}
 
-	prt, _ := strconv.Atoi(strings.Split(listener.Addr().String(), ":")[1])
+	arr := strings.Split(listener.Addr().String(), ":")
+	prt, _ := strconv.Atoi(arr[1])
 
 	return &Server{
-		host:     host,
+		address:  arr[0],
 		port:     int32(prt),
 		listener: listener,
 	}, nil
@@ -31,7 +32,7 @@ func Serve(host string, port int32) (*Server, error) {
 
 // Comment
 func (ctx *Server) Address() string {
-	return ctx.host
+	return ctx.address
 }
 
 // Comment
