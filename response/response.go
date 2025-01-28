@@ -1,6 +1,7 @@
 package response
 
 import (
+	"encoding/json"
 	"http/types"
 	"strconv"
 	"strings"
@@ -77,6 +78,14 @@ const (
 	HTTP_RESPONSE_NETWORK_AUTHENTICATION_REQUIRED Status = 511
 )
 
+type ResponseType string
+
+const (
+	RESPONSE_TYPE_VIEW     ResponseType = "view"
+	RESPONSE_TYPE_REDIRECT ResponseType = "redirect"
+	RESPONSE_TYPE_DATA     ResponseType = "data"
+)
+
 type Response struct {
 	protocol   string
 	status     Status
@@ -111,6 +120,23 @@ func (ctx *Response) Header(key string, value string) *Response {
 // Comment
 func (ctx *Response) Body(body []byte) *Response {
 	ctx.body = body
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) Json(v any) *Response {
+	ctx.Header("content-type", "application/json")
+
+	data, err := json.Marshal(v)
+
+	if err != nil {
+		ctx.body = []byte("{}")
+
+		return ctx
+	}
+
+	ctx.body = data
 
 	return ctx
 }

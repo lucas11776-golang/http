@@ -1,6 +1,7 @@
 package response
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -48,6 +49,28 @@ func TestHttpResponse(t *testing.T) {
 		}
 	})
 
-	// t.Run("TestHttpResponseWithJsonBody",)
+	t.Run("TestHttpResponseWithJsonBody", func(t *testing.T) {
+		j := struct {
+			Id    int64  `json:"id"`
+			Title string `json:"title"`
+		}{
+			Id:    1,
+			Title: "Response With Json Body",
+		}
+
+		body, _ := json.Marshal(j)
+		res := Init().Status(HTTP_RESPONSE_OK).Json(j)
+
+		httpExpected := "HTTP/1.1 200 Ok\r\n" +
+			"Content-Type: application/json\r\n" +
+			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n\r\n" +
+			string(body) + "\r\n"
+
+		http := ParseHttp(res)
+
+		if httpExpected != http {
+			t.Errorf("Expected response to be (%s) but go (%s)", httpExpected, http)
+		}
+	})
 
 }
