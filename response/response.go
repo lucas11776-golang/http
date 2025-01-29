@@ -123,7 +123,7 @@ func (ctx *Response) Status(status Status) *Response {
 
 // Comment
 func (ctx *Response) Header(key string, value string) *Response {
-	// ctx.headers[key] = value
+	ctx.headers[key] = value
 
 	return ctx
 }
