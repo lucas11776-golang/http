@@ -87,11 +87,22 @@ const (
 )
 
 type Response struct {
+	format     ResponseType
 	protocol   string
 	status     Status
 	statusText string
 	headers    types.Headers
 	body       []byte
+}
+
+// Comment
+func Create(protocol string, status Status, headers types.Headers, body []byte) *Response {
+	return &Response{
+		protocol: protocol,
+		status:   status,
+		headers:  headers,
+		body:     body,
+	}
 }
 
 // Comment
@@ -112,7 +123,7 @@ func (ctx *Response) Status(status Status) *Response {
 
 // Comment
 func (ctx *Response) Header(key string, value string) *Response {
-	ctx.headers[key] = value
+	// ctx.headers[key] = value
 
 	return ctx
 }
@@ -151,9 +162,12 @@ func ParseHttp(res *Response) string {
 		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
 	}
 
-	if len(res.body) == 0 {
-		http = append(http, "\r\n")
-		return strings.Join(http, "\r\n")
+	switch res.format {
+	default:
+		if len(res.body) == 0 {
+			http = append(http, "\r\n")
+			return strings.Join(http, "\r\n")
+		}
 	}
 
 	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))

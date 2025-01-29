@@ -11,11 +11,23 @@ import (
 type Request struct {
 	method   string
 	path     string
-	protocol string
 	query    types.Query
+	protocol string
 	headers  types.Headers
 	body     []byte
 	Conn     *net.Conn
+}
+
+// Comment
+func Create(method string, path string, query types.Query, protocol string, headers types.Headers, body []byte) *Request {
+	return &Request{
+		method:   strings.ToUpper(method),
+		path:     strings.Trim(path, "/"),
+		query:    query,
+		protocol: protocol,
+		headers:  headers,
+		body:     body,
+	}
 }
 
 type headerInfo struct {
