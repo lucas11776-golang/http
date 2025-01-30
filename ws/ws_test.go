@@ -69,11 +69,11 @@ func closeConnection(t *testing.T, conn net.Conn) {
 func TestWs(t *testing.T) {
 	t.Run("TestSendMessage", func(t *testing.T) {
 		data := []byte("Hello Number: ")
-		concat := []byte(strconv.Itoa(rand.Int() * 255))
+		concat := []byte(strconv.Itoa(int(rand.Float32() * 10000)))
 		mask := []byte{}
 
 		for i := 0; i < 4; i++ {
-			mask = append(mask, byte(rand.Int()*255))
+			mask = append(mask, byte(rand.Float32()*255))
 		}
 
 		maskData := []byte{}
