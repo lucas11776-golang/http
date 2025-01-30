@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	"http/request"
 	"http/types"
 	"strconv"
 	"strings"
@@ -81,9 +82,11 @@ const (
 type ResponseType string
 
 const (
+	RESPONSE_TYPE_NEXT     ResponseType = "next"
+	RESPONSE_TYPE_DATA     ResponseType = "data"
 	RESPONSE_TYPE_VIEW     ResponseType = "view"
 	RESPONSE_TYPE_REDIRECT ResponseType = "redirect"
-	RESPONSE_TYPE_DATA     ResponseType = "data"
+	RESPONSE_TYPE_DOWNLOAD ResponseType = "download"
 )
 
 type Response struct {
@@ -93,6 +96,7 @@ type Response struct {
 	statusText string
 	headers    types.Headers
 	body       []byte
+	Request    *request.Request
 }
 
 // Comment
@@ -150,6 +154,33 @@ func (ctx *Response) Json(v any) *Response {
 	ctx.body = data
 
 	return ctx
+}
+
+// Comment
+// func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
+// 	return ctx
+// }
+
+// Comment
+func responseData(res *Response) string {
+	return ""
+}
+
+// Comment
+func responseView(res *Response) string {
+	return ""
+}
+
+// Comment
+func responseRedirect(res *Response) string {
+	return `<!DOCTYPE html>` +
+		`<head>` +
+		`  <meta name="viewport" content="0, url='` + string(res.body) + `'">` +
+		`</head>` +
+		`<body>` +
+		`  <p>You will be redirected to ` + string(res.body) + `</p>` +
+		`</body>` +
+		`</html>`
 }
 
 // Comment
