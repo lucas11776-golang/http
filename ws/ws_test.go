@@ -1,6 +1,8 @@
 package ws
 
 import (
+	"fmt"
+	"http/ws/frame"
 	"math/rand"
 	"net"
 	"strconv"
@@ -65,7 +67,7 @@ func closeConnection(t *testing.T, conn net.Conn) {
 }
 
 func TestWs(t *testing.T) {
-	t.Run("TestConnection", func(t *testing.T) {
+	t.Run("TestSendMessage", func(t *testing.T) {
 		data := []byte("Hello Number: ")
 		concat := []byte(strconv.Itoa(rand.Int() * 255))
 		mask := []byte{}
@@ -123,5 +125,11 @@ func TestWs(t *testing.T) {
 		if response == expectedResponse {
 			t.Errorf("Expected the response to be (%s) but go (%s)", expectedResponse, response)
 		}
+	})
+
+	t.Run("TestPing", func(t *testing.T) {
+		text := frame.OPCODE_TEXT + 128
+
+		fmt.Println("TEXT: ", text, frame.OPCODE_TEXT, frame.OPCODE_TEXT&text)
 	})
 }
