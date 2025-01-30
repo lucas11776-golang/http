@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 )
 
 // [opcode, len, mask, data]
@@ -100,6 +101,8 @@ func TestWs(t *testing.T) {
 		}
 
 		go func() {
+			time.Sleep(time.Millisecond * 50)
+
 			_, err = conn.Write(payload)
 
 			if err != nil {
