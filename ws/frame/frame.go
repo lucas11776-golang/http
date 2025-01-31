@@ -2,6 +2,7 @@ package frame
 
 import (
 	"encoding/binary"
+	"errors"
 )
 
 type Opcode byte
@@ -13,6 +14,10 @@ const (
 	OPCODE_CONNECTION_CLOSE Opcode = 0x08
 	OPCODE_PING             Opcode = 0x09
 	OPCODE_PONG             Opcode = 0x0A
+)
+
+var (
+	InvalidPayloadError = errors.New("Invalid payload")
 )
 
 type Frame struct {
@@ -35,34 +40,38 @@ func unmask(mask []byte, data []byte) []byte {
 
 // Comment
 func Decode(payload []byte) (*Frame, error) {
-	// check len
+	if len(payload) < 2 {
+		// Error
+	}
 
 	head := payload[:2]
 	size := uint16(head[1] & 0x7F)
 	frame := &Frame{payload: payload}
 
-	if frame.IsPing() || frame.IsPong() {
-		return frame, nil
-	}
-
 	if size < 126 {
-		// check len
+		if len(payload) < int(size)+6 {
+			// Error
+		}
 		frame.size = size
 		frame.data = unmask(payload[2:6], payload[6:frame.size+6])
 		return frame, nil
 	}
 
 	if size == 126 {
-		// check len
+		if len(payload) < int(size)+8 {
+			// Error
+		}
 		frame.size = binary.BigEndian.Uint16(payload[2:4])
 		frame.data = unmask(payload[4:8], payload[8:frame.size+8])
 		return frame, nil
 	}
 
-	// check len
+	if len(payload) < int(size)+14 {
+		// Error
+	}
 
-	frame.size = binary.BigEndian.Uint16(payload[2:10])
-	frame.data = unmask(payload[10:14], payload[14:frame.size+14])
+	// frame.size = binary.BigEndian.Uint16(payload[2:10])
+	// frame.data = unmask(payload[10:14], payload[14:frame.size+14])
 
 	return frame, nil
 }
@@ -74,6 +83,8 @@ func Encode(opcode Opcode, data []byte) *Frame {
 	size := len(data)
 	frame := &Frame{data: data}
 	opc := OPCODE_CONST + opcode
+
+	frame.size = uint16(size)
 
 	if size < 126 {
 		payload := make([]byte, 2)
