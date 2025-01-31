@@ -1,6 +1,9 @@
 package frame
 
 import (
+	"encoding/binary"
+	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 )
@@ -11,7 +14,7 @@ func TestFrame(t *testing.T) {
 		data := []byte("Continuation")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
 	t.Run("TestEncodeText", func(t *testing.T) {
@@ -19,7 +22,7 @@ func TestFrame(t *testing.T) {
 		data := []byte("Text")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
 	t.Run("TestEncodeBinary", func(t *testing.T) {
@@ -27,7 +30,7 @@ func TestFrame(t *testing.T) {
 		data := []byte("Binary")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
 	t.Run("TestEncodeClose", func(t *testing.T) {
@@ -35,7 +38,7 @@ func TestFrame(t *testing.T) {
 		data := []byte("Close")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
 	t.Run("TestEncodePing", func(t *testing.T) {
@@ -43,7 +46,7 @@ func TestFrame(t *testing.T) {
 		data := []byte("Ping")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
 	t.Run("TestEncodePong", func(t *testing.T) {
@@ -51,19 +54,80 @@ func TestFrame(t *testing.T) {
 		data := []byte("Pong")
 		frame := Encode(opcode, data)
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
 	})
 
-	// t.Run("TestEncodeDataEqualsTo126", func(t *testing.T) {
-	// 	opcode := OPCODE_TEXT
-	// 	data := generateData(512)
-	// 	frame := Encode(opcode, data)
+	t.Run("TestEncodeDataLessThen126", func(t *testing.T) {
+		opcode := OPCODE_TEXT
+		data := generateData(125)
+		frame := Encode(opcode, data)
 
-	// 	payload := []byte{byte(OPCODE_CONST + opcode), byte(len(data))}
-	// 	payload = append(payload, data...)
+		testFrame(t, frame, opcode, data)
 
-	// 	testingFrame(t, frame, opcode, data)
-	// })
+		if frame.Payload()[0] != byte(opcode+OPCODE_CONST) {
+			t.Errorf("Expected payload opcode flag to be (%d) but got (%d)", opcode+OPCODE_CONST, frame.Payload()[0])
+		}
+
+		if string(data) != string(frame.Payload()[2:]) {
+			t.Errorf("Expected payload data to be (%s) but got (%s)", string(data), string(frame.Payload()[2:]))
+		}
+	})
+
+	t.Run("TestEncodeDataGreaterThenEqualsTo126AndLessThen2**16", func(t *testing.T) {
+		opcode := OPCODE_TEXT
+		data := generateData(512)
+		frame := Encode(opcode, data)
+
+		testFrame(t, frame, opcode, data)
+
+		fmt.Println("SIZE: ")
+
+		if frame.Payload()[0] != byte(opcode+OPCODE_CONST) {
+			t.Errorf("Expected payload opcode flag to be (%d) but got (%d)", opcode+OPCODE_CONST, frame.Payload()[0])
+		}
+
+		if frame.Payload()[1] != 126 {
+			t.Errorf("Expected payload length flag to be (%d) but got (%d)", 126, frame.Payload()[1])
+		}
+
+		size := binary.BigEndian.Uint16(frame.Payload()[2:4])
+
+		if size != uint16(len(data)) {
+			t.Errorf("Expected payload length to be (%d) but got (%d)", len(data), size)
+		}
+
+		if string(data) != string(frame.Payload()[4:]) {
+			t.Errorf("Expected payload data to be (%s) but got (%s)", string(data), string(frame.Payload()[4:]))
+		}
+	})
+
+	t.Run("TestEncodeDataGreaterThen2**16", func(t *testing.T) {
+		opcode := OPCODE_BINARY
+		data := generateData(int(math.Pow(2, 16) + 1))
+		frame := Encode(opcode, data)
+
+		testFrame(t, frame, opcode, data)
+
+		fmt.Println("SIZE: ")
+
+		if frame.Payload()[0] != byte(opcode+OPCODE_CONST) {
+			t.Errorf("Expected payload opcode flag to be (%d) but got (%d)", opcode+OPCODE_CONST, frame.Payload()[0])
+		}
+
+		if frame.Payload()[1] != 126 {
+			t.Errorf("Expected payload length flag to be (%d) but got (%d)", 127, frame.Payload()[1])
+		}
+
+		size := binary.BigEndian.Uint64(frame.Payload()[2:10])
+
+		if size != uint64(len(data)) {
+			t.Errorf("Expected payload length to be (%d) but got (%d)", len(data), size)
+		}
+
+		if string(data) != string(frame.Payload()[10:]) {
+			t.Errorf("Expected payload data to be (%s) but got (%s)", string(data), string(frame.Payload()[10:]))
+		}
+	})
 
 	// t.Run("TestEncodeDataEqualGreatThe126", func(t *testing.T) {
 	// 	opcode := OPCODE_PONG
@@ -72,6 +136,14 @@ func TestFrame(t *testing.T) {
 
 	// 	testingFrame(t, frame, opcode, data)
 	// })
+
+	t.Run("TestDecodeWithInvalidPayload", func(t *testing.T) {
+		_, err := Decode([]byte{byte(OPCODE_CONST + OPCODE_TEXT)})
+
+		if err == nil {
+			t.Errorf("Expected the decode to have error because the payload was invalid")
+		}
+	})
 
 	t.Run("TestDecodeDataLessThe126", func(t *testing.T) {
 		opcode := OPCODE_CONST + OPCODE_TEXT
@@ -88,7 +160,18 @@ func TestFrame(t *testing.T) {
 			t.Errorf("Something went wrong when trying to decode payload: %s", err.Error())
 		}
 
-		testingFrame(t, frame, opcode, data)
+		testFrame(t, frame, opcode, data)
+
+		// Invalid payload
+		payloadInvalid := []byte{byte(opcode), byte(size)}
+		payloadInvalid = append(payloadInvalid, mask...)
+		payloadInvalid = append(payloadInvalid, []byte{65, 66, 67}...)
+
+		_, err = Decode(payloadInvalid)
+
+		if err == nil {
+			t.Errorf("Expected the decode to have error because the payload was invalid")
+		}
 	})
 
 	t.Run("TestDecodeDataEquals126AndLessThen2**16", func(t *testing.T) {
@@ -134,8 +217,8 @@ func testingPayload(size int) (mask []byte, data []byte, dataMasked []byte) {
 }
 
 // Comment
-func testingFrame(t *testing.T, frame *Frame, opcode Opcode, data []byte) {
-	if frame.Length() != uint16(len(data)) {
+func testFrame(t *testing.T, frame *Frame, opcode Opcode, data []byte) {
+	if frame.Length() != uint64(len(data)) {
 		t.Errorf("Expected data len in frame to be (%d) but got (%d)", len(data), frame.Length())
 	}
 

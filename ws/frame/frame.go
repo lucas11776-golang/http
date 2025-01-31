@@ -3,6 +3,7 @@ package frame
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 )
 
 type Opcode byte
@@ -24,7 +25,7 @@ type Frame struct {
 	fin        byte
 	opcode     Opcode
 	mask       byte
-	size       uint16
+	size       uint64
 	maskingKey byte
 	data       []byte
 	payload    []byte
@@ -41,30 +42,32 @@ func unmask(mask []byte, data []byte) []byte {
 // Comment
 func Decode(payload []byte) (*Frame, error) {
 	if len(payload) < 2 {
-		// Error
+		return nil, InvalidPayloadError
 	}
 
 	head := payload[:2]
-	size := uint16(head[1] & 0x7F)
+	size := uint64(head[1] & 0x7F)
 	frame := &Frame{payload: payload}
 
 	if size < 126 {
 		if len(payload) < int(size)+6 {
-			// Error
+			return nil, InvalidPayloadError
 		}
+
 		frame.size = size
 		frame.data = unmask(payload[2:6], payload[6:frame.size+6])
+
 		return frame, nil
 	}
 
-	if size == 126 {
-		if len(payload) < int(size)+8 {
-			// Error
-		}
-		frame.size = binary.BigEndian.Uint16(payload[2:4])
-		frame.data = unmask(payload[4:8], payload[8:frame.size+8])
-		return frame, nil
-	}
+	// if size == 126 {
+	// 	if len(payload) < int(size)+8 {
+	// 		// Error
+	// 	}
+	// 	frame.size = binary.BigEndian.Uint16(payload[2:4])
+	// 	frame.data = unmask(payload[4:8], payload[8:frame.size+8])
+	// 	return frame, nil
+	// }
 
 	if len(payload) < int(size)+14 {
 		// Error
@@ -84,7 +87,7 @@ func Encode(opcode Opcode, data []byte) *Frame {
 	frame := &Frame{data: data}
 	opc := OPCODE_CONST + opcode
 
-	frame.size = uint16(size)
+	frame.size = uint64(size)
 
 	if size < 126 {
 		payload := make([]byte, 2)
@@ -98,35 +101,35 @@ func Encode(opcode Opcode, data []byte) *Frame {
 		return frame
 	}
 
-	// if size == 126 || size < int(math.Pow(2, 16)) {
-	// 	payload := make([]byte, 2)
-	// 	payload[0] = byte(opcode + OPCODE_CONST)
-	// 	payload[1] = 126
+	if size >= 126 && size < int(math.Pow(2, 16)) {
+		payload := make([]byte, 2)
+		payload[0] = byte(opc)
+		payload[1] = 126
 
-	// 	length := make([]byte, 2)
+		length := make([]byte, 2)
 
-	// 	binary.BigEndian.PutUint16(length, uint16(size))
+		binary.BigEndian.PutUint16(length, uint16(size))
 
-	// 	payload = append(payload, length...)
-	// 	payload = append(payload, data...)
+		payload = append(payload, length...)
+		payload = append(payload, data...)
 
-	// 	frame.payload = payload
+		frame.payload = payload
 
-	// 	return frame
-	// }
+		return frame
+	}
 
-	// payload := make([]byte, 2)
-	// payload[0] = byte(opcode + OPCODE_CONST)
-	// payload[1] = 127
+	payload := make([]byte, 2)
+	payload[0] = byte(opcode + OPCODE_CONST)
+	payload[1] = 126
 
-	// length := make([]byte, 8)
+	length := make([]byte, 8)
 
-	// binary.BigEndian.PutUint64(length, uint64(size))
+	binary.BigEndian.PutUint64(length, uint64(size))
 
-	// payload = append(payload, length...)
-	// payload = append(payload, data...)
+	payload = append(payload, length...)
+	payload = append(payload, data...)
 
-	// frame.payload = payload
+	frame.payload = payload
 
 	return frame
 }
@@ -179,7 +182,7 @@ func (ctx *Frame) IsPong() bool {
 }
 
 // Comment
-func (ctx *Frame) Length() uint16 {
+func (ctx *Frame) Length() uint64 {
 	return ctx.size
 }
 
