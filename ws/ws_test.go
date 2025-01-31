@@ -13,7 +13,7 @@ import (
 // [opcode, len, mask, data]
 
 // Comment
-func replyServerWsTest(t *testing.T, concat []byte) (net.Listener, error) {
+func replyServerWsTest(concat []byte) (net.Listener, error) {
 	listener, err := net.Listen("tcp", ":0")
 
 	if err != nil {
@@ -36,7 +36,6 @@ func replyServerWsTest(t *testing.T, concat []byte) (net.Listener, error) {
 
 					if err != nil {
 						listener.Close()
-						t.Errorf("Something went wrong when trying ot send data: %s", err.Error())
 					}
 				})
 			})
@@ -55,7 +54,7 @@ func closeServer(t *testing.T, listener net.Listener) {
 	err := listener.Close()
 
 	if err != nil {
-		t.Errorf("Something went wrong when closing server: %s", err.Error())
+		t.Fatalf("Something went wrong when closing server: %s", err.Error())
 	}
 }
 
@@ -63,7 +62,7 @@ func closeConnection(t *testing.T, conn net.Conn) {
 	err := conn.Close()
 
 	if err != nil {
-		t.Errorf("Something went wrong when closing connection: %s", err.Error())
+		t.Fatalf("Something went wrong when closing connection: %s", err.Error())
 	}
 }
 
@@ -87,30 +86,28 @@ func TestWs(t *testing.T) {
 		payload = append(payload, mask...)
 		payload = append(payload, maskData...)
 
-		listener, err := replyServerWsTest(t, concat)
+		listener, err := replyServerWsTest(concat)
 
 		if err != nil {
-			t.Errorf("Something went wrong starting server: %s", err.Error())
+			t.Fatalf("Something went wrong starting server: %s", err.Error())
 		}
 
 		conn, err := net.Dial("tcp", listener.Addr().String())
 
 		if err != nil {
 			closeServer(t, listener)
-			t.Errorf("Something went wrong when connecting to server: %s", err.Error())
+			t.Fatalf("Something went wrong when connecting to server: %s", err.Error())
 		}
 
-		go func() {
-			time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 50)
 
-			_, err = conn.Write(payload)
+		_, err = conn.Write(payload)
 
-			if err != nil {
-				closeServer(t, listener)
-				closeConnection(t, conn)
-				t.Errorf("Something went wrong when connecting to server: %s", err.Error())
-			}
-		}()
+		if err != nil {
+			closeServer(t, listener)
+			closeConnection(t, conn)
+			t.Fatalf("Something went wrong when connecting to server: %s", err.Error())
+		}
 
 		buffer := make([]byte, MAX_PAYLOAD_SIZE)
 
@@ -119,14 +116,14 @@ func TestWs(t *testing.T) {
 		if err != nil {
 			closeServer(t, listener)
 			closeConnection(t, conn)
-			t.Errorf("Something went wrong when reading connection: %s", err.Error())
+			t.Fatalf("Something went wrong when reading connection: %s", err.Error())
 		}
 
 		response := string(buffer[2:])
 		expectedResponse := string(append(data, concat...))
 
 		if response == expectedResponse {
-			t.Errorf("Expected the response to be (%s) but go (%s)", expectedResponse, response)
+			t.Fatalf("Expected the response to be (%s) but go (%s)", expectedResponse, response)
 		}
 	})
 

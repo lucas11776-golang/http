@@ -60,8 +60,8 @@ func getHeaderInfo(header string) (*headerInfo, error) {
 	return &headerInfo{
 		method:   strings.ToUpper(arr[0]),
 		path:     strings.Trim(u.Path, "/"),
-		query:    query,
 		protocol: strings.ToUpper(arr[2]),
+		query:    query,
 	}, nil
 }
 
@@ -84,11 +84,11 @@ func getContent(arr []string) (*content, error) {
 
 		header := strings.Split(line, ":")
 
-		if len(header) != 2 {
+		if len(header) < 2 {
 			return nil, fmt.Errorf("Invalid header %s", header[0])
 		}
 
-		content.headers[strings.ToLower(header[0])] = strings.Trim(header[1], " ")
+		content.headers[strings.ToLower(header[0])] = strings.Trim(strings.Join(header[1:], ":"), " ")
 	}
 
 	return &content, nil

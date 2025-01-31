@@ -37,7 +37,7 @@ type Router struct {
 	routes     *RouterGroup
 }
 
-type Group func(router *Router)
+type Group func(route *Router)
 
 type Web func(req *request.Request, res *response.Response) *response.Response
 
@@ -56,7 +56,7 @@ func JoinPath(path ...string) string {
 	}
 
 	if len(arr) == 0 {
-		arr[0] = ""
+		arr = append(arr, "")
 	}
 
 	return strings.Join(arr, "/")
@@ -127,6 +127,8 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 	parameters := make(Parameters)
 	path := strings.Split(strings.Trim(uri, "/"), "/")
+	regexGlobal, _ := regexp.Compile("[\\*]")
+	regexParameter, _ := regexp.Compile("\\{[a-zA-Z_]+\\}")
 
 	for _, route := range routes {
 		if strings.ToUpper(method) != route.Method() {
@@ -137,17 +139,17 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 			return route, parameters
 		}
 
-		regexGlobal, _ := regexp.Compile("[\\*]")
-
-		if len(path) != len(route.path) && (path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path())) == false) {
-			continue
-		}
-
 		if strings.Trim(uri, "/") == route.Path() {
 			return route, parameters
 		}
 
-		regexParameter, _ := regexp.Compile("\\{[a-zA-Z_]+\\}")
+		if len(path) != len(route.path) {
+			if path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path())) {
+				// continue
+			} else {
+				continue
+			}
+		}
 
 		for i, segment := range route.path {
 			if segment == "*" {

@@ -16,7 +16,7 @@ func TestHttpResponse(t *testing.T) {
 		http := ParseHttp(res)
 
 		if httpExpected != http {
-			t.Errorf("Expected response to be (%s) but go (%s)", httpExpected, http)
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
 
@@ -29,7 +29,7 @@ func TestHttpResponse(t *testing.T) {
 		http := ParseHttp(res)
 
 		if httpExpected != http {
-			t.Errorf("Expected response to be (%s) but go (%s)", httpExpected, http)
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
 
@@ -45,7 +45,7 @@ func TestHttpResponse(t *testing.T) {
 		http := ParseHttp(res)
 
 		if httpExpected != http {
-			t.Errorf("Expected response to be (%s) but go (%s)", httpExpected, http)
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
 
@@ -69,7 +69,7 @@ func TestHttpResponse(t *testing.T) {
 		http := ParseHttp(res)
 
 		if httpExpected != http {
-			t.Errorf("Expected response to be (%s) but go (%s)", httpExpected, http)
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
 

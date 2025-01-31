@@ -193,18 +193,26 @@ func ParseHttp(res *Response) string {
 		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
 	}
 
-	switch res.format {
-	default:
-		if len(res.body) == 0 {
-			http = append(http, "\r\n")
-			return strings.Join(http, "\r\n")
-		}
-	}
+	// switch res.format {
+	// default:
+	// 	if len(res.body) == 0 {
+	// 		http = append(http, "\r\n")
+	// 		return strings.Join(http, "\r\n")
+	// 	}
+	// }
+
+	// http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))
+	// http = append(http, strings.Join([]string{"\r\n", string(res.body), "\r\n"}, ""))
+
+	// return strings.Join(http, "\r\n")
 
 	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))
-	http = append(http, strings.Join([]string{"\r\n", string(res.body), "\r\n"}, ""))
 
-	return strings.Join(http, "\r\n")
+	if len(res.body) == 0 {
+		return strings.Join(append(http, "\r\n"), "\r\n")
+	}
+
+	return strings.Join(append(http, strings.Join([]string{"\r\n", string(res.body), "\r\n"}, "")), "\r\n")
 }
 
 // Comment

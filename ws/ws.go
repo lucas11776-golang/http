@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"fmt"
 	"http/ws/frame"
 	"net"
 )
@@ -52,17 +51,24 @@ func (ctx *Ws) OnMessage(callback EventCallback) {
 }
 
 // Comment
-func (ctx *Ws) OnPing(callback EventCallback) {
+func (ctx *Ws) OnError(callback EventCallback) {
 
+	ctx.event[EVENT_ERROR] = append(ctx.event[EVENT_ERROR], callback)
 }
 
 // Comment
-func (ctx *Ws) OnError(callback EventCallback) {
+func (ctx *Ws) OnPing(callback EventCallback) {
+	ctx.event[EVENT_PING] = append(ctx.event[EVENT_PING], callback)
+}
 
+// Comment
+func (ctx *Ws) OnPong(callback EventCallback) {
+	ctx.event[EVENT_PONG] = append(ctx.event[EVENT_PONG], callback)
 }
 
 // Comment
 func (ctx *Ws) OnClose(callback EventCallback) {
+	ctx.event[EVENT_CLOSE] = append(ctx.event[EVENT_CLOSE], callback)
 }
 
 // Comment
@@ -104,27 +110,38 @@ func (ctx *Ws) Listen() {
 	payload := make([]byte, MAX_PAYLOAD_SIZE)
 
 	for {
-
 		_, err := ctx.conn.Read(payload)
 
 		if err != nil {
+			ctx.Alive = false
+
 			ctx.Emit(EVENT_ERROR, []byte(err.Error()))
 
 			break
 		}
 
-		frame, err := frame.Decode(payload)
+		frm, err := frame.Decode(payload)
 
 		if err != nil {
 			continue
 		}
 
-		if frame.IsBinary() || frame.IsText() {
-			ctx.Emit(EVENT_MESSAGE, frame.Data())
-
-			continue
+		switch frm.Opcode() {
+		case frame.OPCODE_CONTINUATION:
+			break
+		case frame.OPCODE_BINARY, frame.OPCODE_TEXT:
+			ctx.Emit(EVENT_MESSAGE, frm.Data())
+			break
+		case frame.OPCODE_CONNECTION_CLOSE:
+			ctx.Emit(EVENT_CLOSE, frm.Data())
+			break
+		case frame.OPCODE_PING:
+			ctx.Emit(EVENT_PING, frm.Data())
+			break
+		case frame.OPCODE_PONG:
+			ctx.Emit(EVENT_PONG, frm.Data())
+			break
+		default:
 		}
-
-		fmt.Println(string(frame.Data()))
 	}
 }

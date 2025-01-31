@@ -134,7 +134,7 @@ func TestRouter(t *testing.T) {
 		route := router.MatchWebRoute("POST", "api/products/203")
 
 		if route.Parameter("id") != "203" {
-			t.Errorf("The route parameter is id is not %s but got %s", "203", route.Parameter("id"))
+			t.Fatalf("The route parameter is id is not %s but got %s", "203", route.Parameter("id"))
 		}
 	})
 
@@ -158,7 +158,7 @@ func TestRouter(t *testing.T) {
 		route := router.MatchWsRoute("devices/R833WC0GL3CF/position")
 
 		if route.Parameter("device") != "R833WC0GL3CF" {
-			t.Errorf("The route parameter is id is not %s but got %s", "1", route.Parameter("id"))
+			t.Fatalf("The route parameter is id is not %s but got %s", "1", route.Parameter("id"))
 		}
 	})
 }
@@ -166,22 +166,22 @@ func TestRouter(t *testing.T) {
 // Comment
 func TestingRoute(t *testing.T, routes Routes, route *Route, index int, method string, path string, middlewares int) {
 	if len(routes) == 0 {
-		t.Errorf("Route is not add to web routes")
+		t.Fatalf("Route is not add to web routes")
 	}
 
 	if route != routes[index] {
-		t.Errorf("Route in web routes does not match web route: %p return route: %p", route, routes[index])
+		t.Fatalf("Route in web routes does not match web route: %p return route: %p", route, routes[index])
 	}
 
 	if route.Method() != strings.ToUpper(method) {
-		t.Errorf("Route is not a %s method is %s method", strings.ToUpper(method), route.Method())
+		t.Fatalf("Route is not a %s method is %s method", strings.ToUpper(method), route.Method())
 	}
 
 	if route.Path() != path {
-		t.Errorf("Route path is not %s is %s", path, route.Path())
+		t.Fatalf("Route path is not %s is %s", path, route.Path())
 	}
 
 	if len(route.Middlewares()) < middlewares {
-		t.Errorf("Middleware is not add to route")
+		t.Fatalf("Middleware is not add to route")
 	}
 }

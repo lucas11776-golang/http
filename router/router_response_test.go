@@ -31,7 +31,7 @@ func TestRouterRouteResponse(t *testing.T) {
 		httpRoute := string(route.Call(reflect.ValueOf(req), reflect.ValueOf(res)))
 
 		if httpExpected != httpRoute {
-			t.Errorf("Excepted http json (%s) but got (%s)", httpExpected, httpRoute)
+			t.Fatalf("Excepted http json (%s) but got (%s)", httpExpected, httpRoute)
 		}
 	})
 }

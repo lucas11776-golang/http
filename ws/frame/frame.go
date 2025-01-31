@@ -8,6 +8,9 @@ import (
 
 type Opcode byte
 
+const OPCODE_START Opcode = 128
+
+// TODO check if error opcode exists
 const (
 	OPCODE_CONTINUATION     Opcode = 0x00
 	OPCODE_TEXT             Opcode = 0x01
@@ -46,46 +49,55 @@ func Decode(payload []byte) (*Frame, error) {
 	}
 
 	head := payload[:2]
-	size := uint64(head[1] & 0x7F)
 	frame := &Frame{payload: payload}
 
-	if size < 126 {
-		if len(payload) < int(size)+6 {
+	if head[1] < 126 {
+		if len(payload) < int(head[1])+6 {
 			return nil, InvalidPayloadError
 		}
 
-		frame.size = size
+		frame.size = uint64(head[1])
 		frame.data = unmask(payload[2:6], payload[6:frame.size+6])
 
 		return frame, nil
 	}
 
-	// if size == 126 {
-	// 	if len(payload) < int(size)+8 {
-	// 		// Error
-	// 	}
-	// 	frame.size = binary.BigEndian.Uint16(payload[2:4])
-	// 	frame.data = unmask(payload[4:8], payload[8:frame.size+8])
-	// 	return frame, nil
-	// }
+	if head[1] == 126 {
+		if len(payload) < 8 {
+			return nil, InvalidPayloadError
+		}
 
-	if len(payload) < int(size)+14 {
-		// Error
+		frame.size = uint64(binary.BigEndian.Uint16(payload[2:4]))
+
+		if len(payload) < int(frame.size)+8 {
+			return nil, InvalidPayloadError
+		}
+
+		frame.data = unmask(payload[4:8], payload[8:frame.size+8])
+
+		return frame, nil
 	}
 
-	// frame.size = binary.BigEndian.Uint16(payload[2:10])
-	// frame.data = unmask(payload[10:14], payload[14:frame.size+14])
+	if len(payload) < 10 {
+		return nil, InvalidPayloadError
+	}
+
+	frame.size = uint64(binary.BigEndian.Uint64(payload[2:10]))
+
+	if len(payload) < int(frame.size+14) {
+		return nil, InvalidPayloadError
+	}
+
+	frame.data = unmask(payload[10:14], payload[14:frame.size+14])
 
 	return frame, nil
 }
-
-const OPCODE_CONST Opcode = 128
 
 // Comment
 func Encode(opcode Opcode, data []byte) *Frame {
 	size := len(data)
 	frame := &Frame{data: data}
-	opc := OPCODE_CONST + opcode
+	opc := OPCODE_START + opcode
 
 	frame.size = uint64(size)
 
@@ -119,7 +131,7 @@ func Encode(opcode Opcode, data []byte) *Frame {
 	}
 
 	payload := make([]byte, 2)
-	payload[0] = byte(opcode + OPCODE_CONST)
+	payload[0] = byte(opcode + OPCODE_START)
 	payload[1] = 126
 
 	length := make([]byte, 8)
@@ -136,48 +148,36 @@ func Encode(opcode Opcode, data []byte) *Frame {
 
 // Comment
 func (ctx *Frame) Opcode() Opcode {
-	return Opcode(ctx.payload[0] - byte(OPCODE_CONST))
+	return Opcode(ctx.payload[0] - byte(OPCODE_START))
 }
 
 // Comment
 func (ctx *Frame) IsContinuation() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_CONTINUATION) == OPCODE_CONTINUATION
-
 	return ctx.Opcode() == OPCODE_CONTINUATION
 }
 
 // Comment
 func (ctx *Frame) IsBinary() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_BINARY) == OPCODE_BINARY
-
 	return ctx.Opcode() == OPCODE_BINARY
 }
 
 // Comment
 func (ctx *Frame) IsText() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_TEXT) == OPCODE_TEXT
-
 	return ctx.Opcode() == OPCODE_TEXT
 }
 
 // Comment
 func (ctx *Frame) IsClose() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_CONNECTION_CLOSE) == OPCODE_CONNECTION_CLOSE
-
 	return ctx.Opcode() == OPCODE_CONNECTION_CLOSE
 }
 
 // Comment
 func (ctx *Frame) IsPing() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_PING) == OPCODE_PING
-
 	return ctx.Opcode() == OPCODE_PING
 }
 
 // Comment
 func (ctx *Frame) IsPong() bool {
-	// return (Opcode(ctx.payload[0]) & OPCODE_PONG) == OPCODE_PONG
-
 	return ctx.Opcode() == OPCODE_PONG
 }
 
@@ -195,11 +195,3 @@ func (ctx *Frame) Data() []byte {
 func (ctx *Frame) Payload() []byte {
 	return ctx.payload
 }
-
-// fmt.Println("IsContinuation: ", frame.IsContinuation())
-// fmt.Println("IsBinary: ", frame.IsBinary())
-// fmt.Println("IsText: ", frame.IsText())
-// fmt.Println("IsPing: ", frame.IsPing())
-// fmt.Println("IsPong: ", frame.IsPong())
-// fmt.Println("IsClose: ", frame.IsClose())
-// fmt.Println("-------------------------------------------------------------------\n\n")
