@@ -11,7 +11,8 @@ func TestHttpResponse(t *testing.T) {
 	t.Run("TestHttpResponseOk", func(t *testing.T) {
 		res := Init().Status(HTTP_RESPONSE_OK)
 
-		httpExpected := "HTTP/1.1 200 Ok\r\n\r\n"
+		httpExpected := "HTTP/1.1 200 Ok\r\n" +
+			"Content-Length: 0\r\n\r\n"
 
 		http := ParseHttp(res)
 
@@ -24,7 +25,8 @@ func TestHttpResponse(t *testing.T) {
 		res := Init().Status(HTTP_RESPONSE_OK).Header("content-type", "application/json")
 
 		httpExpected := "HTTP/1.1 200 Ok\r\n" +
-			"Content-Type: application/json\r\n\r\n"
+			"Content-Type: application/json\r\n" +
+			"Content-Length: 0\r\n\r\n"
 
 		http := ParseHttp(res)
 
