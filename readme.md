@@ -7,7 +7,7 @@
 
 HTTP requests [Go]() version [1.23]()
 
-### Getting HTTP
+## Getting HTTP
 
 ### Running HTTP
 
@@ -18,9 +18,9 @@ package main
 
 import (
 	"fmt"
-	"http/request"
-	"http/response"
-	"http/server"
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http/server"
 	"log"
 )
 
@@ -32,7 +32,7 @@ func main() {
 	}
 
 	machine.Router().Get("/", func(req *request.Request, res *response.Response) *response.Response {
-		return res.Body([]byte("<h1>Hello World</h1>"))
+		return res.Body([]byte("<h1>Hello World</h1>")).Header("content-type", "text/html; charset: utf-8")
 	})
 
 	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
@@ -59,9 +59,9 @@ package main
 
 import (
 	"fmt"
-	"http/request"
-	"http/server"
-	"http/ws"
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/server"
+	"github.com/lucas11776-golang/http/ws"
 	"log"
 )
 
@@ -95,6 +95,81 @@ func main() {
 				fmt.Println("On Error:", string(data))
 			})
 
+		})
+	})
+
+	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+
+	machine.Listen()
+}
+```
+
+
+### HTTP Route Grouping
+
+HTTP allows simple grouping of routes using `Group` method
+
+```go
+package main
+
+import (
+	"fmt"
+	"http/router"
+	"http/server"
+	"log"
+)
+
+func main() {
+	machine, err := server.Serve("127.0.0.1", 8080)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	machine.Router().Group("api", func(route *router.Router) {
+		route.Group("products", func(route *router.Router) {
+			// Some routes
+		})
+		route.Group("invoices", func(route *router.Router) {
+			// Some routes
+		})
+	})
+
+	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+
+	machine.Listen()
+}
+```
+
+
+### HTTP Route Parameter
+
+HTTP supports route params
+
+```go
+package main
+
+import (
+	"fmt"
+	"http/request"
+	"http/response"
+	"http/router"
+	"http/server"
+	"log"
+)
+
+func main() {
+	machine, err := server.Serve("127.0.0.1", 8080)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	machine.Router().Group("products", func(route *router.Router) {
+		route.Group("{product}", func(route *router.Router) {
+			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+				return res.Body([]byte("Product: ")).Header("content-type", "text/html")
+			})
 		})
 	})
 
