@@ -3,33 +3,41 @@ package main
 import (
 	"fmt"
 	"http/request"
-	"http/response"
-	"http/router"
 	"http/server"
+	"http/ws"
 	"log"
 )
 
-type User struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-}
-
-func http() {
-	users := []User{
-		(User{ID: 1, Email: "jane@doe.com"}),
-		(User{ID: 2, Email: "jeo@doe.com"}),
-	}
-
+func main() {
 	machine, err := server.Serve("127.0.0.1", 8080)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	machine.Router().Group("api", func(route *router.Router) {
-		route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
-			fmt.Println("REQUEST MADE GET: ", req.Header("cookie"))
-			return res.Json(users)
+	machine.Router().Ws("/", func(req *request.Request, socket *ws.Ws) {
+		socket.OnReady(func(socket *ws.Ws) {
+
+			socket.OnMessage(func(data []byte) {
+				fmt.Println("On Message:", string(data))
+			})
+
+			socket.OnPing(func(data []byte) {
+				fmt.Println("On Ping:", string(data))
+			})
+
+			socket.OnPong(func(data []byte) {
+				fmt.Println("On Pong:", string(data))
+			})
+
+			socket.OnClose(func(data []byte) {
+				fmt.Println("On Close:", string(data))
+			})
+
+			socket.OnError(func(data []byte) {
+				fmt.Println("On Error:", string(data))
+			})
+
 		})
 	})
 

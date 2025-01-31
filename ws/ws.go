@@ -18,7 +18,7 @@ const (
 	EVENT_CLOSE   Event = "close"
 )
 
-type ReadyCallback func(ws *Ws)
+type ReadyCallback func(socket *Ws)
 
 type EventCallback func(data []byte)
 

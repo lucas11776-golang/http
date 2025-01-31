@@ -41,7 +41,7 @@ type Group func(route *Router)
 
 type Web func(req *request.Request, res *response.Response) *response.Response
 
-type Ws func(req *request.Request, ws *ws.Ws)
+type Ws func(req *request.Request, socket *ws.Ws)
 
 // Comment
 func JoinPath(path ...string) string {
