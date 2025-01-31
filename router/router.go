@@ -143,6 +143,7 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 			return route, parameters
 		}
 
+		// TODO Fix this garbage :(
 		if len(path) != len(route.path) {
 			if path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path())) {
 				// continue
