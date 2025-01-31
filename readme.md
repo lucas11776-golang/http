@@ -44,7 +44,7 @@ func main() {
 To run the code, use the `go run` command, like:
 
 ```sh
-$ go run example
+$ go run main.go
 ```
 
 Then open your favorite browser and visit [`127.0.0.1:8080`](http://12.0.0.1:8080) you should see `Hello World`
@@ -74,7 +74,6 @@ func main() {
 
 	machine.Router().Ws("/", func(req *request.Request, socket *ws.Ws) {
 		socket.OnReady(func(socket *ws.Ws) {
-
 			socket.OnMessage(func(data []byte) {
 				fmt.Println("On Message:", string(data))
 			})
@@ -94,7 +93,6 @@ func main() {
 			socket.OnError(func(data []byte) {
 				fmt.Println("On Error:", string(data))
 			})
-
 		})
 	})
 
@@ -114,8 +112,8 @@ package main
 
 import (
 	"fmt"
-	"http/router"
-	"http/server"
+	"github.com/lucas11776-golang/http/router"
+	"github.com/lucas11776-golang/http/server"
 	"log"
 )
 
@@ -151,10 +149,10 @@ package main
 
 import (
 	"fmt"
-	"http/request"
-	"http/response"
-	"http/router"
-	"http/server"
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http/router"
+	"github.com/lucas11776-golang/http/server"
 	"log"
 )
 
