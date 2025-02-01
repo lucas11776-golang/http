@@ -3,6 +3,7 @@ package router
 import (
 	"http/request"
 	"http/response"
+	str "http/utils/strings"
 	"http/ws"
 	"reflect"
 	"regexp"
@@ -42,25 +43,6 @@ type Group func(route *Router)
 type Web func(req *request.Request, res *response.Response) *response.Response
 
 type Ws func(req *request.Request, socket *ws.Ws)
-
-// Comment
-func JoinPath(path ...string) string {
-	arr := []string{}
-
-	for _, p := range path {
-		if p == "" || p == "/" {
-			continue
-		}
-
-		arr = append(arr, strings.Trim(p, "/"))
-	}
-
-	if len(arr) == 0 {
-		arr = append(arr, "")
-	}
-
-	return strings.Join(arr, "/")
-}
 
 // Comment
 func (ctx *Route) Path() string {
@@ -145,9 +127,7 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 
 		// TODO Fix this garbage :(
 		if len(path) != len(route.path) {
-			if path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path())) {
-				// continue
-			} else {
+			if (path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path()))) == false {
 				continue
 			}
 		}
@@ -203,7 +183,7 @@ func (ctx *RouterGroup) MatchWsRoute(uri string) *Route {
 func (ctx *Router) getRoute(router *Router, method string, uri string, callback reflect.Value) *Route {
 	return &Route{
 		method:     strings.ToUpper(method),
-		path:       strings.Split(JoinPath(ctx.path, uri), "/"),
+		path:       strings.Split(str.JoinPath(ctx.path, uri), "/"),
 		parameters: make(Parameters),
 		middleware: ctx.middleware,
 		router:     router,
@@ -228,7 +208,7 @@ func (ctx *Router) Route(method string, uri string, callback Web) *Route {
 // Comment
 func (ctx *Router) Group(prefix string, group Group) {
 	group(&Router{
-		path:       JoinPath(ctx.path, prefix),
+		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
 		middleware: ctx.middleware,
 	})

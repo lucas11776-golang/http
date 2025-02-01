@@ -139,7 +139,6 @@ func main() {
 }
 ```
 
-
 ### HTTP Route Parameter
 
 HTTP supports route params
@@ -166,7 +165,7 @@ func main() {
 	machine.Router().Group("products", func(route *router.Router) {
 		route.Group("{product}", func(route *router.Router) {
 			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
-				return res.Body([]byte("Product: ")).Header("content-type", "text/html")
+				return res.Body([]byte("<h1>Product: " + "</h1>")).Header("content-type", "text/html")
 			})
 		})
 	})

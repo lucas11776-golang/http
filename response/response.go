@@ -1,7 +1,6 @@
 package response
 
 import (
-	"encoding/json"
 	"http/request"
 	"http/types"
 	"strconv"
@@ -82,11 +81,11 @@ const (
 type ResponseType string
 
 const (
-	RESPONSE_TYPE_NEXT     ResponseType = "next"
-	RESPONSE_TYPE_DATA     ResponseType = "data"
-	RESPONSE_TYPE_VIEW     ResponseType = "view"
-	RESPONSE_TYPE_REDIRECT ResponseType = "redirect"
-	RESPONSE_TYPE_DOWNLOAD ResponseType = "download"
+// RESPONSE_TYPE_NEXT     ResponseType = "next"
+// RESPONSE_TYPE_DATA     ResponseType = "data"
+// RESPONSE_TYPE_VIEW     ResponseType = "view"
+// RESPONSE_TYPE_REDIRECT ResponseType = "redirect"
+// RESPONSE_TYPE_DOWNLOAD ResponseType = "download"
 )
 
 type Response struct {
@@ -96,6 +95,7 @@ type Response struct {
 	statusText string
 	headers    types.Headers
 	body       []byte
+	data       any
 	Request    *request.Request
 }
 
@@ -134,54 +134,23 @@ func (ctx *Response) Header(key string, value string) *Response {
 
 // Comment
 func (ctx *Response) Body(body []byte) *Response {
-	ctx.body = body
-
-	return ctx
+	return BodyDefault(ctx, body)
 }
 
 // Comment
 func (ctx *Response) Json(v any) *Response {
-	ctx.Header("content-type", "application/json")
-
-	data, err := json.Marshal(v)
-
-	if err != nil {
-		ctx.body = []byte("{}")
-
-		return ctx
-	}
-
-	ctx.body = data
-
-	return ctx
+	return BodyJson(ctx, v)
 }
 
 // Comment
-// func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
-// 	return ctx
+// func (ctx *Response) Redirect(path string) *Response {
+// 	return BodyRedirect(ctx, path)
 // }
 
 // Comment
-func responseData(res *Response) string {
-	return ""
-}
-
-// Comment
-func responseView(res *Response) string {
-	return ""
-}
-
-// Comment
-func responseRedirect(res *Response) string {
-	return `<!DOCTYPE html>` +
-		`<head>` +
-		`  <meta name="viewport" content="0, url='` + string(res.body) + `'">` +
-		`</head>` +
-		`<body>` +
-		`  <p>You will be redirected to ` + string(res.body) + `</p>` +
-		`</body>` +
-		`</html>`
-}
+// func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
+// 	return BodyDownload(ctx, contentType, filename, binary)
+// }
 
 // Comment
 func ParseHttp(res *Response) string {
@@ -192,19 +161,6 @@ func ParseHttp(res *Response) string {
 	for key, value := range res.headers {
 		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
 	}
-
-	// switch res.format {
-	// default:
-	// 	if len(res.body) == 0 {
-	// 		http = append(http, "\r\n")
-	// 		return strings.Join(http, "\r\n")
-	// 	}
-	// }
-
-	// http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))
-	// http = append(http, strings.Join([]string{"\r\n", string(res.body), "\r\n"}, ""))
-
-	// return strings.Join(http, "\r\n")
 
 	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))
 

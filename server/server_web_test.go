@@ -64,6 +64,11 @@ func TestServerWeb(t *testing.T) {
 			route.Post("/", func(req *request.Request, res *response.Response) *response.Response {
 				return res.Status(response.HTTP_RESPONSE_OK).Json(userCreatedMessage)
 			}).Middleware(AuthKey)
+			route.Group("{id}", func(route *router.Router) {
+				route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+					return res
+				})
+			})
 		})
 	})
 
