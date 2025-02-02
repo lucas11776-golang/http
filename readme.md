@@ -15,6 +15,7 @@ HTTP requests [Go](https://go.dev) version [1.23](https://go.dev/doc/devel/relea
 - Router parameters
 - Response types `body`, `html`, `json`, `redirect`, `download` and `view`
 - Websocket support
+- Middleware
 
 
 ## Getting with HTTP
@@ -59,8 +60,6 @@ $ go run main.go
 ```
 
 Then open your favorite browser and visit [`127.0.0.1:8080`](http://12.0.0.1:8080) you should see `Hello World`
-
-
 
 
 ### Route Grouping
@@ -188,7 +187,8 @@ func main() {
 
 ### Response View
 
-HTTP `view` response in order to use `view` response we have to tell the server where to look for views `resources`
+
+HTTP `view` response uses `Scriggo`(https://scrigoo.com/templates) in order to use `view` in HTTP we have to tell application where to look for `views`
 
 ```go
 package main
@@ -216,6 +216,27 @@ func main() {
 
 	machine.Listen()
 }
+```
+
+Then create a folder in current working directory called `views` and create a file called `views/index.html` and put below html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golang View</title>
+  <style>
+    h1 { font-size: 2em; color: limegreen; }
+    p { font-size: 18px; font-weight: bolder; color: gray }
+  </style>
+</head>
+<body>
+  <h1>Hello World!!!</h1>
+  <p>This is my first view.</p>
+</body>
+</html>
 ```
 
 

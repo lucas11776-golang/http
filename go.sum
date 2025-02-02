@@ -1,2 +1,4 @@
+github.com/open2b/scriggo v0.59.1 h1:LIe3j6DEZPBSikoWISIMpu4P9iCyL5Ck5zqIiQDnPcQ=
+github.com/open2b/scriggo v0.59.1/go.mod h1:XYnYHkW9EdAT1lDNRM3nFv7zISbywe0+xnZHjf5GjZg=
 golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
 golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
