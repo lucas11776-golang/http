@@ -17,10 +17,10 @@ HTTP requests [Go](https://go.dev) version [1.23](https://go.dev/doc/devel/relea
 - Websocket support
 
 
-## Getting HTTP
+## Getting with HTTP
 
 
-### Running HTTP
+### Running HTTP server
 
 Create a basic example create a `go` file called `main.go` and paste the below code.
 
@@ -63,7 +63,7 @@ Then open your favorite browser and visit [`127.0.0.1:8080`](http://12.0.0.1:808
 
 
 
-### HTTP Route Grouping
+### Route Grouping
 
 HTTP allows simple grouping of routes using `Group` method
 
@@ -100,7 +100,7 @@ func main() {
 ```
 
 
-### HTTP Route Parameter
+### Route Parameter
 
 HTTP supports route params
 
@@ -138,7 +138,7 @@ func main() {
 ```
 
 
-### Running Response Types
+### Response Types
 
 HTTP has several response type which are `body`, `html`, `json`, `redirect`, `download` and `view` which will be explained in the next section.
 
@@ -186,7 +186,7 @@ func main() {
 ```
 
 
-### Running Response View
+### Response View
 
 HTTP `view` response in order to use `view` response we have to tell the server where to look for views `resources`
 
@@ -219,7 +219,7 @@ func main() {
 ```
 
 
-### HTTP Websocket
+### Websocket
 
 HTTP support websocket without third party packages
 
