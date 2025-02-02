@@ -100,7 +100,7 @@ func main() {
 ```
 
 
-### Route Parameter
+### Route Parameters
 
 HTTP supports route params
 
