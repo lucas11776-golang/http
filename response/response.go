@@ -3,6 +3,7 @@ package response
 import (
 	"http/request"
 	"http/types"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -138,19 +139,24 @@ func (ctx *Response) Body(body []byte) *Response {
 }
 
 // Comment
+func (ctx *Response) Html(html string) *Response {
+	return BodyHtml(ctx, html)
+}
+
+// Comment
 func (ctx *Response) Json(v any) *Response {
 	return BodyJson(ctx, v)
 }
 
 // Comment
-// func (ctx *Response) Redirect(path string) *Response {
-// 	return BodyRedirect(ctx, path)
-// }
+func (ctx *Response) Redirect(path string) *Response {
+	return BodyRedirect(ctx, path)
+}
 
 // Comment
-// func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
-// 	return BodyDownload(ctx, contentType, filename, binary)
-// }
+func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
+	return BodyDownload(ctx, contentType, filename, binary)
+}
 
 // Comment
 func ParseHttp(res *Response) string {
@@ -158,8 +164,16 @@ func ParseHttp(res *Response) string {
 
 	http = append(http, strings.Join([]string{res.protocol, strconv.Itoa(int(res.status)), getStatusText(res.status)}, " "))
 
-	for key, value := range res.headers {
-		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
+	keys := make([]string, 0, len(res.headers))
+
+	for k := range res.headers {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), res.headers[key]}, ": "))
 	}
 
 	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))

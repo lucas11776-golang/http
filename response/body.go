@@ -2,24 +2,24 @@ package response
 
 import (
 	"encoding/json"
+	"strings"
 )
 
 // Comment
 func BodyRedirect(res *Response, path string) *Response {
-	// res.body = []byte(
-	// 	strings.Join([]string{
-	// 		`<!DOCTYPE html>`,
-	// 		`<head>`,
-	// 		`  <meta name="viewport" content="0, url='` + string(res.body) + `'">`,
-	// 		`</head>`,
-	// 		`<body>`,
-	// 		`  <p>You will be redirected to ` + string(res.body) + `</p>`,
-	// 		`</body>`,
-	// 		`</html>`,
-	// 	}, "\r\n"),
-	// )
-
-	return res
+	res.Body([]byte(
+		strings.Join([]string{
+			`<!DOCTYPE html>`,
+			`<head>`,
+			`  <meta http-equiv="Refresh" content="0, url='` + path + `'">`,
+			`</head>`,
+			`<body>`,
+			`  <p>You will be redirected to ` + path + `</p>`,
+			`</body>`,
+			`</html>`,
+		}, "\r\n"),
+	))
+	return res.Header("content-type", "text/html; charset=utf-8").Status(HTTP_RESPONSE_TEMPORARY_REDIRECT)
 }
 
 // Comment
@@ -29,19 +29,22 @@ func BodyJson(res *Response, value any) *Response {
 	data, err := json.Marshal(value)
 
 	if err != nil {
-		res.body = []byte("{}")
-
-		return res
+		return res.Body([]byte("{}"))
 	}
 
-	res.body = data
-
-	return res
+	return res.Body(data)
 }
 
 // Comment
 func BodyDownload(res *Response, contentType string, filename string, binary []byte) *Response {
-	return res
+	res.Header("content-type", contentType)
+	res.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	return res.Body(binary)
+}
+
+func BodyHtml(res *Response, html string) *Response {
+	res.Header("content-type", "text/html; charset=utf-8")
+	return res.Body([]byte(html))
 }
 
 // Comment
