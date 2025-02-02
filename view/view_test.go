@@ -1,24 +1,27 @@
 package view
 
 import (
+	"embed"
+	"io/fs"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 )
 
+//go:embed views/*
+var views embed.FS
+
+type WriterTest struct {
+}
+
+// Comment
+func (ctx *WriterTest) Open(name string) (fs.File, error) {
+	return views.Open(strings.Join([]string{"views", name}, "/"))
+}
+
 func TestView(t *testing.T) {
-	cwd, err := os.Getwd()
-
-	if err != nil {
-		t.Fatalf("Something went wrong when trying to get cwd: %s", err.Error())
-	}
-
-	viewsDir := filepath.Dir(cwd) + "\\view\\views"
-
-	view := Init(viewsDir, "html")
+	view := Init(&WriterTest{}, "html")
 
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)

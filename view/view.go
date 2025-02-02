@@ -15,6 +15,10 @@ type viewFs struct {
 	dir string
 }
 
+type Reader interface {
+	Open(name string) (fs.File, error)
+}
+
 type viewWriter struct {
 	parsed []byte
 }
@@ -40,7 +44,7 @@ func (ctx *viewFs) Open(view string) (fs.File, error) {
 }
 
 // Comment
-func fileSystem(views string) fs.FS {
+func FileSystem(views string) fs.FS {
 	return &viewFs{
 		dir: views,
 	}
@@ -54,9 +58,14 @@ func (ctx *viewWriter) Write(p []byte) (n int, err error) {
 }
 
 // Comment
-func Init(views string, extension string) *View {
+func (ctx *viewWriter) Parsed() []byte {
+	return ctx.parsed
+}
+
+// Comment
+func Init(fsys Reader, extension string) *View {
 	return &View{
-		fs:        fileSystem(views),
+		fs:        fsys,
 		extension: extension,
 	}
 }
