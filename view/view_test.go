@@ -50,7 +50,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Failed to parse view: %s", err.Error())
 		}
 
-		expected := "<h1>\r\n  You can not drive\r\n</h1>"
+		expected := "<h1>You can not drive</h1>"
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
@@ -64,7 +64,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Failed to parse view: %s", err.Error())
 		}
 
-		expected = "<h1>\r\n  You can drive code 10\r\n</h1>"
+		expected = "<h1>You can drive code 10</h1>"
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
@@ -78,7 +78,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Failed to parse view: %s", err.Error())
 		}
 
-		expected = "<h1>\r\n  You can drive code 12 or 14\r\n</h1>"
+		expected = "<h1>You can drive code 12 or 14</h1>"
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
@@ -98,18 +98,18 @@ func TestView(t *testing.T) {
 
 		expected := strings.Join([]string{
 			"<ul>",
-			"  <li>Pretoria</li>",
-			"  <li>New York</li>",
-			"  <li>Cape Town</li>",
+			"<li>Pretoria</li>",
+			"<li>New York</li>",
+			"<li>Cape Town</li>",
 			"</ul>",
-		}, "\r\n")
+		}, "")
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 	})
 
-	t.Run("TestFor", func(t *testing.T) {
+	t.Run("TestSwitch", func(t *testing.T) {
 		data, err := view.Read("switch", Data{
 			"role": "guest",
 		})
@@ -118,7 +118,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Failed to parse view: %s", err.Error())
 		}
 
-		expected := "<h1>\r\n  You are a guest\r\n</h1>"
+		expected := "<h1>You are a guest</h1>"
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
@@ -132,7 +132,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Failed to parse view: %s", err.Error())
 		}
 
-		expected = "<h1>\r\n  You are a user\r\n</h1>"
+		expected = "<h1>You are a user</h1>"
 
 		if expected != string(data) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
