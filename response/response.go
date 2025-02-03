@@ -97,7 +97,6 @@ type Response struct {
 	statusText string
 	headers    types.Headers
 	body       []byte
-	data       any
 	Request    *request.Request
 }
 

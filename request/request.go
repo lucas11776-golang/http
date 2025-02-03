@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
 )
 
@@ -17,6 +18,7 @@ type Request struct {
 	headers  types.Headers
 	body     []byte
 	Conn     *net.Conn
+	Server   *server.Server
 }
 
 // Comment
