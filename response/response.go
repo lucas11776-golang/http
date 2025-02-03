@@ -1,11 +1,12 @@
 package response
 
 import (
-	"http/request"
-	"http/types"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/types"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

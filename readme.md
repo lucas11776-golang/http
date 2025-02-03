@@ -32,24 +32,19 @@ import (
 	"fmt"
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/server"
-	"log"
+	"github.com/lucas11776-golang/http"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Get("/", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Get("/", func(req *request.Request, res *response.Response) *response.Response {
 		return res.Html("<h1>Hello World</h1>")
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```
 
@@ -72,18 +67,13 @@ package main
 import (
 	"fmt"
 	"github.com/lucas11776-golang/http/router"
-	"github.com/lucas11776-golang/http/server"
-	"log"
+	"github.com/lucas11776-golang/http"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Group("api", func(route *router.Router) {
+	server.Route().Group("api", func(route *router.Router) {
 		route.Group("products", func(route *router.Router) {
 			// Some routes
 		})
@@ -92,9 +82,9 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```
 
@@ -111,18 +101,13 @@ import (
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/response"
 	"github.com/lucas11776-golang/http/router"
-	"github.com/lucas11776-golang/http/server"
-	"log"
+	"github.com/lucas11776-golang/http"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Group("products", func(route *router.Router) {
+	server.Route().Group("products", func(route *router.Router) {
 		route.Group("{product}", func(route *router.Router) {
 			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
 				return res.Body([]byte("<h1>Product: " + "</h1>")).Header("content-type", "text/html")
@@ -130,9 +115,9 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```
 
@@ -149,18 +134,13 @@ import (
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/response"
 	"github.com/lucas11776-golang/http/router"
-	"github.com/lucas11776-golang/http/server"
-	"log"
+	"github.com/lucas11776-golang/http"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Group("/", func(route *router.Router) {
+	server.Route().Group("/", func(route *router.Router) {
 		route.Get("body", func(req *request.Request, res *response.Response) *response.Response {
 			return res.Body([]byte("Hello World!!!")).Header("content-type", "text/plain; charset: utf-8")
 		})
@@ -178,9 +158,9 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```
 
@@ -194,26 +174,21 @@ package main
 
 import (
 	"fmt"
-	"http/request"
-	"http/response"
-	"http/server"
-	"log"
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Get("/", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Get("/", func(req *request.Request, res *response.Response) *response.Response {
 		return res
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```
 
@@ -249,19 +224,14 @@ package main
 import (
 	"fmt"
 	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/server"
+	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/ws"
-	"log"
 )
 
 func main() {
-	machine, err := server.Serve("127.0.0.1", 8080)
+	server := http.Server("127.0.0.1", 8080)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	machine.Router().Ws("/", func(req *request.Request, socket *ws.Ws) {
+	server.Route().Ws("/", func(req *request.Request, socket *ws.Ws) {
 		socket.OnReady(func(socket *ws.Ws) {
 			socket.OnMessage(func(data []byte) {
 				fmt.Println("On Message:", string(data))
@@ -285,8 +255,8 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Server running %s:%d", machine.Address(), machine.Port())
+	fmt.Printf("Server running %s", server.Host())
 
-	machine.Listen()
+	server.Listen()
 }
 ```

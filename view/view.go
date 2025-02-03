@@ -23,6 +23,10 @@ type viewWriter struct {
 	parsed []byte
 }
 
+type viewReader struct {
+	dir string
+}
+
 type View struct {
 	fs        fs.FS
 	extension string
@@ -34,8 +38,13 @@ func (ctx *viewFs) cleanPath(path string) string {
 }
 
 // Comment
+func path(path string) string {
+	return strings.Trim(strings.ReplaceAll(path, "/", "\\"), "\\")
+}
+
+// Comment
 func (ctx *viewFs) viewPath(view string) string {
-	return strings.ReplaceAll(strings.Join([]string{ctx.cleanPath(ctx.dir), ctx.cleanPath(view)}, "\\"), "/", "\\")
+	return path(strings.Join([]string{ctx.cleanPath(ctx.dir), ctx.cleanPath(view)}, "\\"))
 }
 
 // Comment
@@ -60,6 +69,19 @@ func (ctx *viewWriter) Write(p []byte) (n int, err error) {
 // Comment
 func (ctx *viewWriter) Parsed() []byte {
 	return ctx.parsed
+}
+
+// Comment
+func (ctx *viewReader) Open(name string) (fs.File, error) {
+
+	return nil, nil
+}
+
+// Comment
+func ViewReader(views string) fs.FS {
+	return &viewReader{
+		dir: path(views),
+	}
 }
 
 // Comment

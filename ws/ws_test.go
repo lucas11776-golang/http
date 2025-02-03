@@ -1,8 +1,6 @@
 package ws
 
 import (
-	"fmt"
-	"http/ws/frame"
 	"math/rand"
 	"net"
 	"strconv"
@@ -128,8 +126,6 @@ func TestWs(t *testing.T) {
 	})
 
 	t.Run("TestPing", func(t *testing.T) {
-		text := frame.OPCODE_TEXT + 128
-
-		fmt.Println("TEXT: ", text, frame.OPCODE_TEXT, frame.OPCODE_TEXT&text)
+		// text := frame.OPCODE_TEXT + 128
 	})
 }

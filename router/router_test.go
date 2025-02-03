@@ -1,11 +1,12 @@
 package router
 
 import (
-	"http/request"
-	"http/response"
-	"http/ws"
 	"strings"
 	"testing"
+
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http/ws"
 )
 
 func TestRouter(t *testing.T) {

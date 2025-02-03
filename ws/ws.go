@@ -1,8 +1,9 @@
 package ws
 
 import (
-	"http/ws/frame"
 	"net"
+
+	"github.com/lucas11776-golang/http/ws/frame"
 )
 
 const MAX_PAYLOAD_SIZE = 2048

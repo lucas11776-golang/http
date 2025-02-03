@@ -2,10 +2,11 @@ package request
 
 import (
 	"fmt"
-	"http/types"
 	"net"
 	"net/url"
 	"strings"
+
+	"github.com/lucas11776-golang/http/types"
 )
 
 type Request struct {

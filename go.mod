@@ -1,4 +1,4 @@
-module http
+module github.com/lucas11776-golang/http
 
 go 1.23
 

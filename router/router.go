@@ -1,13 +1,14 @@
 package router
 
 import (
-	"http/request"
-	"http/response"
-	str "http/utils/strings"
-	"http/ws"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	str "github.com/lucas11776-golang/http/utils/strings"
+	"github.com/lucas11776-golang/http/ws"
 )
 
 type Next func() *response.Response

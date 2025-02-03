@@ -2,23 +2,29 @@ package server
 
 import (
 	"fmt"
-	"http/request"
-	"http/response"
-	"http/router"
-	"http/types"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http/router"
+	"github.com/lucas11776-golang/http/server/connection"
+	"github.com/lucas11776-golang/http/types"
 )
 
-const MAX_REQUEST_SIZE = (1024 * 1000)
+const MAX_REQUEST_SIZE int64 = (1024 * 1000)
+
+type ConnectionCallback func(server *Server, conn *connection.Connection)
 
 type Server struct {
-	address  string
-	port     int32
-	listener net.Listener
-	router   *router.RouterGroup
+	address        string
+	port           int32
+	listener       net.Listener
+	router         *router.RouterGroup
+	connection     []ConnectionCallback
+	MaxRequestSize int64
 }
 
 // Comment
@@ -33,10 +39,11 @@ func Serve(host string, port int32) (*Server, error) {
 	prt, _ := strconv.Atoi(arr[1])
 
 	return &Server{
-		address:  arr[0],
-		port:     int32(prt),
-		listener: listener,
-		router:   &router.RouterGroup{},
+		address:        arr[0],
+		port:           int32(prt),
+		listener:       listener,
+		router:         &router.RouterGroup{},
+		MaxRequestSize: MAX_REQUEST_SIZE,
 	}, nil
 }
 
@@ -50,9 +57,26 @@ func (ctx *Server) Port() int32 {
 	return ctx.port
 }
 
+// Comment
+func (ctx *Server) Host() string {
+	return ctx.listener.Addr().String()
+}
+
+// Comment
+func (ctx *Server) Router() *router.RouterGroup {
+	return ctx.router
+}
+
 // comment
-func (ctx *Server) Router() *router.Router {
+func (ctx *Server) Route() *router.Router {
 	return ctx.router.Router()
+}
+
+// Comment
+func (ctx *Server) Connection(callback ConnectionCallback) *Server {
+	ctx.connection = append(ctx.connection, callback)
+
+	return ctx
 }
 
 // Comment
@@ -65,6 +89,17 @@ func (ctx *Server) Listen() {
 		}
 
 		go func() {
+			for _, callback := range ctx.connection {
+				go func() {
+					callback(ctx, connection.Init(&conn, ctx.MaxRequestSize))
+				}()
+			}
+		}()
+
+		go func() {
+
+			return
+
 			// Must be read the hole request
 			http := make([]byte, MAX_REQUEST_SIZE)
 
@@ -87,7 +122,7 @@ func (ctx *Server) Listen() {
 				return
 			}
 
-			res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+			res := response.Create("github.com/lucas11776-golang/http/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 
 			r := route.Call(reflect.ValueOf(req), reflect.ValueOf(res))
 
