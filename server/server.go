@@ -14,6 +14,10 @@ type Configuration map[string]string
 
 type ConnectionCallback func(server *Server, conn *connection.Connection)
 
+type Dependency interface{}
+
+type Dependencies map[string]Dependency
+
 type Server struct {
 	address        string
 	port           int32
@@ -21,6 +25,7 @@ type Server struct {
 	connection     []ConnectionCallback
 	configuration  Configuration
 	MaxRequestSize int64
+	dependency     Dependencies
 }
 
 // Comment
@@ -40,6 +45,7 @@ func Serve(host string, port int32) (*Server, error) {
 		listener:       listener,
 		MaxRequestSize: MAX_REQUEST_SIZE,
 		configuration:  make(Configuration),
+		dependency:     make(Dependencies),
 	}, nil
 }
 
@@ -81,6 +87,24 @@ func (ctx *Server) GetConfig(key string) string {
 	}
 
 	return config
+}
+
+// Comment
+func (ctx *Server) SetDependency(name string, dependency Dependency) *Server {
+	ctx.dependency[name] = dependency
+
+	return ctx
+}
+
+// Comment
+func (ctx *Server) GetDependency(name string) Dependency {
+	dependency, ok := ctx.dependency[name]
+
+	if !ok {
+		return nil
+	}
+
+	return dependency
 }
 
 // Comment

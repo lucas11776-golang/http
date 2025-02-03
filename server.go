@@ -16,7 +16,6 @@ import (
 const MAX_REQUEST_SIZE = (1024 * 1000)
 
 type HTTP struct {
-	router *router.RouterGroup
 	*serve.Server
 }
 
@@ -36,7 +35,7 @@ func newConnection(http *HTTP, conn *connection.Connection) {
 
 		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 
-		res.Request = req
+		// res.Request = req
 
 		if route == nil {
 			// Not found page
@@ -60,12 +59,12 @@ func newConnection(http *HTTP, conn *connection.Connection) {
 
 // Comment
 func (ctx *HTTP) Router() *router.RouterGroup {
-	return ctx.router
+	return ctx.GetDependency("router").(*router.RouterGroup)
 }
 
 // comment
 func (ctx *HTTP) Route() *router.Router {
-	return ctx.router.Router()
+	return ctx.Router().Router()
 }
 
 // Comment
@@ -78,8 +77,9 @@ func Server(address string, port int32) *HTTP {
 
 	http := &HTTP{
 		Server: server,
-		router: &router.RouterGroup{},
 	}
+
+	http.SetDependency("router", &router.RouterGroup{})
 
 	http.Connection(func(server *serve.Server, conn *connection.Connection) {
 		newConnection(http, conn)

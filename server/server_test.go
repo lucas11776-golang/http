@@ -1,6 +1,9 @@
 package server
 
-import "testing"
+import (
+	"math/rand/v2"
+	"testing"
+)
 
 func TestServer(t *testing.T) {
 	serve, err := Serve("127.0.0.1", 0)
@@ -28,6 +31,16 @@ func TestServer(t *testing.T) {
 
 		if serve.GetConfig("VIEW_PATH") != "views" {
 			t.Fatalf("Expected view path to be (%s) but go (%s)", "views", serve.GetConfig("VIEW_PATH"))
+		}
+	})
+
+	t.Run("TestDependency", func(t *testing.T) {
+		dep := rand.Float64() * 10000
+
+		serve.SetDependency("rand", dep)
+
+		if serve.GetDependency("rand") != dep {
+			t.Fatalf("Expected dependency to be (%s) but go (%s)", "views", serve.GetDependency("rand"))
 		}
 	})
 

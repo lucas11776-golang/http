@@ -158,4 +158,23 @@ func TestHttpResponse(t *testing.T) {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
+
+	t.Run("TestHttpResponseView", func(t *testing.T) {
+		// html := "<h1>Hello lucas11776</h1>"
+
+		// res := Init().View("index", view.Data{
+		// 	"name": "lucas11776",
+		// })
+
+		// httpExpected := strings.Join([]string{
+		// 	"HTTP/1.1 200 Ok",
+		// 	"Content-Type: text/html",
+		// 	strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
+		// 	html + "\r\n",
+		// }, "\r\n")
+
+		// if httpExpected != html {
+		// 	t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, html)
+		// }
+	})
 }

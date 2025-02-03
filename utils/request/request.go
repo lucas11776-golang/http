@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/lucas11776-golang/http/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const MAX_REQUEST_SIZE = 1024 * 1000
@@ -45,11 +47,11 @@ func (ctx *Request) Get(url string) (string, error) {
 // Comment
 func (ctx *Request) parse(method string, path string, data []byte) string {
 	arr := []string{
-		strings.Join([]string{strings.ToUpper(method), path, "github.com/lucas11776-golang/http/1.1"}, " "),
+		strings.Join([]string{strings.ToUpper(method), path, "HTTP/1.1"}, " "),
 	}
 
 	for key, value := range ctx.headers {
-		arr = append(arr, strings.Join([]string{key, value}, ": "))
+		arr = append(arr, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
 	}
 
 	if len(data) == 0 {

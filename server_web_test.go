@@ -3,6 +3,7 @@ package http
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/lucas11776-golang/http/request"
@@ -47,20 +48,35 @@ func TestServerWeb(t *testing.T) {
 	}()
 
 	t.Run("TestApiGetUsers", func(t *testing.T) {
-		r := req.CreateRequest().Header("Content-Type", "application/json")
+		r := req.CreateRequest().Header("content-type", "application/json")
 
-		http, err := r.Get("http://" + server.Host() + "/api/users")
+		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))
 
 		if err != nil {
 			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
 		}
 
-		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
-		expectedHttp := response.ParseHttp(res.Json(users))
+		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(users)
+		expectedHttp := response.ParseHttp(res)
 
 		if expectedHttp != http {
 			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
 		}
+	})
+
+	t.Run("TestGetIndexPage", func(t *testing.T) {
+		// r := req.CreateRequest().Header("accept", "text/html")
+
+		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))
+
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
+		// }
+
+		// ht
+
+		// res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+
 	})
 
 	server.Close()

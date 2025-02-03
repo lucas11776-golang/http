@@ -7,6 +7,7 @@ import (
 
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/view"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -156,6 +157,14 @@ func (ctx *Response) Redirect(path string) *Response {
 // Comment
 func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
 	return BodyDownload(ctx, contentType, filename, binary)
+}
+
+// Comment
+func (ctx *Response) View(view string, data view.Data) *Response {
+
+	// ctx.Request.Server
+
+	return ctx
 }
 
 // Comment
