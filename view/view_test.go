@@ -7,21 +7,31 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/open2b/scriggo"
 )
 
 //go:embed views/*
 var views embed.FS
 
-type WriterTest struct {
+type ReaderTest struct {
+	cache scriggo.Files
 }
 
 // Comment
-func (ctx *WriterTest) Open(name string) (fs.File, error) {
+func (ctx *ReaderTest) Open(name string) (fs.File, error) {
 	return views.Open(strings.Join([]string{"views", name}, "/"))
 }
 
+// Comment
+func (ctx *ReaderTest) Views(name string) (scriggo.Files, error) {
+	return ReadViewCache(ctx, ctx.cache, name)
+}
+
 func TestView(t *testing.T) {
-	view := Init(&WriterTest{}, "html")
+	view := Init(&ReaderTest{
+		cache: make(scriggo.Files),
+	}, "html")
 
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)

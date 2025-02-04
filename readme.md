@@ -174,16 +174,22 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http"
+	"github.com/lucas11776-golang/http/view"
 )
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
+	server.SetView("views", "html")
+
 	server.Route().Get("/", func(req *request.Request, res *response.Response) *response.Response {
-		return res
+		return res.View("index", view.Data{
+			"name": "lucas11776",
+		})
 	})
 
 	fmt.Printf("Server running %s", server.Host())
@@ -200,15 +206,10 @@ Then create a folder in current working directory called `views` and create a fi
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Golang View</title>
-  <style>
-    h1 { font-size: 2em; color: limegreen; }
-    p { font-size: 18px; font-weight: bolder; color: gray }
-  </style>
+  <title>View Reader</title>
 </head>
 <body>
-  <h1>Hello World!!!</h1>
-  <p>This is my first view.</p>
+  <h1>Hello {{ name }} this is home page.</h1>
 </body>
 </html>
 ```

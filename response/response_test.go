@@ -13,15 +13,23 @@ import (
 	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/view"
+	"github.com/open2b/scriggo"
 )
 
 //go:embed views/*
 var views embed.FS
 
-type ViewReader struct{}
+type ViewReader struct {
+	cache scriggo.Files
+}
 
 func (ctx *ViewReader) Open(name string) (fs.File, error) {
 	return views.Open(strings.Join([]string{"views", name}, "/"))
+}
+
+// Comment
+func (ctx *ViewReader) Views(name string) (scriggo.Files, error) {
+	return view.ReadViewCache(ctx, ctx.cache, name)
 }
 
 func TestHttpResponse(t *testing.T) {
@@ -182,7 +190,9 @@ func TestHttpResponse(t *testing.T) {
 
 		res.Request = request.Create("GET", "/", make(types.Query), "HTTP/1.1", make(types.Headers), []byte{})
 
-		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", view.Init(&ViewReader{}, "html"))
+		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", view.Init(&ViewReader{
+			cache: make(scriggo.Files),
+		}, "html"))
 
 		res.View("index", view.Data{
 			"name": name,

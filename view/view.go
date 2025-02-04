@@ -12,34 +12,27 @@ import (
 
 type Data map[string]interface{}
 
-type viewFs struct {
-	dir string
-}
-
-type Reader interface {
-	Open(name string) (fs.File, error)
-}
-
 type viewWriter struct {
 	parsed []byte
 }
 
 type viewReader struct {
-	dir string
+	dir   string
+	cache scriggo.Files
+}
+
+type Reader interface {
+	Open(name string) (fs.File, error)
+	Views(name string) (scriggo.Files, error)
 }
 
 type View struct {
-	fs        fs.FS
+	fs        Reader
 	extension string
 }
 
 // Comment
-func (ctx *viewFs) cleanPath(path string) string {
-	return strings.Trim(strings.Trim(path, "\\"), "/")
-}
-
-// Comment
-func path(path ...string) string {
+func Path(path ...string) string {
 	pth := []string{}
 
 	for _, p := range path {
@@ -47,23 +40,6 @@ func path(path ...string) string {
 	}
 
 	return strings.Join(pth, "\\")
-}
-
-// Comment
-func (ctx *viewFs) viewPath(view string) string {
-	return path(strings.Join([]string{ctx.cleanPath(ctx.dir), ctx.cleanPath(view)}, "\\"))
-}
-
-// Comment
-func (ctx *viewFs) Open(view string) (fs.File, error) {
-	return os.OpenFile(ctx.viewPath(view), os.O_RDONLY, fs.ModeExclusive)
-}
-
-// Comment
-func FileSystem(views string) fs.FS {
-	return &viewFs{
-		dir: views,
-	}
 }
 
 // Comment
@@ -79,13 +55,50 @@ func (ctx *viewWriter) Parsed() []byte {
 }
 
 // Comment
-func (ctx *viewReader) Open(name string) (fs.File, error) {
+func ReadViewCache(reader Reader, cache scriggo.Files, view string) (scriggo.Files, error) {
+	_, ok := cache[view]
 
-	return nil, nil
+	if ok {
+		return cache, nil
+	}
+
+	file, err := reader.Open(view)
+
+	if err != nil {
+		return nil, err
+	}
+
+	stat, err := file.Stat()
+
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]byte, stat.Size())
+
+	_, err = file.Read(data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cache[view] = data
+
+	return cache, nil
 }
 
 // Comment
-func ViewReader(views string) fs.FS {
+func (ctx *viewReader) Open(name string) (fs.File, error) {
+	return os.Open(Path(ctx.dir, name))
+}
+
+// Comment
+func (ctx *viewReader) Views(name string) (scriggo.Files, error) {
+	return ReadViewCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func ViewReader(views string) *viewReader {
 	wd, err := os.Getwd()
 
 	if err != nil {
@@ -93,7 +106,8 @@ func ViewReader(views string) fs.FS {
 	}
 
 	return &viewReader{
-		dir: path(wd, views),
+		dir:   Path(wd, views),
+		cache: make(scriggo.Files),
 	}
 }
 
@@ -115,7 +129,15 @@ func (ctx *View) Read(view string, data Data) ([]byte, error) {
 		}
 	}
 
-	template, err := scriggo.BuildTemplate(ctx.fs, strings.Join([]string{view, ctx.extension}, "."), &scriggo.BuildOptions{
+	vw := strings.Join([]string{view, ctx.extension}, ".")
+
+	views, err := ctx.fs.Views(vw)
+
+	if err != nil {
+		return nil, err
+	}
+
+	template, err := scriggo.BuildTemplate(views, vw, &scriggo.BuildOptions{
 		Globals: globals,
 	})
 

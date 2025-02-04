@@ -21,12 +21,6 @@ func TestServerWeb(t *testing.T) {
 		(User{ID: 2, Email: "jeo@doe.com"}),
 	}
 
-	server.Route().Group("/", func(route *router.Router) {
-		route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
-			return res
-		})
-	})
-
 	server.Route().Group("api", func(route *router.Router) {
 		route.Group("users", func(route *router.Router) {
 			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
@@ -62,22 +56,6 @@ func TestServerWeb(t *testing.T) {
 		if expectedHttp != http {
 			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
 		}
-	})
-
-	t.Run("TestGetIndexPage", func(t *testing.T) {
-
-		// r := req.CreateRequest().Header("accept", "text/html")
-
-		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))
-
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
-		// }
-
-		// ht
-
-		// res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
-
 	})
 
 	server.Close()
