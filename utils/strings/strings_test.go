@@ -1,6 +1,9 @@
 package strings
 
-import "testing"
+import (
+	"math/rand/v2"
+	"testing"
+)
 
 func TestStrings(t *testing.T) {
 
@@ -21,6 +24,15 @@ func TestStrings(t *testing.T) {
 
 		if path != "" {
 			t.Fatalf("Expected joined string path to be (%s) but go (%s)", "", path)
+		}
+	})
+
+	t.Run("TestRandom", func(t *testing.T) {
+		size := int(rand.Float64() * 1000)
+		str := Random(size)
+
+		if len(str) != size {
+			t.Fatalf("Expected string size to be (%d) but go (%d)", size, len(str))
 		}
 	})
 }

@@ -3,6 +3,7 @@ package request
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 )
 
 type Request struct {
+	*http.Request
 	method   string
 	path     string
 	query    types.Query
@@ -19,6 +21,13 @@ type Request struct {
 	body     []byte
 	Conn     *net.Conn
 	Server   *server.Server
+}
+
+type headerInfo struct {
+	method   string
+	path     string
+	query    types.Query
+	protocol string
 }
 
 // Comment
@@ -31,13 +40,6 @@ func Create(method string, path string, query types.Query, protocol string, head
 		headers:  headers,
 		body:     body,
 	}
-}
-
-type headerInfo struct {
-	method   string
-	path     string
-	query    types.Query
-	protocol string
 }
 
 // Comment
@@ -95,6 +97,12 @@ func getContent(arr []string) (*content, error) {
 	}
 
 	return &content, nil
+}
+
+// Comment
+func ParseRequest(request *http.Request) *Request {
+
+	return &Request{}
 }
 
 // Comment

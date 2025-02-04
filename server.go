@@ -2,6 +2,7 @@ package http
 
 import (
 	"log"
+	"net/http"
 	"reflect"
 
 	"github.com/lucas11776-golang/http/request"
@@ -14,15 +15,15 @@ import (
 	"github.com/lucas11776-golang/http/view"
 )
 
-const MAX_REQUEST_SIZE = (1024 * 1000)
+const MAX_REQUEST_SIZE = 1024 * 1000
 
 type HTTP struct {
 	*serve.Server
 }
 
 // Comment
-func newConnection(http *HTTP, conn *connection.Connection) {
-	conn.Message(func(data []byte) {
+func newConnection(htp *HTTP, conn *connection.Connection) {
+	conn.Message(func(r *http.Request, data []byte) {
 		req, err := request.ParseHttp(string(data))
 
 		if err != nil {
@@ -30,9 +31,10 @@ func newConnection(http *HTTP, conn *connection.Connection) {
 			return
 		}
 
-		req.Server = http.Server
+		req.Request = r
+		req.Server = htp.Server
 
-		route := http.Router().MatchWebRoute(req.Method(), req.Path())
+		route := htp.Router().MatchWebRoute(req.Method(), req.Path())
 
 		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 

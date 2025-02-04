@@ -1,16 +1,19 @@
 package connection
 
 import (
+	"bufio"
+	"bytes"
 	"net"
+	"net/http"
 )
 
-type MessageCallback func(data []byte)
+type RequestCallback func(req *http.Request, hp []byte)
 
 type Connection struct {
 	Alive   bool
 	conn    *net.Conn
-	message []MessageCallback
-	max     int64
+	message []RequestCallback
+	max     int
 }
 
 // Comment
@@ -18,7 +21,7 @@ func Init(conn *net.Conn, max int64) *Connection {
 	return &Connection{
 		Alive: true,
 		conn:  conn,
-		max:   max,
+		max:   int(max),
 	}
 }
 
@@ -35,7 +38,7 @@ func (ctx *Connection) Write(data []byte) error {
 }
 
 // Comment
-func (ctx *Connection) Message(callback MessageCallback) *Connection {
+func (ctx *Connection) Message(callback RequestCallback) *Connection {
 	ctx.message = append(ctx.message, callback)
 
 	return ctx
@@ -46,7 +49,14 @@ func (ctx *Connection) Listen() {
 	buffer := make([]byte, ctx.max)
 
 	for {
-		size, err := ctx.Conn().Read(buffer)
+		size, _ := ctx.Conn().Read(buffer)
+
+		req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(buffer[:size])))
+
+		if err != nil {
+			// Error
+			return
+		}
 
 		if err != nil {
 			ctx.Alive = false
@@ -55,7 +65,7 @@ func (ctx *Connection) Listen() {
 
 		for _, callback := range ctx.message {
 			go func() {
-				callback(buffer[:size])
+				callback(req, buffer[:size])
 			}()
 		}
 	}

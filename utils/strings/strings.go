@@ -1,6 +1,9 @@
 package strings
 
-import "strings"
+import (
+	"math/rand"
+	"strings"
+)
 
 // Comment
 func JoinPath(path ...string) string {
@@ -14,9 +17,16 @@ func JoinPath(path ...string) string {
 		pth = append(pth, strings.Trim(path[i], "/"))
 	}
 
-	// if len(pth) == 0 {
-	// 	pth = append(pth, "")
-	// }
-
 	return strings.Join(pth, "/")
+}
+
+// Comment
+func Random(size int) string {
+	str := ""
+
+	for i := 0; i < size; i++ {
+		str += string(byte(65 + (rand.Float32() * 58)))
+	}
+
+	return str
 }

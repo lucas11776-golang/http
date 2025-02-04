@@ -4,15 +4,15 @@ import (
 	"testing"
 )
 
-const http = "POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1\r\n" +
-	"HOST: example.com\r\n" +
-	"Content-Type: application/json\r\n" +
-	"Content-Length: 10\r\n\r\n" +
-	"{\"user\":1}\r\n"
-
 // Comment
 func TestParseHttpToRequest(t *testing.T) {
-	req, _ := ParseHttp(http)
+	const httpText = "POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1\r\n" +
+		"HOST: example.com\r\n" +
+		"Content-Type: application/json\r\n" +
+		"Content-Length: 10\r\n\r\n" +
+		"{\"user\":1}\r\n"
+
+	req, _ := ParseHttp(httpText)
 
 	t.Run("TestHttpMethod", func(t *testing.T) {
 		if req.Method() != "POST" {
