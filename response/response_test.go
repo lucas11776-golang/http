@@ -207,7 +207,7 @@ func TestHttpResponse(t *testing.T) {
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
 			"Content-Type: text/html",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n",
+			strings.Join([]string{"Content-Length", strconv.Itoa(len([]byte(body)))}, ": ") + "\r\n",
 			body + "\r\n",
 		}, "\r\n")
 
