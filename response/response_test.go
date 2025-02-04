@@ -1,12 +1,28 @@
 package response
 
 import (
+	"embed"
 	"encoding/json"
+	"io/fs"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/server"
+	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/view"
 )
+
+//go:embed views/*
+var views embed.FS
+
+type ViewReader struct{}
+
+func (ctx *ViewReader) Open(name string) (fs.File, error) {
+	return views.Open(strings.Join([]string{"views", name}, "/"))
+}
 
 func TestHttpResponse(t *testing.T) {
 	t.Run("TestHttpResponseOk", func(t *testing.T) {
@@ -72,7 +88,7 @@ func TestHttpResponse(t *testing.T) {
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
-			"Content-Type: text/html; charset=utf-8",
+			"Content-Type: text/html",
 			strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
 			string(html) + "\r\n",
 		}, "\r\n")
@@ -126,7 +142,7 @@ func TestHttpResponse(t *testing.T) {
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 307 Temporary Redirect",
-			"Content-Type: text/html; charset=utf-8",
+			"Content-Type: text/html",
 			strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
 			string(html) + "\r\n",
 		}, "\r\n")
@@ -160,21 +176,45 @@ func TestHttpResponse(t *testing.T) {
 	})
 
 	t.Run("TestHttpResponseView", func(t *testing.T) {
-		// html := "<h1>Hello lucas11776</h1>"
+		name := strings.Join([]string{"lucas", strconv.Itoa(int(rand.Float64() * 1000))}, "")
 
-		// res := Init().View("index", view.Data{
-		// 	"name": "lucas11776",
-		// })
+		res := Init()
 
-		// httpExpected := strings.Join([]string{
-		// 	"HTTP/1.1 200 Ok",
-		// 	"Content-Type: text/html",
-		// 	strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
-		// 	html + "\r\n",
-		// }, "\r\n")
+		res.Request = request.Create("GET", "/", make(types.Query), "HTTP/1.1", make(types.Headers), []byte{})
 
-		// if httpExpected != html {
-		// 	t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, html)
-		// }
+		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", view.Init(&ViewReader{}, "html"))
+
+		res.View("index", view.Data{
+			"name": name,
+		})
+
+		body := string(
+			strings.Join([]string{
+				`<!DOCTYPE html>`,
+				`<html lang="en">`,
+				`<head>`,
+				`  <meta charset="UTF-8">`,
+				`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
+				`  <title>View Render Page</title>`,
+				`</head>`,
+				`<body>`,
+				strings.Join([]string{"  <h1>Hello user ", name, "</h1>"}, ""),
+				`</body>`,
+				`</html>`,
+			}, "\r\n"),
+		)
+
+		httpExpected := strings.Join([]string{
+			"HTTP/1.1 200 Ok",
+			"Content-Type: text/html",
+			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n",
+			body + "\r\n",
+		}, "\r\n")
+
+		http := ParseHttp(res)
+
+		if httpExpected != http {
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
+		}
 	})
 }

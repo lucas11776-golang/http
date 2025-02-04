@@ -3,23 +3,20 @@ package response
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/lucas11776-golang/http/view"
 )
 
 // Comment
-func BodyRedirect(res *Response, path string) *Response {
-	res.Body([]byte(
-		strings.Join([]string{
-			`<!DOCTYPE html>`,
-			`<head>`,
-			`  <meta http-equiv="Refresh" content="0, url='` + path + `'">`,
-			`</head>`,
-			`<body>`,
-			`  <p>You will be redirected to ` + path + `</p>`,
-			`</body>`,
-			`</html>`,
-		}, "\r\n"),
-	))
-	return res.Header("content-type", "text/html; charset=utf-8").Status(HTTP_RESPONSE_TEMPORARY_REDIRECT)
+func BodyDefault(res *Response, data []byte) *Response {
+	res.body = data
+
+	return res
+}
+
+// Comment
+func BodyHtml(res *Response, html string) *Response {
+	return res.Header("content-type", "text/html").Body([]byte(html))
 }
 
 // Comment
@@ -36,25 +33,33 @@ func BodyJson(res *Response, value any) *Response {
 }
 
 // Comment
+func BodyRedirect(res *Response, path string) *Response {
+	return res.Html(strings.Join([]string{
+		`<!DOCTYPE html>`,
+		`<head>`,
+		`  <meta http-equiv="Refresh" content="0, url='` + path + `'">`,
+		`</head>`,
+		`<body>`,
+		`  <p>You will be redirected to ` + path + `</p>`,
+		`</body>`,
+		`</html>`,
+	}, "\r\n")).Status(HTTP_RESPONSE_TEMPORARY_REDIRECT)
+}
+
+// Comment
 func BodyDownload(res *Response, contentType string, filename string, binary []byte) *Response {
-	res.Header("content-type", contentType)
-	res.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	res.Header("content-type", contentType).Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	return res.Body(binary)
 }
 
-func BodyHtml(res *Response, html string) *Response {
-	res.Header("content-type", "text/html; charset=utf-8")
-	return res.Body([]byte(html))
-}
-
 // Comment
-func BodyView(res *Response, view string, data any) *Response {
-	return res
-}
+func BodyView(res *Response, v string, data view.Data) *Response {
+	html, err := res.Request.Server.Get("view").(*view.View).Read(v, data)
 
-// Comment
-func BodyDefault(res *Response, data []byte) *Response {
-	res.body = data
+	if err != nil {
+		// TODO Error page 500
+		return res
+	}
 
-	return res
+	return res.Html(string(html))
 }

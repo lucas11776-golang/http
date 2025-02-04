@@ -161,10 +161,7 @@ func (ctx *Response) Download(contentType string, filename string, binary []byte
 
 // Comment
 func (ctx *Response) View(view string, data view.Data) *Response {
-
-	// ctx.Request.Server
-
-	return ctx
+	return BodyView(ctx, view, data)
 }
 
 // Comment

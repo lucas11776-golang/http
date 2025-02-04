@@ -27,6 +27,19 @@ type Server struct {
 }
 
 // Comment
+func Init(address string, port int32, listener net.Listener) *Server {
+	return &Server{
+		address:        address,
+		port:           port,
+		MaxRequestSize: MAX_REQUEST_SIZE,
+		listener:       listener,
+		dependency: Dependencies{
+			"config": config.Init(),
+		},
+	}
+}
+
+// Comment
 func Serve(host string, port int32) (*Server, error) {
 	listener, err := net.Listen("tcp", strings.Join([]string{host, strconv.Itoa(int(port))}, ":"))
 
@@ -37,15 +50,7 @@ func Serve(host string, port int32) (*Server, error) {
 	arr := strings.Split(listener.Addr().String(), ":")
 	prt, _ := strconv.Atoi(arr[1])
 
-	return &Server{
-		address:        arr[0],
-		port:           int32(prt),
-		listener:       listener,
-		MaxRequestSize: MAX_REQUEST_SIZE,
-		dependency: Dependencies{
-			"config": config.Init(),
-		},
-	}, nil
+	return Init(arr[0], int32(prt), listener), nil
 }
 
 // Comment
