@@ -188,26 +188,12 @@ func TestHttpResponse(t *testing.T) {
 			"name": name,
 		})
 
-		body := string(
-			strings.Join([]string{
-				`<!DOCTYPE html>`,
-				`<html lang="en">`,
-				`<head>`,
-				`  <meta charset="UTF-8">`,
-				`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
-				`  <title>View Render Page</title>`,
-				`</head>`,
-				`<body>`,
-				strings.Join([]string{"  <h1>Hello user ", name, "</h1>"}, ""),
-				`</body>`,
-				`</html>`,
-			}, "\r\n"),
-		)
+		body := strings.Join([]string{"<h1>Hello user ", name, "</h1>"}, "")
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
 			"Content-Type: text/html",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len([]byte(body)))}, ": ") + "\r\n",
+			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n",
 			body + "\r\n",
 		}, "\r\n")
 
