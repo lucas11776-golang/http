@@ -46,6 +46,11 @@ type Web func(req *request.Request, res *response.Response) *response.Response
 type Ws func(req *request.Request, socket *ws.Ws)
 
 // Comment
+func Init() *RouterGroup {
+	return &RouterGroup{}
+}
+
+// Comment
 func (ctx *Route) Path() string {
 	return strings.Join(ctx.path, "/")
 }

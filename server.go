@@ -11,6 +11,7 @@ import (
 	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/view"
 )
 
 const MAX_REQUEST_SIZE = (1024 * 1000)
@@ -35,7 +36,7 @@ func newConnection(http *HTTP, conn *connection.Connection) {
 
 		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 
-		// res.Request = req
+		res.Request = req
 
 		if route == nil {
 			// Not found page
@@ -59,12 +60,19 @@ func newConnection(http *HTTP, conn *connection.Connection) {
 
 // Comment
 func (ctx *HTTP) Router() *router.RouterGroup {
-	return ctx.GetDependency("router").(*router.RouterGroup)
+	return ctx.Get("router").(*router.RouterGroup)
 }
 
 // comment
 func (ctx *HTTP) Route() *router.Router {
 	return ctx.Router().Router()
+}
+
+// Comment
+func (ctx *HTTP) SetView(views string, extension string) *HTTP {
+	ctx.Set("view", view.Init(view.ViewReader(views), extension))
+
+	return ctx
 }
 
 // Comment
@@ -79,7 +87,7 @@ func Server(address string, port int32) *HTTP {
 		Server: server,
 	}
 
-	http.SetDependency("router", &router.RouterGroup{})
+	http.Set("router", router.Init())
 
 	http.Connection(func(server *serve.Server, conn *connection.Connection) {
 		newConnection(http, conn)

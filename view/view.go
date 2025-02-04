@@ -2,6 +2,7 @@ package view
 
 import (
 	"io/fs"
+	"log"
 	"os"
 	"strings"
 
@@ -38,8 +39,14 @@ func (ctx *viewFs) cleanPath(path string) string {
 }
 
 // Comment
-func path(path string) string {
-	return strings.Trim(strings.ReplaceAll(path, "/", "\\"), "\\")
+func path(path ...string) string {
+	pth := []string{}
+
+	for _, p := range path {
+		pth = append(pth, strings.Trim(strings.ReplaceAll(p, "/", "\\"), "\\"))
+	}
+
+	return strings.Join(pth, "\\")
 }
 
 // Comment
@@ -79,8 +86,14 @@ func (ctx *viewReader) Open(name string) (fs.File, error) {
 
 // Comment
 func ViewReader(views string) fs.FS {
+	wd, err := os.Getwd()
+
+	if err != nil {
+		log.Fatalf("Failed to get current working dir in view reader: %s", err.Error())
+	}
+
 	return &viewReader{
-		dir: path(views),
+		dir: path(wd, views),
 	}
 }
 

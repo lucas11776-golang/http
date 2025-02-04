@@ -65,6 +65,7 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestGetIndexPage", func(t *testing.T) {
+
 		// r := req.CreateRequest().Header("accept", "text/html")
 
 		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))

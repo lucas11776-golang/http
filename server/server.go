@@ -5,12 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lucas11776-golang/http/config"
 	"github.com/lucas11776-golang/http/server/connection"
 )
 
 const MAX_REQUEST_SIZE int64 = (1024 * 1000)
-
-type Configuration map[string]string
 
 type ConnectionCallback func(server *Server, conn *connection.Connection)
 
@@ -23,7 +22,6 @@ type Server struct {
 	port           int32
 	listener       net.Listener
 	connection     []ConnectionCallback
-	configuration  Configuration
 	MaxRequestSize int64
 	dependency     Dependencies
 }
@@ -44,8 +42,9 @@ func Serve(host string, port int32) (*Server, error) {
 		port:           int32(prt),
 		listener:       listener,
 		MaxRequestSize: MAX_REQUEST_SIZE,
-		configuration:  make(Configuration),
-		dependency:     make(Dependencies),
+		dependency: Dependencies{
+			"config": config.Init(),
+		},
 	}, nil
 }
 
@@ -72,32 +71,14 @@ func (ctx *Server) Connection(callback ConnectionCallback) *Server {
 }
 
 // Comment
-func (ctx *Server) SetConfig(key string, value string) *Server {
-	ctx.configuration[key] = value
-
-	return ctx
-}
-
-// Comment
-func (ctx *Server) GetConfig(key string) string {
-	config, ok := ctx.configuration[key]
-
-	if !ok {
-		return ""
-	}
-
-	return config
-}
-
-// Comment
-func (ctx *Server) SetDependency(name string, dependency Dependency) *Server {
+func (ctx *Server) Set(name string, dependency Dependency) *Server {
 	ctx.dependency[name] = dependency
 
 	return ctx
 }
 
 // Comment
-func (ctx *Server) GetDependency(name string) Dependency {
+func (ctx *Server) Get(name string) Dependency {
 	dependency, ok := ctx.dependency[name]
 
 	if !ok {
