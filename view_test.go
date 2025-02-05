@@ -1,4 +1,4 @@
-package view
+package http
 
 import (
 	"embed"
@@ -29,14 +29,14 @@ func (ctx *ReaderTest) Views(name string) (scriggo.Files, error) {
 }
 
 func TestView(t *testing.T) {
-	view := Init(&ReaderTest{
+	view := InitView(&ReaderTest{
 		cache: make(scriggo.Files),
 	}, "html")
 
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)
 
-		data, err := view.Read("simple", Data{
+		data, err := view.Read("simple", ViewData{
 			"world": world,
 		})
 
@@ -52,7 +52,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestIfElse", func(t *testing.T) {
-		data, err := view.Read("if", Data{
+		data, err := view.Read("if", ViewData{
 			"age": 17,
 		})
 
@@ -66,7 +66,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 
-		data, err = view.Read("if", Data{
+		data, err = view.Read("if", ViewData{
 			"age": 18,
 		})
 
@@ -80,7 +80,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 
-		data, err = view.Read("if", Data{
+		data, err = view.Read("if", ViewData{
 			"age": 21,
 		})
 
@@ -98,7 +98,7 @@ func TestView(t *testing.T) {
 	t.Run("TestFor", func(t *testing.T) {
 		cities := []string{"Pretoria", "New York", "Cape Town"}
 
-		data, err := view.Read("for", Data{
+		data, err := view.Read("for", ViewData{
 			"cities": &cities,
 		})
 
@@ -120,7 +120,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestSwitch", func(t *testing.T) {
-		data, err := view.Read("switch", Data{
+		data, err := view.Read("switch", ViewData{
 			"role": "guest",
 		})
 
@@ -134,7 +134,7 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 
-		data, err = view.Read("switch", Data{
+		data, err = view.Read("switch", ViewData{
 			"role": "user",
 		})
 

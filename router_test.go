@@ -1,23 +1,29 @@
-package router
+package http
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
+	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/ws"
 )
+
+// Comment
+func makeRequest(method string, path string) *Request {
+	req, _ := NewRequest(method, path, "HTTP/1.1", make(types.Headers), strings.NewReader(""))
+
+	return req
+}
 
 func TestRouter(t *testing.T) {
 	t.Run("TestRouterAddWebRouteUsingRoute", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		route := router.Router().Route("GET", "/products/{id}", func(req *request.Request, res *response.Response) *response.Response {
+		route := router.Router().Route("GET", "/products/{id}", func(req *Request, res *Response) *Response {
 			return res.SetBody([]byte("<h1>Hello World</h1>")).SetHeader("content-type", "text/html")
 		})
 
-		route.Middleware(func(req *request.Request, res *response.Response, next Next) *response.Response {
+		route.Middleware(func(req *Request, res *Response, next Next) *Response {
 			return next()
 		})
 
@@ -27,11 +33,11 @@ func TestRouter(t *testing.T) {
 	t.Run("TestRouterAddWsRouteUsingRoute", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		route := router.Router().Ws("/position/moving", func(req *request.Request, ws *ws.Ws) {
+		route := router.Router().Ws("/position/moving", func(req *Request, ws *ws.Ws) {
 			// Ws staff
 		})
 
-		route.Middleware(func(req *request.Request, res *response.Response, next Next) *response.Response {
+		route.Middleware(func(req *Request, res *Response, next Next) *Response {
 			return next()
 		})
 
@@ -41,37 +47,37 @@ func TestRouter(t *testing.T) {
 	t.Run("TestRouterWebGroup", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		middleware := func(req *request.Request, res *response.Response, next Next) *response.Response {
+		middleware := func(req *Request, res *Response, next Next) *Response {
 			return next()
 		}
 
 		router.Router().Middleware(middleware).Group("/api", func(router *Router) {
-			router.Options("/*", func(req *request.Request, res *response.Response) *response.Response {
+			router.Options("/*", func(req *Request, res *Response) *Response {
 				return res
 			})
 			router.Group("/products", func(router *Router) {
-				router.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+				router.Get("/", func(req *Request, res *Response) *Response {
 					return res
 				})
-				router.Post("/", func(req *request.Request, res *response.Response) *response.Response {
+				router.Post("/", func(req *Request, res *Response) *Response {
 					return res
 				})
-				router.Put("/", func(req *request.Request, res *response.Response) *response.Response {
+				router.Put("/", func(req *Request, res *Response) *Response {
 					return res
 				})
-				router.Patch("/{id}", func(req *request.Request, res *response.Response) *response.Response {
+				router.Patch("/{id}", func(req *Request, res *Response) *Response {
 					return res
 				})
-				router.Delete("/{id}", func(req *request.Request, res *response.Response) *response.Response {
+				router.Delete("/{id}", func(req *Request, res *Response) *Response {
 					return res
 				})
-				router.Head("/{id}", func(req *request.Request, res *response.Response) *response.Response {
+				router.Head("/{id}", func(req *Request, res *Response) *Response {
 					return res
 				})
 			})
 		})
 
-		router.Router().Connect("/*", func(req *request.Request, res *response.Response) *response.Response {
+		router.Router().Connect("/*", func(req *Request, res *Response) *Response {
 			return res
 		})
 
@@ -88,12 +94,12 @@ func TestRouter(t *testing.T) {
 	t.Run("TestRouterWsGroup", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		middleware := func(req *request.Request, res *response.Response, next Next) *response.Response {
+		middleware := func(req *Request, res *Response, next Next) *Response {
 			return next()
 		}
 
 		router.Router().Middleware(middleware).Group("/position", func(router *Router) {
-			router.Ws("/change", func(req *request.Request, ws *ws.Ws) {
+			router.Ws("/change", func(req *Request, ws *ws.Ws) {
 				// Ws staff
 			})
 		})
@@ -104,35 +110,35 @@ func TestRouter(t *testing.T) {
 	t.Run("TestRouterWebMatch", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		router.Router().Connect("/*", func(req *request.Request, res *response.Response) *response.Response {
+		router.Router().Connect("/*", func(req *Request, res *Response) *Response {
 			return res
 		})
 		router.Router().Group("/api", func(router *Router) {
-			router.Options("/*", func(req *request.Request, res *response.Response) *response.Response {
+			router.Options("/*", func(req *Request, res *Response) *Response {
 				return res
 			})
 			router.Group("/products", func(router *Router) {
-				router.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+				router.Get("/", func(req *Request, res *Response) *Response {
 					return res
 				})
 				router.Group("{id}", func(router *Router) {
-					router.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+					router.Get("/", func(req *Request, res *Response) *Response {
 						return res
 					})
-					router.Post("/", func(req *request.Request, res *response.Response) *response.Response {
+					router.Post("/", func(req *Request, res *Response) *Response {
 						return res
 					})
 				})
 			})
 		})
 
-		TestingRoute(t, router.web, router.MatchWebRoute("CONNECT", "api/products"), 0, "CONNECT", "*", 0)
-		TestingRoute(t, router.web, router.MatchWebRoute("OPTIONS", "api/products/50"), 1, "OPTIONS", "api/*", 0)
-		TestingRoute(t, router.web, router.MatchWebRoute("GET", "api/products"), 2, "GET", "api/products", 0)
-		TestingRoute(t, router.web, router.MatchWebRoute("GET", "api/products/20"), 3, "GET", "api/products/{id}", 0)
-		TestingRoute(t, router.web, router.MatchWebRoute("POST", "api/products/20"), 4, "POST", "api/products/{id}", 0)
+		TestingRoute(t, router.web, router.MatchWebRoute(makeRequest("CONNECT", "api/products")), 0, "CONNECT", "*", 0)
+		TestingRoute(t, router.web, router.MatchWebRoute(makeRequest("OPTIONS", "api/products/50")), 1, "OPTIONS", "api/*", 0)
+		TestingRoute(t, router.web, router.MatchWebRoute(makeRequest("GET", "api/products")), 2, "GET", "api/products", 0)
+		TestingRoute(t, router.web, router.MatchWebRoute(makeRequest("GET", "api/products/20")), 3, "GET", "api/products/{id}", 0)
+		TestingRoute(t, router.web, router.MatchWebRoute(makeRequest("POST", "api/products/20")), 4, "POST", "api/products/{id}", 0)
 
-		route := router.MatchWebRoute("POST", "api/products/203")
+		route := router.MatchWebRoute(makeRequest("POST", "api/products/203"))
 
 		if route.Parameter("id") != "203" {
 			t.Fatalf("The route parameter is id is not %s but got %s", "203", route.Parameter("id"))
@@ -144,10 +150,10 @@ func TestRouter(t *testing.T) {
 
 		router.Router().Group("devices", func(router *Router) {
 			router.Group("/{device}", func(router *Router) {
-				router.Ws("/", func(req *request.Request, ws *ws.Ws) {
+				router.Ws("/", func(req *Request, ws *ws.Ws) {
 					// Ws staff
 				})
-				router.Ws("/position", func(req *request.Request, ws *ws.Ws) {
+				router.Ws("/position", func(req *Request, ws *ws.Ws) {
 					// Ws staff
 				})
 			})

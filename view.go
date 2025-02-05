@@ -1,4 +1,4 @@
-package view
+package http
 
 import (
 	"io/fs"
@@ -10,7 +10,7 @@ import (
 	"github.com/open2b/scriggo/native"
 )
 
-type Data map[string]interface{}
+type ViewData map[string]interface{}
 
 type viewWriter struct {
 	parsed []byte
@@ -29,6 +29,10 @@ type Reader interface {
 type View struct {
 	fs        Reader
 	extension string
+}
+
+type ViewInterface interface {
+	Read(view string, data ViewData) ([]byte, error)
 }
 
 // Comment
@@ -112,7 +116,7 @@ func ViewReader(views string) *viewReader {
 }
 
 // Comment
-func Init(fsys Reader, extension string) *View {
+func InitView(fsys Reader, extension string) *View {
 	return &View{
 		fs:        fsys,
 		extension: extension,
@@ -120,7 +124,7 @@ func Init(fsys Reader, extension string) *View {
 }
 
 // Comment
-func (ctx *View) Read(view string, data Data) ([]byte, error) {
+func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 	globals := native.Declarations{}
 
 	if data != nil {

@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/strings"
 )
 
 func TestSession(t *testing.T) {
-	t.Run("TestGetSession", func(t *testing.T) {
-		sessions := Init("session", []byte(strings.Random(10)))
+	sessions := Init("session", []byte(strings.Random(10)))
 
-		req, err := request.Create("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+	t.Run("TestGetSession", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())

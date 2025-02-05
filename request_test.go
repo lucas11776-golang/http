@@ -1,18 +1,18 @@
-package request
+package http
 
 import (
 	"testing"
 )
 
 // Comment
-func TestParse(t *testing.T) {
+func TestRequest(t *testing.T) {
 	const httpText = "POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1\r\n" +
 		"HOST: example.com\r\n" +
 		"Content-Type: application/x-www-form-urlencoded\r\n" +
 		"Content-Length: 6\r\n\r\n" +
 		"user=1\r\n"
 
-	req, _ := ParseHttp(httpText)
+	req, _ := ParseHttpRequest(httpText)
 
 	t.Run("TestMethod", func(t *testing.T) {
 		if req.Method != "POST" {

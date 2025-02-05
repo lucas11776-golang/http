@@ -1,4 +1,4 @@
-package response
+package http
 
 import (
 	"bytes"
@@ -10,10 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
-	"github.com/lucas11776-golang/http/view"
 	"github.com/open2b/scriggo"
 )
 
@@ -30,20 +28,47 @@ func (ctx *ViewReaderBody) Open(name string) (fs.File, error) {
 
 // Comment
 func (ctx *ViewReaderBody) Views(name string) (scriggo.Files, error) {
-	return view.ReadViewCache(ctx, ctx.cache, name)
+	return ReadViewCache(ctx, ctx.cache, name)
 }
 
-func TestBody(t *testing.T) {
+func TestResponse(t *testing.T) {
+	t.Run("TestResponseOk", func(t *testing.T) {
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK)
+
+		httpExpected := "HTTP/1.1 200 Ok\r\n" +
+			"Content-Length: 0\r\n\r\n"
+
+		http := ParseHttpResponse(res)
+
+		if httpExpected != http {
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
+		}
+	})
+
+	t.Run("TestResponseContentTypeHeader", func(t *testing.T) {
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).SetHeader("content-type", "application/json")
+
+		httpExpected := "HTTP/1.1 200 Ok\r\n" +
+			"Content-Type: application/json\r\n" +
+			"Content-Length: 0\r\n\r\n"
+
+		http := ParseHttpResponse(res)
+
+		if httpExpected != http {
+			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
+		}
+	})
+
 	t.Run("TestResponseBody", func(t *testing.T) {
 		body := []byte(`{"id": 1, "email": "jeo@doe.com"}`)
-		res := Init().SetStatus(HTTP_RESPONSE_OK).SetHeader("content-type", "application/json").SetBody(body)
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).SetHeader("content-type", "application/json").SetBody(body)
 
 		httpExpected := "HTTP/1.1 200 Ok\r\n" +
 			"Content-Type: application/json\r\n" +
 			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n\r\n" +
 			string(body) + "\r\n"
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
@@ -66,7 +91,7 @@ func TestBody(t *testing.T) {
 			}, "\r\n"),
 		)
 
-		res := Init().SetStatus(HTTP_RESPONSE_OK).Html(string(html))
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Html(string(html))
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
@@ -75,7 +100,7 @@ func TestBody(t *testing.T) {
 			string(html) + "\r\n",
 		}, "\r\n")
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
@@ -92,14 +117,14 @@ func TestBody(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(j)
-		res := Init().SetStatus(HTTP_RESPONSE_OK).Json(j)
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Json(j)
 
 		httpExpected := "HTTP/1.1 200 Ok\r\n" +
 			"Content-Type: application/json\r\n" +
 			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n\r\n" +
 			string(body) + "\r\n"
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
@@ -120,7 +145,7 @@ func TestBody(t *testing.T) {
 			}, "\r\n"),
 		)
 
-		res := Init().SetStatus(HTTP_RESPONSE_OK).Redirect("authentication/login")
+		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Redirect("authentication/login")
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 307 Temporary Redirect",
@@ -129,7 +154,7 @@ func TestBody(t *testing.T) {
 			string(html) + "\r\n",
 		}, "\r\n")
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		// TODO Test will fail sometimes because map does not go by order on loop
 		if httpExpected != http {
@@ -140,7 +165,7 @@ func TestBody(t *testing.T) {
 	t.Run("TestResponseDownload", func(t *testing.T) {
 		file := []byte("Hello World: " + string(strconv.Itoa(int(rand.Float64()*1000))))
 
-		res := Init().Download("text/plain; charset: utf-8", "hello.txt", file)
+		res := InitResponse().Download("text/plain; charset: utf-8", "hello.txt", file)
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
@@ -150,7 +175,7 @@ func TestBody(t *testing.T) {
 			string(file) + "\r\n",
 		}, "\r\n")
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
@@ -160,9 +185,9 @@ func TestBody(t *testing.T) {
 	t.Run("TestResponseView", func(t *testing.T) {
 		name := strings.Join([]string{"lucas", strconv.Itoa(int(rand.Float64() * 1000))}, "")
 
-		res := Init()
+		res := InitResponse()
 
-		req, err := request.Create("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+		req, err := NewRequest("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
@@ -170,13 +195,13 @@ func TestBody(t *testing.T) {
 
 		res.Request = req
 
-		vw := view.Init(&ViewReaderBody{
+		vw := InitView(&ViewReaderBody{
 			cache: make(scriggo.Files),
 		}, "html")
 
 		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", vw)
 
-		res.View("index", view.Data{
+		res.View("home", ViewData{
 			"name": name,
 		})
 
@@ -189,7 +214,7 @@ func TestBody(t *testing.T) {
 			body + "\r\n",
 		}, "\r\n")
 
-		http := ParseHttp(res)
+		http := ParseHttpResponse(res)
 
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)

@@ -5,14 +5,10 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/router"
 	"github.com/lucas11776-golang/http/server"
 	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
-	"github.com/lucas11776-golang/http/view"
 )
 
 const MAX_REQUEST_SIZE = 1024 * 1000
@@ -24,7 +20,8 @@ type HTTP struct {
 // Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
 	conn.Message(func(r *http.Request, data []byte) {
-		req, err := request.ParseHttp(string(data))
+
+		req, err := ParseHttpRequest(string(data))
 
 		if err != nil {
 			// Invalid request page
@@ -34,9 +31,9 @@ func newConnection(htp *HTTP, conn *connection.Connection) {
 		req.Request = r
 		req.Server = htp.Server
 
-		route := htp.Router().MatchWebRoute(req.Method, req.Path())
+		route := htp.Router().MatchWebRoute(req)
 
-		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 
 		res.Request = req
 
@@ -61,18 +58,18 @@ func newConnection(htp *HTTP, conn *connection.Connection) {
 }
 
 // Comment
-func (ctx *HTTP) Router() *router.RouterGroup {
-	return ctx.Get("router").(*router.RouterGroup)
+func (ctx *HTTP) Router() *RouterGroup {
+	return ctx.Get("router").(*RouterGroup)
 }
 
 // comment
-func (ctx *HTTP) Route() *router.Router {
+func (ctx *HTTP) Route() *Router {
 	return ctx.Router().Router()
 }
 
 // Comment
 func (ctx *HTTP) SetView(views string, extension string) *HTTP {
-	ctx.Set("view", view.Init(view.ViewReader(views), extension))
+	ctx.Set("view", InitView(ViewReader(views), extension))
 
 	return ctx
 }
@@ -89,7 +86,7 @@ func Server(address string, port int32) *HTTP {
 		Server: server,
 	}
 
-	http.Set("router", router.Init())
+	http.Set("router", InitRouter())
 
 	http.Connection(func(server *serve.Server, conn *connection.Connection) {
 		newConnection(http, conn)

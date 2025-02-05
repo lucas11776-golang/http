@@ -1,10 +1,8 @@
 package session
 
 import (
-	"net/http"
-
 	"github.com/gorilla/sessions"
-	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http"
 )
 
 type Sessions struct {
@@ -14,7 +12,7 @@ type Sessions struct {
 
 type Session struct {
 	session *sessions.Session
-	request *request.Request
+	request *http.Request
 }
 
 // Comment
@@ -26,7 +24,7 @@ func Init(name string, key []byte) *Sessions {
 }
 
 // Comment
-func (ctx *Sessions) Session(req *request.Request) (*Session, error) {
+func (ctx *Sessions) Session(req *http.Request) (*Session, error) {
 	session, err := ctx.store.Get(req.Request, ctx.name)
 
 	if err != nil {
@@ -39,13 +37,13 @@ func (ctx *Sessions) Session(req *request.Request) (*Session, error) {
 	}, nil
 }
 
-type W http.ResponseWriter
+// type W http.ResponseWriter
 
 // Comment
 func (ctx *Session) Set(key string, value string) *Session {
 	ctx.session.Values[key] = value
 
-	// ctx.session.Save(ctx.request.Request, ctx.request.Response)
+	ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
 
 	return ctx
 }

@@ -6,9 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/router"
 	"github.com/lucas11776-golang/http/types"
 	req "github.com/lucas11776-golang/http/utils/request"
 )
@@ -21,16 +18,16 @@ func TestServerWeb(t *testing.T) {
 		(User{ID: 2, Email: "jeo@doe.com"}),
 	}
 
-	server.Route().Group("api", func(route *router.Router) {
-		route.Group("users", func(route *router.Router) {
-			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Group("api", func(route *Router) {
+		route.Group("users", func(route *Router) {
+			route.Get("/", func(req *Request, res *Response) *Response {
 				return res.Json(users)
 			})
-			route.Post("/", func(req *request.Request, res *response.Response) *response.Response {
-				return res.SetStatus(response.HTTP_RESPONSE_OK).Json(userCreatedMessage)
+			route.Post("/", func(req *Request, res *Response) *Response {
+				return res.SetStatus(HTTP_RESPONSE_OK).Json(userCreatedMessage)
 			}).Middleware(AuthorizationGuard)
-			route.Group("{id}", func(route *router.Router) {
-				route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+			route.Group("{id}", func(route *Router) {
+				route.Get("/", func(req *Request, res *Response) *Response {
 					return res
 				})
 			})
@@ -50,8 +47,8 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
 		}
 
-		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(users)
-		expectedHttp := response.ParseHttp(res)
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(users)
+		expectedHttp := ParseHttpResponse(res)
 
 		if expectedHttp != http {
 			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
@@ -77,9 +74,9 @@ var userCreatedMessage = Message{
 }
 
 // Comment
-func AuthorizationGuard(req *request.Request, res *response.Response, next router.Next) *response.Response {
+func AuthorizationGuard(req *Request, res *Response, next Next) *Response {
 	if req.GetHeader("authorization") != AuthKey {
-		return res.SetStatus(response.HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
+		return res.SetStatus(HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
 	}
 
 	return next()

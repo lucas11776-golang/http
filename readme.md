@@ -30,15 +30,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
+	
 	"github.com/lucas11776-golang/http"
 )
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Get("/", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
 		return res.Html("<h1>Hello World</h1>")
 	})
 
@@ -66,18 +65,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/lucas11776-golang/http/router"
 	"github.com/lucas11776-golang/http"
 )
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Group("api", func(route *router.Router) {
-		route.Group("products", func(route *router.Router) {
+	server.Route().Group("api", func(route *http.Router) {
+		route.Group("products", func(route *http.Router) {
 			// Some routes
 		})
-		route.Group("invoices", func(route *router.Router) {
+		route.Group("invoices", func(route *http.Router) {
 			// Some routes
 		})
 	})
@@ -98,18 +96,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/router"
+
 	"github.com/lucas11776-golang/http"
 )
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Group("products", func(route *router.Router) {
-		route.Group("{product}", func(route *router.Router) {
-			route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Group("products", func(route *http.Router) {
+		route.Group("{product}", func(route *http.Router) {
+			route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
 				return res.Body([]byte("<h1>Product: " + "</h1>")).Header("content-type", "text/html")
 			})
 		})
@@ -131,29 +127,27 @@ package main
 
 import (
 	"fmt"
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/router"
+
 	"github.com/lucas11776-golang/http"
 )
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Group("/", func(route *router.Router) {
-		route.Get("body", func(req *request.Request, res *response.Response) *response.Response {
+	server.Route().Group("/", func(route *http.Router) {
+		route.Get("body", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Body([]byte("Hello World!!!")).Header("content-type", "text/plain; charset: utf-8")
 		})
-		route.Get("html", func(req *request.Request, res *response.Response) *response.Response {
+		route.Get("html", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Html("<h1 style='color: green; font-size: 3em;'>Hello World!!!</h1>")
 		})
-		route.Get("json", func(req *request.Request, res *response.Response) *response.Response {
+		route.Get("json", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Html("<h1 style='color: green; font-size: 3em;'>Hello World!!!</h1>")
 		})
-		route.Get("redirect", func(req *request.Request, res *response.Response) *response.Response {
+		route.Get("redirect", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Redirect("http://www.google.com/")
 		})
-		route.Get("download", func(req *request.Request, res *response.Response) *response.Response {
+		route.Get("download", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Download("text/plain; charset=utf-8", "hello.txt", []byte("Hello World!!!"))
 		})
 	})
@@ -176,9 +170,6 @@ import (
 	"fmt"
 
 	"github.com/lucas11776-golang/http"
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
-	"github.com/lucas11776-golang/http/view"
 )
 
 func main() {
@@ -186,8 +177,8 @@ func main() {
 
 	server.SetView("views", "html")
 
-	server.Route().Get("/", func(req *request.Request, res *response.Response) *response.Response {
-		return res.View("index", view.Data{
+	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
+		return res.View("index", http.ViewData{
 			"name": "lucas11776",
 		})
 	})
@@ -224,7 +215,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/lucas11776-golang/http/request"
+
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/ws"
 )
@@ -232,7 +223,7 @@ import (
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Ws("/", func(req *request.Request, socket *ws.Ws) {
+	server.Route().Ws("/", func(req *http.Request, socket *ws.Ws) {
 		socket.OnReady(func(socket *ws.Ws) {
 			socket.OnMessage(func(data []byte) {
 				fmt.Println("On Message:", string(data))

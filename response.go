@@ -1,14 +1,16 @@
-package response
+package http
 
 import (
+	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
-	"github.com/lucas11776-golang/http/view"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Status int
@@ -80,14 +82,10 @@ const (
 )
 
 type Response struct {
-	// protocol string
-	// status     Status
-	// statusText string
-	// headers types.Headers
-	body    []byte
-	Request *request.Request
-	Writer  *Writer
 	*http.Response
+	_Body   []byte
+	Writer  *Writer
+	Request *Request
 }
 
 type Writer struct {
@@ -110,7 +108,7 @@ func (ctx *Writer) WriteHeader(status int) {
 }
 
 // Comment
-func Create(protocol string, status Status, headers types.Headers, body []byte) *Response {
+func NewResponse(protocol string, status Status, headers types.Headers, body []byte) *Response {
 	res := &Response{
 		Response: &http.Response{
 			Proto:  protocol,
@@ -125,8 +123,8 @@ func Create(protocol string, status Status, headers types.Headers, body []byte) 
 }
 
 // Comment
-func Init() *Response {
-	return Create("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+func InitResponse() *Response {
+	return NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 }
 
 // Comment
@@ -145,32 +143,91 @@ func (ctx *Response) SetHeader(key string, value string) *Response {
 
 // Comment
 func (ctx *Response) SetBody(body []byte) *Response {
-	return BodyDefault(ctx, body)
+	ctx._Body = body
+
+	return ctx
 }
 
 // Comment
 func (ctx *Response) Html(html string) *Response {
-	return BodyHtml(ctx, html)
+	return ctx.SetHeader("content-type", "text/html").SetBody([]byte(html))
 }
 
 // Comment
 func (ctx *Response) Json(v any) *Response {
-	return BodyJson(ctx, v)
+	ctx.SetHeader("content-type", "application/json")
+
+	data, err := json.Marshal(v)
+
+	if err != nil {
+		return ctx.SetBody([]byte("{}"))
+	}
+
+	return ctx.SetBody(data)
 }
 
 // Comment
 func (ctx *Response) Redirect(path string) *Response {
-	return BodyRedirect(ctx, path)
+	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(strings.Join([]string{
+		`<!DOCTYPE html>`,
+		`<head>`,
+		`  <meta http-equiv="Refresh" content="0, url='` + path + `'">`,
+		`</head>`,
+		`<body>`,
+		`  <p>You will be redirected to ` + path + `</p>`,
+		`</body>`,
+		`</html>`,
+	}, "\r\n"))
 }
 
 // Comment
 func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
-	return BodyDownload(ctx, contentType, filename, binary)
+	ctx.SetHeader("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	ctx.SetHeader("content-type", contentType)
+
+	return ctx.SetBody(binary)
 }
 
 // Comment
-func (ctx *Response) View(view string, data view.Data) *Response {
-	return BodyView(ctx, view, data)
+func (ctx *Response) View(view string, data ViewData) *Response {
+	html, err := ctx.Request.Server.Get("view").(*View).Read(view, data)
+
+	if err != nil {
+		// TODO Error page 500
+		return ctx
+	}
+
+	return ctx.Html(string(html))
+}
+
+// Comment
+func ParseHttpResponse(res *Response) string {
+	http := []string{}
+
+	http = append(http, strings.Join([]string{res.Proto, res.Status}, " "))
+
+	keys := make([]string, 0, len(res.Header))
+
+	for k := range res.Header {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		k := cases.Title(language.English).String(key)
+		v := strings.Join(res.Header[key], ";")
+
+		http = append(http, strings.Join([]string{k, v}, ": "))
+	}
+
+	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res._Body))}, ": "))
+
+	if len(res._Body) == 0 {
+		return strings.Join(append(http, "\r\n"), "\r\n")
+	}
+
+	return strings.Join(append(http, strings.Join([]string{"\r\n", string(res._Body), "\r\n"}, "")), "\r\n")
 }
 
 // Comment

@@ -1,19 +1,17 @@
-package router
+package http
 
 import (
 	"reflect"
 	"regexp"
 	"strings"
 
-	"github.com/lucas11776-golang/http/request"
-	"github.com/lucas11776-golang/http/response"
 	str "github.com/lucas11776-golang/http/utils/strings"
 	"github.com/lucas11776-golang/http/ws"
 )
 
-type Next func() *response.Response
+type Next func() *Response
 
-type Middleware func(req *request.Request, res *response.Response, next Next) *response.Response
+type Middleware func(req *Request, res *Response, next Next) *Response
 
 type Parameters map[string]string
 
@@ -41,12 +39,12 @@ type Router struct {
 
 type Group func(route *Router)
 
-type Web func(req *request.Request, res *response.Response) *response.Response
+type Web func(req *Request, res *Response) *Response
 
-type Ws func(req *request.Request, socket *ws.Ws)
+type Ws func(req *Request, socket *ws.Ws)
 
 // Comment
-func Init() *RouterGroup {
+func InitRouter() *RouterGroup {
 	return &RouterGroup{}
 }
 
@@ -104,8 +102,8 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 	}
 
 	switch rt[0].Type().String() {
-	case "*response.Response":
-		return []byte(response.ParseHttp((rt[0].Interface().(*response.Response))))
+	case "*http.Response":
+		return []byte(ParseHttpResponse((rt[0].Interface().(*Response))))
 	default:
 		return []byte("")
 	}
@@ -163,8 +161,8 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 }
 
 // Comment
-func (ctx *RouterGroup) MatchWebRoute(method string, uri string) *Route {
-	route, parameters := routeMatch(ctx.web, method, uri)
+func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
+	route, parameters := routeMatch(ctx.web, req.Method, req.Path())
 
 	if route == nil {
 		return nil
