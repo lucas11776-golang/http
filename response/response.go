@@ -1,19 +1,17 @@
 package response
 
 import (
-	"sort"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/types"
+	h "github.com/lucas11776-golang/http/utils/headers"
 	"github.com/lucas11776-golang/http/view"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
-type Status int16
+type Status int
 
 const (
 	HTTP_RESPONSE_CONTINUE                        Status = 100
@@ -81,61 +79,72 @@ const (
 	HTTP_RESPONSE_NETWORK_AUTHENTICATION_REQUIRED Status = 511
 )
 
-type ResponseType string
-
-const (
-// RESPONSE_TYPE_NEXT     ResponseType = "next"
-// RESPONSE_TYPE_DATA     ResponseType = "data"
-// RESPONSE_TYPE_VIEW     ResponseType = "view"
-// RESPONSE_TYPE_REDIRECT ResponseType = "redirect"
-// RESPONSE_TYPE_DOWNLOAD ResponseType = "download"
-)
-
 type Response struct {
-	format     ResponseType
-	protocol   string
-	status     Status
-	statusText string
-	headers    types.Headers
-	body       []byte
-	Request    *request.Request
+	// protocol string
+	// status     Status
+	// statusText string
+	// headers types.Headers
+	body    []byte
+	Request *request.Request
+	Writer  *Writer
+	*http.Response
+}
+
+type Writer struct {
+	response *Response
+}
+
+// Comment
+func (ctx *Writer) Header() http.Header {
+	return ctx.response.Header
+}
+
+// Comment
+func (ctx *Writer) Write([]byte) (int, error) {
+	return 0, nil
+}
+
+// Comment
+func (ctx *Writer) WriteHeader(status int) {
+	ctx.response.Status = strings.Join([]string{strconv.Itoa(status), StatusText(Status(status))}, "")
 }
 
 // Comment
 func Create(protocol string, status Status, headers types.Headers, body []byte) *Response {
-	return &Response{
-		protocol: protocol,
-		status:   status,
-		headers:  headers,
-		body:     body,
+	res := &Response{
+		Response: &http.Response{
+			Proto:  protocol,
+			Status: strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
+			Header: h.ToHeader(headers),
+		},
 	}
+
+	res.Writer = &Writer{response: res}
+
+	return res
 }
 
 // Comment
 func Init() *Response {
-	return &Response{
-		status:   200,
-		protocol: "HTTP/1.1",
-		headers:  make(types.Headers),
-	}
+	return Create("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 }
 
 // Comment
-func (ctx *Response) Status(status Status) *Response {
-	ctx.status = status
+func (ctx *Response) SetStatus(status Status) *Response {
+	ctx.Status = strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " ")
 
 	return ctx
 }
 
 // Comment
-func (ctx *Response) Header(key string, value string) *Response {
-	ctx.headers[key] = value
+func (ctx *Response) SetHeader(key string, value string) *Response {
+	ctx.Header[key] = strings.Split(value, ";")
 
 	return ctx
 }
 
 // Comment
-func (ctx *Response) Body(body []byte) *Response {
+func (ctx *Response) SetBody(body []byte) *Response {
 	return BodyDefault(ctx, body)
 }
 
@@ -165,34 +174,7 @@ func (ctx *Response) View(view string, data view.Data) *Response {
 }
 
 // Comment
-func ParseHttp(res *Response) string {
-	http := []string{}
-
-	http = append(http, strings.Join([]string{res.protocol, strconv.Itoa(int(res.status)), getStatusText(res.status)}, " "))
-
-	keys := make([]string, 0, len(res.headers))
-
-	for k := range res.headers {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		http = append(http, strings.Join([]string{cases.Title(language.English).String(key), res.headers[key]}, ": "))
-	}
-
-	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res.body))}, ": "))
-
-	if len(res.body) == 0 {
-		return strings.Join(append(http, "\r\n"), "\r\n")
-	}
-
-	return strings.Join(append(http, strings.Join([]string{"\r\n", string(res.body), "\r\n"}, "")), "\r\n")
-}
-
-// Comment
-func getStatusText(status Status) string {
+func StatusText(status Status) string {
 	switch status {
 	case HTTP_RESPONSE_CONTINUE:
 		return "Continue"
@@ -321,6 +303,6 @@ func getStatusText(status Status) string {
 	case HTTP_RESPONSE_NETWORK_AUTHENTICATION_REQUIRED:
 		return "Network Authentication Required"
 	default:
-		return ""
+		return "Ok"
 	}
 }

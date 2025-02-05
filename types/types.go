@@ -1,5 +1,7 @@
 package types
 
+import "github.com/open2b/scriggo"
+
 type Headers map[string]string
 
 type Query map[string]string
@@ -9,3 +11,5 @@ type File struct {
 	Type string
 	Data []byte
 }
+
+type Fs scriggo.Files

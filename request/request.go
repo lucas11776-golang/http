@@ -8,6 +8,7 @@ import (
 
 	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
+	h "github.com/lucas11776-golang/http/utils/headers"
 )
 
 type Request struct {
@@ -17,35 +18,16 @@ type Request struct {
 }
 
 // Comment
-func toHeader(headers types.Headers) http.Header {
-	h := make(http.Header)
-
-	for k, v := range headers {
-		h[k] = []string{v}
-	}
-
-	return h
-}
-
-// Comment
 func Create(method string, path string, protocol string, headers types.Headers, body io.Reader) (*Request, error) {
-	r, err := http.NewRequest(method, path, strings.NewReader(""))
+	req, err := http.NewRequest(method, path, strings.NewReader(""))
 
 	if err != nil {
 		return nil, err
 	}
 
-	req := &Request{Request: r}
+	req.Header = h.ToHeader(headers)
 
-	// url, _ := url.Parse(path)
-
-	// req.Method = method
-	// req.URL = url
-	// req.RequestURI = path
-	// req.Proto = protocol
-	req.Header = toHeader(headers)
-
-	return req, nil
+	return &Request{Request: req}, nil
 }
 
 // Comment

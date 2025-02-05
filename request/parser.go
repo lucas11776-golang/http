@@ -1,11 +1,10 @@
-package parser
+package request
 
 import (
 	"bytes"
 	"fmt"
 	"strings"
 
-	"github.com/lucas11776-golang/http/request"
 	"github.com/lucas11776-golang/http/types"
 )
 
@@ -59,6 +58,7 @@ func HttpContent(http []string) (*Content, error) {
 
 		if key == "host" {
 			content.host = value
+
 			continue
 		}
 
@@ -69,7 +69,7 @@ func HttpContent(http []string) (*Content, error) {
 }
 
 // Comment
-func ParseHttp(http string) (*request.Request, error) {
+func ParseHttp(http string) (*Request, error) {
 	hp := strings.Split(http, "\r\n")
 
 	header, err := HttpHeader(hp)
@@ -84,7 +84,7 @@ func ParseHttp(http string) (*request.Request, error) {
 		return nil, err
 	}
 
-	req, err := request.Create(header.method, header.path, header.protocol, content.headers, bytes.NewReader(content.body))
+	req, err := Create(header.method, header.path, header.protocol, content.headers, bytes.NewReader(content.body))
 
 	if err != nil {
 		return nil, err

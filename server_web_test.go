@@ -27,7 +27,7 @@ func TestServerWeb(t *testing.T) {
 				return res.Json(users)
 			})
 			route.Post("/", func(req *request.Request, res *response.Response) *response.Response {
-				return res.Status(response.HTTP_RESPONSE_OK).Json(userCreatedMessage)
+				return res.SetStatus(response.HTTP_RESPONSE_OK).Json(userCreatedMessage)
 			}).Middleware(AuthorizationGuard)
 			route.Group("{id}", func(route *router.Router) {
 				route.Get("/", func(req *request.Request, res *response.Response) *response.Response {
@@ -79,7 +79,7 @@ var userCreatedMessage = Message{
 // Comment
 func AuthorizationGuard(req *request.Request, res *response.Response, next router.Next) *response.Response {
 	if req.GetHeader("authorization") != AuthKey {
-		return res.Status(response.HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
+		return res.SetStatus(response.HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
 	}
 
 	return next()

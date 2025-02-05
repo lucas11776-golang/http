@@ -16,20 +16,20 @@ func BodyDefault(res *Response, data []byte) *Response {
 
 // Comment
 func BodyHtml(res *Response, html string) *Response {
-	return res.Header("content-type", "text/html").Body([]byte(html))
+	return res.SetHeader("content-type", "text/html").SetBody([]byte(html))
 }
 
 // Comment
 func BodyJson(res *Response, value any) *Response {
-	res.Header("content-type", "application/json")
+	res.SetHeader("content-type", "application/json")
 
 	data, err := json.Marshal(value)
 
 	if err != nil {
-		return res.Body([]byte("{}"))
+		return res.SetBody([]byte("{}"))
 	}
 
-	return res.Body(data)
+	return res.SetBody(data)
 }
 
 // Comment
@@ -43,13 +43,13 @@ func BodyRedirect(res *Response, path string) *Response {
 		`  <p>You will be redirected to ` + path + `</p>`,
 		`</body>`,
 		`</html>`,
-	}, "\r\n")).Status(HTTP_RESPONSE_TEMPORARY_REDIRECT)
+	}, "\r\n")).SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT)
 }
 
 // Comment
 func BodyDownload(res *Response, contentType string, filename string, binary []byte) *Response {
-	res.Header("content-type", contentType).Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	return res.Body(binary)
+	res.SetHeader("content-type", contentType).SetHeader("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	return res.SetBody(binary)
 }
 
 // Comment

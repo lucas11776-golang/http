@@ -14,7 +14,7 @@ func TestRouter(t *testing.T) {
 		router := &RouterGroup{}
 
 		route := router.Router().Route("GET", "/products/{id}", func(req *request.Request, res *response.Response) *response.Response {
-			return res.Body([]byte("<h1>Hello World</h1>")).Header("content-type", "text/html")
+			return res.SetBody([]byte("<h1>Hello World</h1>")).SetHeader("content-type", "text/html")
 		})
 
 		route.Middleware(func(req *request.Request, res *response.Response, next Next) *response.Response {
