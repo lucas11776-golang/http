@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/lucas11776-golang/http/request"
+	"github.com/lucas11776-golang/http/request/parser"
 	"github.com/lucas11776-golang/http/response"
 	"github.com/lucas11776-golang/http/router"
 	"github.com/lucas11776-golang/http/server"
@@ -24,7 +24,7 @@ type HTTP struct {
 // Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
 	conn.Message(func(r *http.Request, data []byte) {
-		req, err := request.ParseHttp(string(data))
+		req, err := parser.ParseHttp(string(data))
 
 		if err != nil {
 			// Invalid request page
@@ -34,7 +34,7 @@ func newConnection(htp *HTTP, conn *connection.Connection) {
 		req.Request = r
 		req.Server = htp.Server
 
-		route := htp.Router().MatchWebRoute(req.Method(), req.Path())
+		route := htp.Router().MatchWebRoute(req.Method, req.Path())
 
 		res := response.Create("HTTP/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 

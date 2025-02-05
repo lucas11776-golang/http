@@ -78,7 +78,7 @@ var userCreatedMessage = Message{
 
 // Comment
 func AuthorizationGuard(req *request.Request, res *response.Response, next router.Next) *response.Response {
-	if req.Header("authorization") != AuthKey {
+	if req.GetHeader("authorization") != AuthKey {
 		return res.Status(response.HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
 	}
 

@@ -1,6 +1,7 @@
 package response
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"io/fs"
@@ -188,7 +189,13 @@ func TestHttpResponse(t *testing.T) {
 
 		res := Init()
 
-		res.Request = request.Create("GET", "/", make(types.Query), "HTTP/1.1", make(types.Headers), []byte{})
+		req, err := request.Create("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		res.Request = req
 
 		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", view.Init(&ViewReader{
 			cache: make(scriggo.Files),

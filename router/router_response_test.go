@@ -1,6 +1,7 @@
 package router
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -25,7 +26,12 @@ func TestRouterRouteResponse(t *testing.T) {
 			return res.Json(data)
 		})
 
-		req := request.Create("GET", "/", make(types.Query), "github.com/lucas11776-golang/http/1.1", make(types.Headers), []byte(""))
+		req, err := request.Create("GET", "/", "github.com/lucas11776-golang/http/1.1", make(types.Headers), bytes.NewReader([]byte("")))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
 		res := response.Create("github.com/lucas11776-golang/http/1.1", response.HTTP_RESPONSE_OK, make(types.Headers), []byte(""))
 
 		httpExpected := response.ParseHttp(res.Json(data))
