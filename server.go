@@ -11,47 +11,49 @@ import (
 	"github.com/lucas11776-golang/http/types"
 )
 
-const MAX_REQUEST_SIZE = 1024 * 1000
-
 type HTTP struct {
 	*serve.Server
 }
 
 // Comment
+func handleHTTP1_1(htp *HTTP, req *Request) {
+	route := htp.Router().MatchWebRoute(req)
+
+	if route == nil {
+		// Not found page
+		return
+	}
+
+	http := route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
+
+	err := req.Conn.Write(http)
+
+	if err != nil {
+		return
+	}
+
+	req.Conn.Close()
+}
+
+// Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
-	conn.Message(func(r *http.Request, data []byte) {
-
-		req, err := ParseHttpRequest(string(data))
-
-		if err != nil {
-			// Invalid request page
-			return
+	conn.Message(func(r *http.Request) {
+		req := &Request{
+			Request:  r,
+			Server:   htp.Server,
+			Response: NewResponse(r.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
+			Conn:     conn,
 		}
 
-		req.Request = r
-		req.Server = htp.Server
+		req.Response.Request = req
 
-		route := htp.Router().MatchWebRoute(req)
-
-		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{})
-
-		res.Request = req
-
-		if route == nil {
-			// Not found page
-			return
+		switch req.Protocol() {
+		case "HTTP/1.1":
+			handleHTTP1_1(htp, req)
+			break
+		default:
+			conn.Close()
 		}
-
-		http := route.Call(reflect.ValueOf(req), reflect.ValueOf(res))
-
-		err = conn.Write(http)
-
-		if err != nil {
-			// Log error
-			return
-		}
-
-		conn.Close()
 	})
 
 	conn.Listen()

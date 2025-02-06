@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"strings"
 
 	"github.com/lucas11776-golang/http/server"
+	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
 )
 
 type Request struct {
 	*http.Request
-	Conn     *net.Conn
+	Conn     *connection.Connection
 	Server   *server.Server
 	Response *Response
 }

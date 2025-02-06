@@ -9,7 +9,7 @@ import (
 	"github.com/lucas11776-golang/http/server/connection"
 )
 
-const MAX_REQUEST_SIZE int64 = (1024 * 1000)
+const MAX_REQUEST_SIZE int64 = 1024 * 1000
 
 type ConnectionCallback func(server *Server, conn *connection.Connection)
 
@@ -71,6 +71,13 @@ func (ctx *Server) Host() string {
 // Comment
 func (ctx *Server) Connection(callback ConnectionCallback) *Server {
 	ctx.connection = append(ctx.connection, callback)
+
+	return ctx
+}
+
+// Comment
+func (ctx *Server) SetMaxRequestSize(size int64) *Server {
+	ctx.MaxRequestSize = size
 
 	return ctx
 }
