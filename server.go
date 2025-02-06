@@ -71,7 +71,7 @@ func (ctx *HTTP) Route() *Router {
 
 // Comment
 func (ctx *HTTP) SetView(views string, extension string) *HTTP {
-	ctx.Set("view", InitView(ViewReader(views), extension))
+	ctx.Set("view", InitView(DefaultViewReader(views), extension))
 
 	return ctx
 }

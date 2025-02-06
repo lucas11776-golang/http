@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 )
 
 func TestView(t *testing.T) {
-	view := InitView(&viewReaderView{
+	view := InitView(&viewReaderTest{
 		cache: make(scriggo.Files),
 	}, "html")
 
@@ -132,7 +133,7 @@ func TestView(t *testing.T) {
 	})
 }
 
-var viewReaderViewFS = scriggo.Files{
+var viewReaderTestFS = scriggo.Files{
 	"simple.html": []byte(strings.Join([]string{
 		`<h1>Hello World: {{ world }}</h1>`,
 	}, "\r\n")),
@@ -147,16 +148,16 @@ var viewReaderViewFS = scriggo.Files{
 	}, "\r\n")),
 }
 
-type viewReaderView struct {
+type viewReaderTest struct {
 	cache scriggo.Files
 }
 
 // Comment
-func (ctx *viewReaderView) Open(name string) (fs.File, error) {
-	return viewReaderViewFS.Open(name)
+func (ctx *viewReaderTest) Open(name string) (fs.File, error) {
+	return viewReaderTestFS.Open(name)
 }
 
 // Comment
-func (ctx *viewReaderView) Views(name string) (scriggo.Files, error) {
-	return ReadViewCache(ctx, ctx.cache, name)
+func (ctx *viewReaderTest) Cache(name string) (scriggo.Files, error) {
+	return reader.ReadCache(ctx, ctx.cache, name)
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
 )
@@ -16,18 +17,18 @@ type viewWriter struct {
 	parsed []byte
 }
 
-type viewReader struct {
+type defaultViewReader struct {
 	dir   string
 	cache scriggo.Files
 }
 
-type Reader interface {
-	Open(name string) (fs.File, error)
-	Views(name string) (scriggo.Files, error)
-}
+// type ViewReader interface {
+// 	Open(name string) (fs.File, error)
+// 	Cache(name string) (scriggo.Files, error)
+// }
 
 type View struct {
-	fs        Reader
+	fs        reader.CacheReader
 	extension string
 }
 
@@ -59,66 +60,33 @@ func (ctx *viewWriter) Parsed() []byte {
 }
 
 // Comment
-func ReadViewCache(reader Reader, cache scriggo.Files, view string) (scriggo.Files, error) {
-	_, ok := cache[view]
-
-	if ok {
-		return cache, nil
-	}
-
-	file, err := reader.Open(view)
-
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := file.Stat()
-
-	if err != nil {
-		return nil, err
-	}
-
-	data := make([]byte, stat.Size())
-
-	_, err = file.Read(data)
-
-	if err != nil {
-		return nil, err
-	}
-
-	cache[view] = data
-
-	return cache, nil
-}
-
-// Comment
-func (ctx *viewReader) Open(name string) (fs.File, error) {
+func (ctx *defaultViewReader) Open(name string) (fs.File, error) {
 	return os.Open(Path(ctx.dir, name))
 }
 
 // Comment
-func (ctx *viewReader) Views(name string) (scriggo.Files, error) {
-	return ReadViewCache(ctx, ctx.cache, name)
+func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
+	return reader.ReadCache(ctx, ctx.cache, name)
 }
 
 // Comment
-func ViewReader(views string) *viewReader {
+func DefaultViewReader(views string) *defaultViewReader {
 	wd, err := os.Getwd()
 
 	if err != nil {
 		log.Fatalf("Failed to get current working dir in view reader: %s", err.Error())
 	}
 
-	return &viewReader{
+	return &defaultViewReader{
 		dir:   Path(wd, views),
 		cache: make(scriggo.Files),
 	}
 }
 
 // Comment
-func InitView(fsys Reader, extension string) *View {
+func InitView(fs reader.CacheReader, extension string) *View {
 	return &View{
-		fs:        fsys,
+		fs:        fs,
 		extension: extension,
 	}
 }
@@ -135,7 +103,7 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 
 	vw := strings.Join([]string{view, ctx.extension}, ".")
 
-	views, err := ctx.fs.Views(vw)
+	views, err := ctx.fs.Cache(vw)
 
 	if err != nil {
 		return nil, err

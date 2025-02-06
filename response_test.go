@@ -11,6 +11,7 @@ import (
 
 	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 )
 
@@ -178,7 +179,7 @@ func TestResponse(t *testing.T) {
 
 		res.Request = req
 
-		vw := InitView(&viewReaderResponse{
+		vw := InitView(&responseReaderViewTest{
 			cache: make(scriggo.Files),
 		}, "html")
 
@@ -217,7 +218,7 @@ func TestResponse(t *testing.T) {
 	})
 }
 
-var viewReaderResponseFS = scriggo.Files{
+var responseReaderTestFS = scriggo.Files{
 	"home.html": []byte(strings.Join([]string{
 		`<!DOCTYPE html>`,
 		`<html lang="en">`,
@@ -233,15 +234,15 @@ var viewReaderResponseFS = scriggo.Files{
 	}, "\r\n")),
 }
 
-type viewReaderResponse struct {
+type responseReaderViewTest struct {
 	cache scriggo.Files
 }
 
-func (ctx *viewReaderResponse) Open(name string) (fs.File, error) {
-	return viewReaderResponseFS.Open(name)
+func (ctx *responseReaderViewTest) Open(name string) (fs.File, error) {
+	return responseReaderTestFS.Open(name)
 }
 
 // Comment
-func (ctx *viewReaderResponse) Views(name string) (scriggo.Files, error) {
-	return ReadViewCache(ctx, ctx.cache, name)
+func (ctx *responseReaderViewTest) Cache(name string) (scriggo.Files, error) {
+	return reader.ReadCache(ctx, ctx.cache, name)
 }
