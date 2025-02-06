@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"embed"
 	"encoding/json"
 	"io/fs"
 	"math/rand"
@@ -14,22 +13,6 @@ import (
 	"github.com/lucas11776-golang/http/types"
 	"github.com/open2b/scriggo"
 )
-
-//go:embed views/*
-var viewsBody embed.FS
-
-type ViewReaderBody struct {
-	cache scriggo.Files
-}
-
-func (ctx *ViewReaderBody) Open(name string) (fs.File, error) {
-	return viewsBody.Open(strings.Join([]string{"views", name}, "/"))
-}
-
-// Comment
-func (ctx *ViewReaderBody) Views(name string) (scriggo.Files, error) {
-	return ReadViewCache(ctx, ctx.cache, name)
-}
 
 func TestResponse(t *testing.T) {
 	t.Run("TestResponseOk", func(t *testing.T) {
@@ -195,7 +178,7 @@ func TestResponse(t *testing.T) {
 
 		res.Request = req
 
-		vw := InitView(&ViewReaderBody{
+		vw := InitView(&viewReaderResponse{
 			cache: make(scriggo.Files),
 		}, "html")
 
@@ -205,7 +188,19 @@ func TestResponse(t *testing.T) {
 			"name": name,
 		})
 
-		body := strings.Join([]string{"<h1>Hello user ", name, "</h1>"}, "")
+		body := strings.Join([]string{
+			`<!DOCTYPE html>`,
+			`<html lang="en">`,
+			`<head>`,
+			`  <meta charset="UTF-8">`,
+			`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
+			`  <title>Home Page</title>`,
+			`</head>`,
+			`<body>`,
+			`  <h1>Hello user ` + name + `</h1>`,
+			`</body>`,
+			`</html>`,
+		}, "\r\n")
 
 		httpExpected := strings.Join([]string{
 			"HTTP/1.1 200 Ok",
@@ -220,4 +215,33 @@ func TestResponse(t *testing.T) {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
 	})
+}
+
+var viewReaderResponseFS = scriggo.Files{
+	"home.html": []byte(strings.Join([]string{
+		`<!DOCTYPE html>`,
+		`<html lang="en">`,
+		`<head>`,
+		`  <meta charset="UTF-8">`,
+		`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
+		`  <title>Home Page</title>`,
+		`</head>`,
+		`<body>`,
+		`  <h1>Hello user {{ name }}</h1>`,
+		`</body>`,
+		`</html>`,
+	}, "\r\n")),
+}
+
+type viewReaderResponse struct {
+	cache scriggo.Files
+}
+
+func (ctx *viewReaderResponse) Open(name string) (fs.File, error) {
+	return viewReaderResponseFS.Open(name)
+}
+
+// Comment
+func (ctx *viewReaderResponse) Views(name string) (scriggo.Files, error) {
+	return ReadViewCache(ctx, ctx.cache, name)
 }

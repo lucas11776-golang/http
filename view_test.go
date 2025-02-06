@@ -1,7 +1,6 @@
 package http
 
 import (
-	"embed"
 	"io/fs"
 	"math/rand"
 	"strconv"
@@ -11,25 +10,8 @@ import (
 	"github.com/open2b/scriggo"
 )
 
-//go:embed views/*
-var views embed.FS
-
-type ReaderTest struct {
-	cache scriggo.Files
-}
-
-// Comment
-func (ctx *ReaderTest) Open(name string) (fs.File, error) {
-	return views.Open(strings.Join([]string{"views", name}, "/"))
-}
-
-// Comment
-func (ctx *ReaderTest) Views(name string) (scriggo.Files, error) {
-	return ReadViewCache(ctx, ctx.cache, name)
-}
-
 func TestView(t *testing.T) {
-	view := InitView(&ReaderTest{
+	view := InitView(&viewReaderView{
 		cache: make(scriggo.Files),
 	}, "html")
 
@@ -148,4 +130,33 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 	})
+}
+
+var viewReaderViewFS = scriggo.Files{
+	"simple.html": []byte(strings.Join([]string{
+		`<h1>Hello World: {{ world }}</h1>`,
+	}, "\r\n")),
+	"for.html": []byte(strings.Join([]string{
+		`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
+	}, "\r\n")),
+	"if.html": []byte(strings.Join([]string{
+		`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
+	}, "\r\n")),
+	"switch.html": []byte(strings.Join([]string{
+		`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
+	}, "\r\n")),
+}
+
+type viewReaderView struct {
+	cache scriggo.Files
+}
+
+// Comment
+func (ctx *viewReaderView) Open(name string) (fs.File, error) {
+	return viewReaderViewFS.Open(name)
+}
+
+// Comment
+func (ctx *viewReaderView) Views(name string) (scriggo.Files, error) {
+	return ReadViewCache(ctx, ctx.cache, name)
 }
