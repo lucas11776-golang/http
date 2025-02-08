@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"net"
 	"net/http"
+	"strings"
 )
 
 type RequestCallback func(req *http.Request)
@@ -27,6 +28,11 @@ func Init(conn *net.Conn, max int64) *Connection {
 // Comment
 func (ctx *Connection) Conn() net.Conn {
 	return *ctx.conn
+}
+
+// Comment
+func (ctx *Connection) IP() string {
+	return strings.Split(ctx.Conn().RemoteAddr().String(), ":")[0]
 }
 
 // Comment

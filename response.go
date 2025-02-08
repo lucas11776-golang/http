@@ -81,6 +81,7 @@ const (
 	HTTP_RESPONSE_NETWORK_AUTHENTICATION_REQUIRED Status = 511
 )
 
+// TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
 	_Body   []byte

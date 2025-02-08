@@ -16,11 +16,32 @@ type HTTP struct {
 }
 
 // Comment
+func handleStatic(conn *connection.Connection, static *Static, req *Request) error {
+	res, err := static.HandleRequest(req)
+
+	if err != nil {
+		return err
+	}
+
+	return conn.Write([]byte(ParseHttpResponse(res)))
+}
+
+// Comment
 func handleHTTP1_1(htp *HTTP, req *Request) {
 	route := htp.Router().MatchWebRoute(req)
 
 	if route == nil {
-		// Not found page
+		if htp.Server.Get("static") != nil {
+			err := handleStatic(req.Conn, htp.Get("static").(*Static), req)
+
+			if err == nil {
+				req.Conn.Close()
+
+				return
+			}
+		}
+
+		// TODO Resource not found
 		return
 	}
 
@@ -72,6 +93,13 @@ func (ctx *HTTP) Route() *Router {
 // Comment
 func (ctx *HTTP) SetView(views string, extension string) *HTTP {
 	ctx.Set("view", InitView(DefaultViewReader(views), extension))
+
+	return ctx
+}
+
+// Comment
+func (ctx *HTTP) SetStatic(statics string) *HTTP {
+	ctx.Set("static", InitStatic(DefaultStaticReader(statics)))
 
 	return ctx
 }

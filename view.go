@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
@@ -22,11 +23,6 @@ type defaultViewReader struct {
 	cache scriggo.Files
 }
 
-// type ViewReader interface {
-// 	Open(name string) (fs.File, error)
-// 	Cache(name string) (scriggo.Files, error)
-// }
-
 type View struct {
 	fs        reader.CacheReader
 	extension string
@@ -34,17 +30,6 @@ type View struct {
 
 type ViewInterface interface {
 	Read(view string, data ViewData) ([]byte, error)
-}
-
-// Comment
-func Path(path ...string) string {
-	pth := []string{}
-
-	for _, p := range path {
-		pth = append(pth, strings.Trim(strings.ReplaceAll(p, "/", "\\"), "\\"))
-	}
-
-	return strings.Join(pth, "\\")
 }
 
 // Comment
@@ -61,7 +46,7 @@ func (ctx *viewWriter) Parsed() []byte {
 
 // Comment
 func (ctx *defaultViewReader) Open(name string) (fs.File, error) {
-	return os.Open(Path(ctx.dir, name))
+	return os.Open(path.Path(ctx.dir, name))
 }
 
 // Comment
@@ -78,7 +63,7 @@ func DefaultViewReader(views string) *defaultViewReader {
 	}
 
 	return &defaultViewReader{
-		dir:   Path(wd, views),
+		dir:   path.Path(wd, views),
 		cache: make(scriggo.Files),
 	}
 }

@@ -79,7 +79,12 @@ func (ctx *Request) GetHeader(key string) string {
 }
 
 // Comment
-func HttpHeader(http []string) (*HttpRequestHeader, error) {
+func (ctx *Request) IP() string {
+	return ctx.Conn.IP()
+}
+
+// Comment
+func httpHeader(http []string) (*HttpRequestHeader, error) {
 	header := strings.Split(http[0], " ")
 
 	if len(header) != 3 {
@@ -94,7 +99,7 @@ func HttpHeader(http []string) (*HttpRequestHeader, error) {
 }
 
 // Comment
-func HttpContent(http []string) (*HttpRequestContent, error) {
+func httpContent(http []string) (*HttpRequestContent, error) {
 	content := HttpRequestContent{
 		headers: make(types.Headers),
 	}
@@ -130,13 +135,13 @@ func HttpContent(http []string) (*HttpRequestContent, error) {
 func ParseHttpRequest(http string) (*Request, error) {
 	hp := strings.Split(http, "\r\n")
 
-	header, err := HttpHeader(hp)
+	header, err := httpHeader(hp)
 
 	if err != nil {
 		return nil, err
 	}
 
-	content, err := HttpContent(hp)
+	content, err := httpContent(hp)
 
 	if err != nil {
 		return nil, err

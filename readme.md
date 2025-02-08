@@ -14,6 +14,7 @@ HTTP requests [Go](https://go.dev) version [1.23](https://go.dev/doc/devel/relea
 - Router grouping
 - Router parameters
 - Response types `body`, `html`, `json`, `redirect`, `download` and `view`
+- Static
 - Websocket support
 - Middleware
 
@@ -205,6 +206,75 @@ Then create a folder in current working directory called `views` and create a fi
 </body>
 </html>
 ```
+
+
+### Static
+
+HTTP static allow allows us to specify a folder containing all webpage assets like `CSS`, `JavaScript`, `Images` etc.
+
+To get start lets create `static` folder and in `static` folder create a file called `main.css` - `static/main.css`.
+
+```css
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: limegreen;
+}
+
+h1 {
+  font-size: 5em;
+  color: #fff;
+  text-align: center;
+  text-decoration: underline;
+  font-family: fantasy;
+  margin: 5px 0px !important;
+}
+```
+
+Now let create view called `home.html` in the `views` - `views/home.html`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Page</title>
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+  <h1>Hello World!!!</h1>
+</body>
+</html>
+```
+
+Lets start `static` to our `server` but specifying `static` path.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/lucas11776-golang/http"
+)
+
+func main() {
+	server := http.Server("127.0.0.1", 8080)
+
+	server.SetView("views", "html").SetStatic("static")
+
+	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
+		return res.View("home", http.ViewData{})
+	})
+
+	fmt.Println("Server running ", server.Host())
+
+	server.Listen()
+}
+```
+
+And then views [127.0.0.1:8080](http://127.0.0.1:8080) and see what we got.
 
 
 ### Websocket

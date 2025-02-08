@@ -1,13 +1,16 @@
 package http
 
 import (
+	"io/fs"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/reader"
 	req "github.com/lucas11776-golang/http/utils/request"
+	"github.com/open2b/scriggo"
 )
 
 func TestServerWeb(t *testing.T) {
@@ -55,6 +58,30 @@ func TestServerWeb(t *testing.T) {
 		}
 	})
 
+	t.Run("TestStatic", func(t *testing.T) {
+		server.Set("static", InitStatic(&webServerReaderTest{
+			cache: make(scriggo.Files),
+		}))
+
+		r := req.CreateRequest().Header("Accept", "text/css")
+
+		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", cssNameWebServer}, ""))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying get static asset: %s", err.Error())
+		}
+
+		headers := types.Headers{"content-type": "text/css"}
+		body := []byte(cssContentWebServer)
+
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, headers, []byte{}).SetBody(body)
+		expectedHttp := ParseHttpResponse(res)
+
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s)", expectedHttp, http)
+		}
+	})
+
 	server.Close()
 }
 
@@ -80,4 +107,28 @@ func AuthorizationGuard(req *Request, res *Response, next Next) *Response {
 	}
 
 	return next()
+}
+
+var cssNameWebServer = "assets/css/main.css"
+
+var cssContentWebServer = strings.Join([]string{
+	"body { margin: 0px !important; padding: 0px !important; background-color: green; }",
+}, "\r\n")
+
+var webServerReaderTestFS = scriggo.Files{
+	cssName: []byte(cssContentWebServer),
+}
+
+type webServerReaderTest struct {
+	cache scriggo.Files
+}
+
+// Comment
+func (ctx *webServerReaderTest) Open(name string) (fs.File, error) {
+	return webServerReaderTestFS.Open(name)
+}
+
+// Comment
+func (ctx *webServerReaderTest) Cache(name string) (scriggo.Files, error) {
+	return reader.ReadCache(ctx, ctx.cache, name)
 }
