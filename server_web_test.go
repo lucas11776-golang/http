@@ -58,6 +58,39 @@ func TestServerWeb(t *testing.T) {
 		}
 	})
 
+	t.Run("TestMiddlewareUserPost", func(t *testing.T) {
+		r := req.CreateRequest().Header("content-type", "application/json")
+
+		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+
+		if err != nil {
+			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
+		}
+
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_UNAUTHORIZED, make(types.Headers), []byte{}).Json(unauthorizedAccessMessage)
+		expectedHttp := ParseHttpResponse(res)
+
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
+		}
+
+		// With key
+		r = req.CreateRequest().Header("content-type", "application/json").Header("authorization", AuthKey)
+
+		http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+
+		if err != nil {
+			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
+		}
+
+		res = NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(userCreatedMessage)
+		expectedHttp = ParseHttpResponse(res)
+
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
+		}
+	})
+
 	t.Run("TestStatic", func(t *testing.T) {
 		server.Set("static", InitStatic(&webServerReaderTest{
 			cache: make(scriggo.Files),
@@ -96,14 +129,18 @@ type User struct {
 	Email string `json:"email"`
 }
 
+var unauthorizedAccessMessage = Message{
+	Message: "Authorization key is invalid",
+}
+
 var userCreatedMessage = Message{
-	Message: "User has been created successfully",
+	Message: "Authorization key is invalid",
 }
 
 // Comment
 func AuthorizationGuard(req *Request, res *Response, next Next) *Response {
 	if req.GetHeader("authorization") != AuthKey {
-		return res.SetStatus(HTTP_RESPONSE_UNAUTHORIZED).Json(userCreatedMessage)
+		return res.SetStatus(HTTP_RESPONSE_UNAUTHORIZED).Json(unauthorizedAccessMessage)
 	}
 
 	return next()

@@ -27,6 +27,15 @@ func handleStatic(conn *connection.Connection, static *Static, req *Request) err
 }
 
 // Comment
+func responseWrite(req *Request, http []byte) {
+	err := req.Conn.Write(http)
+
+	if err != nil {
+		return
+	}
+}
+
+// Comment
 func handleHTTP1_1(htp *HTTP, req *Request) {
 	route := htp.Router().MatchWebRoute(req)
 
@@ -45,13 +54,23 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 		return
 	}
 
-	http := route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
+	for _, middleware := range route.middleware {
+		req.Response.Next = false
 
-	err := req.Conn.Write(http)
+		res := middleware(req, req.Response, func() *Response {
+			req.Response.Next = true
 
-	if err != nil {
-		return
+			return req.Response
+		})
+
+		if !res.Next {
+			responseWrite(req, []byte(ParseHttpResponse(res)))
+
+			return
+		}
 	}
+
+	responseWrite(req, route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response)))
 
 	req.Conn.Close()
 }

@@ -248,7 +248,7 @@ Now let create view called `home.html` in the `views` - `views/home.html`.
 </html>
 ```
 
-Lets start `static` to our `server` but specifying `static` path.
+Lets add `static` to our `server` but specifying `static` path.
 
 ```go
 package main
@@ -274,7 +274,7 @@ func main() {
 }
 ```
 
-And then views [127.0.0.1:8080](http://127.0.0.1:8080) and see what we got.
+And then visit [127.0.0.1:8080](http://127.0.0.1:8080) and see what we got.
 
 
 ### Websocket
@@ -323,3 +323,48 @@ func main() {
 	server.Listen()
 }
 ```
+
+
+### Middleware
+
+What`s an application without middleware/guard to protected routes from unauthorized request or unwanted request below is simple route with middleware.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/lucas11776-golang/http"
+)
+
+type Message struct {
+	Message string `json:"message"`
+}
+
+func Authorization(req *http.Request, res *http.Response, next http.Next) *http.Response {
+	if req.GetHeader("auth-key") != "test@123" {
+		return res.SetStatus(http.HTTP_RESPONSE_UNAUTHORIZED).Json(Message{
+			Message: "Unauthorized Access",
+		})
+	}
+
+	return next()
+}
+
+func main() {
+	server := http.Server("127.0.0.1", 8080)
+
+	server.Route().Middleware(Authorization).Get("/", func(req *http.Request, res *http.Response) *http.Response {
+		return res.Json(Message{
+			Message: "Hello World, You Authorized To See This Route...",
+		})
+	})
+
+	fmt.Println("Server running ", server.Host())
+
+	server.Listen()
+}
+```
+
+If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `404` with message `Unauthorized Access`.

@@ -11,6 +11,8 @@ import (
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Request struct {
@@ -69,7 +71,7 @@ func (ctx *Request) GetQuery(key string) string {
 
 // Comment
 func (ctx *Request) GetHeader(key string) string {
-	header, ok := ctx.Header[key]
+	header, ok := ctx.Header[cases.Title(language.English).String(key)]
 
 	if !ok {
 		return ""
@@ -116,10 +118,10 @@ func httpContent(http []string) (*HttpRequestContent, error) {
 			return nil, fmt.Errorf("Invalid header %s", header[0])
 		}
 
-		key := strings.ToLower(header[0])
-		value := strings.Trim(strings.Join(header[1:], ":"), " ")
+		key := cases.Title(language.English).String(header[0])
+		value := strings.Trim(strings.Join(header[1:], ","), " ")
 
-		if key == "host" {
+		if key == "Host" {
 			content.host = value
 
 			continue

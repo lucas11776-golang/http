@@ -84,6 +84,7 @@ const (
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
+	Next    bool
 	_Body   []byte
 	Writer  *Writer
 	Request *Request
