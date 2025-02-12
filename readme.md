@@ -367,4 +367,9 @@ func main() {
 }
 ```
 
-If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `404` with message `Unauthorized Access`.
+If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `401` with message `Unauthorized Access`.
+
+
+## Issues
+
+Having issues with HTTP framework co

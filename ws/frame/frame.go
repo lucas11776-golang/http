@@ -49,20 +49,21 @@ func Decode(payload []byte) (*Frame, error) {
 	}
 
 	head := payload[:2]
+	size := uint16(head[1] & 0x7F)
 	frame := &Frame{payload: payload}
 
-	if head[1] < 126 {
-		if len(payload) < int(head[1])+6 {
+	if size < 126 {
+		if len(payload) < int(size)+6 {
 			return nil, InvalidPayloadError
 		}
 
-		frame.size = uint64(head[1])
+		frame.size = uint64(size)
 		frame.data = unmask(payload[2:6], payload[6:frame.size+6])
 
 		return frame, nil
 	}
 
-	if head[1] == 126 {
+	if size == 126 {
 		if len(payload) < 8 {
 			return nil, InvalidPayloadError
 		}

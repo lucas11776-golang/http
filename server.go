@@ -1,9 +1,14 @@
 package http
 
 import (
+	"bufio"
+	"crypto/sha1"
+	"encoding/base64"
+	"errors"
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/lucas11776-golang/http/server"
 	serve "github.com/lucas11776-golang/http/server"
@@ -35,8 +40,74 @@ func responseWrite(req *Request, http []byte) {
 	}
 }
 
+const (
+	ESTABLISH_CONNECTION_PAYLOAD_SIZE = 2048
+	SEC_WEB_SOCKET_ACCEPT_STATIC      = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+)
+
+var ERROR_INVALID_WEBSOCKET_REQUEST = errors.New("Invalid http request")
+
+// Comment
+func handShakeReplay(req *Request) ([]byte, error) {
+	res := NewResponse(req.Protocol(), HTTP_RESPONSE_SWITCHING_PROTOCOLS, make(types.Headers), []byte{})
+
+	secWebsocketKey := req.GetHeader("sec-websocket-key")
+
+	if secWebsocketKey == "" {
+		return nil, ERROR_INVALID_WEBSOCKET_REQUEST
+	}
+
+	alg := sha1.New()
+
+	alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
+
+	hashed := base64.StdEncoding.EncodeToString(alg.Sum(nil))
+
+	// res.SetStatus(101)
+	res.SetHeader("Upgrade", "websocket")
+	res.SetHeader("Connection", "Upgrade")
+	res.SetHeader("Sec-WebSocket-Accept", hashed)
+
+	return []byte(ParseHttpResponse(res)), nil
+}
+
 // Comment
 func handleHTTP1_1(htp *HTTP, req *Request) {
+	if strings.ToLower(req.GetHeader("Upgrade")) == "websocket" {
+		route := htp.Router().MatchWsRoute(req)
+
+		if route == nil {
+			// TODO Error response
+			return
+		}
+
+		reply, err := handShakeReplay(req)
+
+		if err != nil {
+			// TODO Error response
+			return
+		}
+
+		err = req.Conn.Write(reply)
+
+		if err != nil {
+			// TODO Error response
+			return
+		}
+
+		ws := InitWs(req.Conn)
+
+		ws.Request = req
+
+		route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
+
+		ws.Emit(EVENT_READY, []byte{})
+
+		ws.Listen()
+
+		return
+	}
+
 	route := htp.Router().MatchWebRoute(req)
 
 	if route == nil {
@@ -50,7 +121,7 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 			}
 		}
 
-		// TODO Resource not found
+		// TODO Error response
 		return
 	}
 
@@ -77,26 +148,28 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 
 // Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
-	conn.Message(func(r *http.Request) {
-		req := &Request{
-			Request:  r,
-			Server:   htp.Server,
-			Response: NewResponse(r.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
-			Conn:     conn,
-		}
+	r, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(htp.MaxRequestSize))))
 
-		req.Response.Request = req
+	if err != nil {
+		return
+	}
 
-		switch req.Protocol() {
-		case "HTTP/1.1":
-			handleHTTP1_1(htp, req)
-			break
-		default:
-			conn.Close()
-		}
-	})
+	req := &Request{
+		Request:  r,
+		Server:   htp.Server,
+		Response: NewResponse(r.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
+		Conn:     conn,
+	}
 
-	conn.Listen()
+	req.Response.Request = req
+
+	switch req.Protocol() {
+	case "HTTP/1.1":
+		handleHTTP1_1(htp, req)
+		break
+	default:
+		conn.Close()
+	}
 }
 
 // Comment

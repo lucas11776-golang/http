@@ -1,4 +1,4 @@
-package ws
+package http
 
 import (
 	"math/rand"
@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/lucas11776-golang/http/server/connection"
 )
 
 // [opcode, len, mask, data]
@@ -26,11 +28,11 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 				break
 			}
 
-			ws := Create(conn)
+			ws := InitWs(connection.Init(&conn, MAX_PAYLOAD_SIZE))
 
 			ws.OnReady(func(ws *Ws) {
 				ws.OnMessage(func(data []byte) {
-					err := ws.WriteText(append(data, concat...))
+					err := ws.Write(append(data, concat...))
 
 					if err != nil {
 						listener.Close()

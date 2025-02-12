@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	str "github.com/lucas11776-golang/http/utils/strings"
-	"github.com/lucas11776-golang/http/ws"
 )
 
 type Next func() *Response
@@ -37,11 +36,11 @@ type Router struct {
 	routes     *RouterGroup
 }
 
-type Group func(route *Router)
+type GroupCallback func(route *Router)
 
-type Web func(req *Request, res *Response) *Response
+type WebCallback func(req *Request, res *Response) *Response
 
-type Ws func(req *Request, socket *ws.Ws)
+type WsCallback func(req *Request, ws *Ws)
 
 // Comment
 func InitRouter() *RouterGroup {
@@ -172,8 +171,8 @@ func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
 }
 
 // Comment
-func (ctx *RouterGroup) MatchWsRoute(uri string) *Route {
-	route, parameters := routeMatch(ctx.ws, "GET", uri)
+func (ctx *RouterGroup) MatchWsRoute(req *Request) *Route {
+	route, parameters := routeMatch(ctx.ws, req.Method, req.Path())
 
 	if route == nil {
 		return nil
@@ -201,7 +200,7 @@ func (ctx *RouterGroup) Router() *Router {
 }
 
 // Comment
-func (ctx *Router) Route(method string, uri string, callback Web) *Route {
+func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route {
 	route := ctx.getRoute(ctx, method, uri, reflect.ValueOf(callback))
 
 	ctx.routes.web = append(ctx.routes.web, route)
@@ -210,7 +209,7 @@ func (ctx *Router) Route(method string, uri string, callback Web) *Route {
 }
 
 // Comment
-func (ctx *Router) Group(prefix string, group Group) {
+func (ctx *Router) Group(prefix string, group GroupCallback) {
 	group(&Router{
 		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
@@ -226,47 +225,47 @@ func (ctx *Router) Middleware(middlewares ...Middleware) *Router {
 }
 
 // Comment
-func (ctx *Router) Get(uri string, callback Web) *Route {
+func (ctx *Router) Get(uri string, callback WebCallback) *Route {
 	return ctx.Route("GET", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Post(uri string, callback Web) *Route {
+func (ctx *Router) Post(uri string, callback WebCallback) *Route {
 	return ctx.Route("POST", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Put(uri string, callback Web) *Route {
+func (ctx *Router) Put(uri string, callback WebCallback) *Route {
 	return ctx.Route("PUT", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Patch(uri string, callback Web) *Route {
+func (ctx *Router) Patch(uri string, callback WebCallback) *Route {
 	return ctx.Route("PATCH", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Delete(uri string, callback Web) *Route {
+func (ctx *Router) Delete(uri string, callback WebCallback) *Route {
 	return ctx.Route("DELETE", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Head(uri string, callback Web) *Route {
+func (ctx *Router) Head(uri string, callback WebCallback) *Route {
 	return ctx.Route("HEAD", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Options(uri string, callback Web) *Route {
+func (ctx *Router) Options(uri string, callback WebCallback) *Route {
 	return ctx.Route("OPTIONS", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Connect(uri string, callback Web) *Route {
+func (ctx *Router) Connect(uri string, callback WebCallback) *Route {
 	return ctx.Route("CONNECT", uri, callback)
 }
 
 // Comment
-func (ctx *Router) Ws(uri string, callback Ws) *Route {
+func (ctx *Router) Ws(uri string, callback WsCallback) *Route {
 	route := ctx.getRoute(ctx, "GET", uri, reflect.ValueOf(callback))
 
 	ctx.routes.ws = append(ctx.routes.ws, route)

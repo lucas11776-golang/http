@@ -1,7 +1,11 @@
 package http
 
 import (
+	"bytes"
+	"reflect"
 	"testing"
+
+	"github.com/lucas11776-golang/http/types"
 )
 
 func TestRouterRouteResponse(t *testing.T) {
@@ -20,21 +24,27 @@ func TestRouterRouteResponse(t *testing.T) {
 			return res.Json(data)
 		})
 
-		// req, err := NewRequest("GET", "/api/user", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte("")))
+		req, err := NewRequest("GET", "/api/user", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte("")))
 
-		// router.MatchWebRoute()
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
-		// }
+		route := router.MatchWebRoute(req)
 
-		// res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte(""))
+		if route == nil {
+			t.Fatalf("The route %s does not exist", req.Path())
+		}
 
-		// httpExpected := ParseHttpResponse(res.Json(data))
-		// httpRoute := string(route.Call(reflect.ValueOf(req), reflect.ValueOf(res)))
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, types.Headers{
+			"content-type": "application/json",
+		}, []byte(""))
 
-		// if httpExpected != httpRoute {
-		// 	t.Fatalf("Excepted http json (%s) but got (%s)", httpExpected, httpRoute)
-		// }
+		httpExpected := ParseHttpResponse(res.Json(data))
+		httpRoute := string(route.Call(reflect.ValueOf(req), reflect.ValueOf(res)))
+
+		if httpExpected != httpRoute {
+			t.Fatalf("Excepted http json (%s) but got (%s)", httpExpected, httpRoute)
+		}
 	})
 }

@@ -1,8 +1,7 @@
-package ws
+package http
 
 import (
-	"net"
-
+	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/ws/frame"
 )
 
@@ -19,21 +18,22 @@ const (
 	EVENT_CLOSE   Event = "close"
 )
 
-type ReadyCallback func(socket *Ws)
+type ReadyCallback func(ws *Ws)
 
 type EventCallback func(data []byte)
 
 type Events map[Event][]EventCallback
 
 type Ws struct {
-	Alive bool
-	conn  net.Conn
-	event Events
-	ready []ReadyCallback
+	Request *Request
+	Alive   bool
+	conn    *connection.Connection
+	event   Events
+	ready   []ReadyCallback
 }
 
 // Comment
-func Create(conn net.Conn) *Ws {
+func InitWs(conn *connection.Connection) *Ws {
 	return &Ws{
 		Alive: true,
 		conn:  conn,
@@ -53,7 +53,6 @@ func (ctx *Ws) OnMessage(callback EventCallback) {
 
 // Comment
 func (ctx *Ws) OnError(callback EventCallback) {
-
 	ctx.event[EVENT_ERROR] = append(ctx.event[EVENT_ERROR], callback)
 }
 
@@ -91,14 +90,7 @@ func (ctx *Ws) Emit(event Event, data []byte) {
 
 // Comment
 func (ctx *Ws) Write(data []byte) error {
-	_, err := ctx.conn.Write(data)
-
-	return err
-}
-
-// Comment
-func (ctx *Ws) WriteText(data []byte) error {
-	return ctx.Write(frame.Encode(frame.OPCODE_TEXT, data).Payload())
+	return ctx.conn.Write(frame.Encode(frame.OPCODE_TEXT, data).Payload())
 }
 
 // Comment
@@ -108,10 +100,10 @@ func (ctx *Ws) WriteBinary(data []byte) error {
 
 // Comment
 func (ctx *Ws) Listen() {
-	payload := make([]byte, MAX_PAYLOAD_SIZE)
-
 	for {
-		_, err := ctx.conn.Read(payload)
+		payload := make([]byte, MAX_PAYLOAD_SIZE)
+
+		_, err := ctx.conn.Conn().Read(payload)
 
 		if err != nil {
 			ctx.Alive = false

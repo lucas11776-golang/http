@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
-	"github.com/lucas11776-golang/http/ws"
 )
 
 // Comment
@@ -33,7 +32,7 @@ func TestRouter(t *testing.T) {
 	t.Run("TestRouterAddWsRouteUsingRoute", func(t *testing.T) {
 		router := &RouterGroup{}
 
-		route := router.Router().Ws("/position/moving", func(req *Request, ws *ws.Ws) {
+		route := router.Router().Ws("/position/moving", func(req *Request, ws *Ws) {
 			// Ws staff
 		})
 
@@ -99,7 +98,7 @@ func TestRouter(t *testing.T) {
 		}
 
 		router.Router().Middleware(middleware).Group("/position", func(router *Router) {
-			router.Ws("/change", func(req *Request, ws *ws.Ws) {
+			router.Ws("/change", func(req *Request, ws *Ws) {
 				// Ws staff
 			})
 		})
@@ -150,19 +149,19 @@ func TestRouter(t *testing.T) {
 
 		router.Router().Group("devices", func(router *Router) {
 			router.Group("/{device}", func(router *Router) {
-				router.Ws("/", func(req *Request, ws *ws.Ws) {
+				router.Ws("/", func(req *Request, ws *Ws) {
 					// Ws staff
 				})
-				router.Ws("/position", func(req *Request, ws *ws.Ws) {
+				router.Ws("/position", func(req *Request, ws *Ws) {
 					// Ws staff
 				})
 			})
 		})
 
-		TestingRoute(t, router.ws, router.MatchWsRoute("devices/R833WC0GL3CF"), 0, "GET", "devices/{device}", 0)
-		TestingRoute(t, router.ws, router.MatchWsRoute("devices/R833WC0GL3CF/position"), 1, "GET", "devices/{device}/position", 0)
+		TestingRoute(t, router.ws, router.MatchWsRoute(makeRequest("GET", "devices/R833WC0GL3CF")), 0, "GET", "devices/{device}", 0)
+		TestingRoute(t, router.ws, router.MatchWsRoute(makeRequest("GET", "devices/R833WC0GL3CF/position")), 1, "GET", "devices/{device}/position", 0)
 
-		route := router.MatchWsRoute("devices/R833WC0GL3CF/position")
+		route := router.MatchWsRoute(makeRequest("GET", "devices/R833WC0GL3CF/position"))
 
 		if route.Parameter("device") != "R833WC0GL3CF" {
 			t.Fatalf("The route parameter is id is not %s but got %s", "1", route.Parameter("id"))
