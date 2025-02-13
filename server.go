@@ -152,6 +152,13 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 }
 
 // Comment
+func ParseBody(req *http.Request) error {
+	req.ParseMultipartForm(req.ContentLength)
+
+	return nil
+}
+
+// Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
 	r, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(htp.MaxRequestSize))))
 
