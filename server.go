@@ -72,38 +72,43 @@ func handShakeReplay(req *Request) ([]byte, error) {
 }
 
 // Comment
+func webSocketRequest(htp *HTTP, req *Request) {
+	route := htp.Router().MatchWsRoute(req)
+
+	if route == nil {
+		// TODO Error response
+		return
+	}
+
+	reply, err := handShakeReplay(req)
+
+	if err != nil {
+		// TODO Error response
+		return
+	}
+
+	err = req.Conn.Write(reply)
+
+	if err != nil {
+		// TODO Error response
+		return
+	}
+
+	ws := InitWs(req.Conn)
+
+	ws.Request = req
+
+	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
+
+	ws.Emit(EVENT_READY, []byte{})
+
+	ws.Listen()
+}
+
+// Comment
 func handleHTTP1_1(htp *HTTP, req *Request) {
 	if strings.ToLower(req.GetHeader("Upgrade")) == "websocket" {
-		route := htp.Router().MatchWsRoute(req)
-
-		if route == nil {
-			// TODO Error response
-			return
-		}
-
-		reply, err := handShakeReplay(req)
-
-		if err != nil {
-			// TODO Error response
-			return
-		}
-
-		err = req.Conn.Write(reply)
-
-		if err != nil {
-			// TODO Error response
-			return
-		}
-
-		ws := InitWs(req.Conn)
-
-		ws.Request = req
-
-		route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
-
-		ws.Emit(EVENT_READY, []byte{})
-
-		ws.Listen()
+		webSocketRequest(htp, req)
 
 		return
 	}
@@ -126,15 +131,15 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 	}
 
 	for _, middleware := range route.middleware {
-		req.Response.Next = false
+		next := false
 
 		res := middleware(req, req.Response, func() *Response {
-			req.Response.Next = true
+			next = true
 
 			return req.Response
 		})
 
-		if !res.Next {
+		if !next {
 			responseWrite(req, []byte(ParseHttpResponse(res)))
 
 			return
