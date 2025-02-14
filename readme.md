@@ -11,12 +11,11 @@ HTTP requests [Go](https://go.dev) version [1.23](https://go.dev/doc/devel/relea
 **Http key features:**
 
 - Router
-- Router grouping
-- Router parameters
-- Response types `body`, `html`, `json`, `redirect`, `download` and `view`
-- Static
-- Websocket support
+- Response Types `body`, `html`, `json`, `redirect`, `download` and `view`
+- Static Assets
+- WebSocket
 - Middleware
+- Session
 
 
 ## Getting with HTTP
@@ -56,8 +55,7 @@ $ go run main.go
 
 Then open your favorite browser and visit [`127.0.0.1:8080`](http://12.0.0.1:8080) you should see `Hello World`
 
-
-### Route Grouping
+#### Route Grouping
 
 HTTP allows simple grouping of routes using `Group` method
 
@@ -88,8 +86,7 @@ func main() {
 }
 ```
 
-
-### Route Parameters
+#### Route Parameters
 
 HTTP supports route params
 
@@ -161,7 +158,7 @@ func main() {
 ```
 
 
-### Response View
+#### Response View
 
 HTTP `view` response uses [`Scriggo`](https://scrigoo.com/templates) in order to use `view` in HTTP we have to tell application where to look for `views`
 
@@ -208,7 +205,7 @@ Then create a folder in current working directory called `views` and create a fi
 ```
 
 
-### Static
+### Static Assets
 
 HTTP static allow allows us to specify a folder containing all webpage assets like `CSS`, `JavaScript`, `Images` etc.
 
@@ -394,7 +391,7 @@ The are three type of writes which are:
 
 - `Write`       - This will write/send text payload to websocket connection.
 - `WriteBinary` - This will write/send binary payload to websocket connection. 
-- `WriteJson`   - This will convert `struct`/`map` to json text string and write/send to connection.
+- `WriteJson`   - This will convert `struct`/`map` to json string and write/send to connection.
 
 
 ### Middleware
@@ -442,6 +439,18 @@ func main() {
 If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `401` with message `Unauthorized Access`.
 
 
+### Websocket
+
+HTTP support session
+
+```go
+
+```
+
+
 ## Issues
 
-Having issues with HTTP framework co
+Having issues with HTTP framework contact me on:
+
+- Email    - [thembangubeni04@gmail.com](mailto:thembangubeni04@gmail.com)
+- Linkedin - [lucas11776](https://linkedin.com/)
