@@ -152,28 +152,23 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 }
 
 // Comment
-func ParseBody(req *http.Request) error {
-	req.ParseMultipartForm(req.ContentLength)
-
-	return nil
-}
-
-// Comment
 func newConnection(htp *HTTP, conn *connection.Connection) {
-	r, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(htp.MaxRequestSize))))
+	rq, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(htp.MaxRequestSize))))
 
 	if err != nil {
 		return
 	}
 
 	req := &Request{
-		Request:  r,
+		Request:  rq,
 		Server:   htp.Server,
-		Response: NewResponse(r.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
+		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
 
 	req.Response.Request = req
+
+	req.ParseBody()
 
 	switch req.Protocol() {
 	case "HTTP/1.1":

@@ -126,8 +126,4 @@ func TestWs(t *testing.T) {
 			t.Fatalf("Expected the response to be (%s) but go (%s)", expectedResponse, response)
 		}
 	})
-
-	t.Run("TestPing", func(t *testing.T) {
-		// text := frame.OPCODE_TEXT + 128
-	})
 }

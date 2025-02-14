@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func TestHeader(t *testing.T) {
@@ -16,7 +18,7 @@ func TestHeader(t *testing.T) {
 
 		header := ToHeader(headers)
 
-		h, ok := header[name]
+		h, ok := header[cases.Title(language.English).String(name)]
 
 		if !ok {
 			t.Fatalf("Failed to get header (%s)", value)

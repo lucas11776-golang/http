@@ -1,7 +1,6 @@
 package connection
 
 import (
-	"bufio"
 	"net"
 	"net/http"
 	"strings"
@@ -47,26 +46,6 @@ func (ctx *Connection) Message(callback RequestCallback) *Connection {
 	ctx.message = append(ctx.message, callback)
 
 	return ctx
-}
-
-// Comment
-func (ctx *Connection) Listen() {
-	for {
-		req, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(ctx.Conn(), ctx.max)))
-
-		if err != nil {
-			ctx.Alive = false
-			break
-		}
-
-		for _, callback := range ctx.message {
-			go func() {
-				callback(req)
-			}()
-		}
-	}
-
-	defer ctx.Conn().Close()
 }
 
 // Comment

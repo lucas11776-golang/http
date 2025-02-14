@@ -1,6 +1,8 @@
 package http
 
 import (
+	"encoding/json"
+
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/ws/frame"
 )
@@ -95,7 +97,18 @@ func (ctx *Ws) Write(data []byte) error {
 
 // Comment
 func (ctx *Ws) WriteBinary(data []byte) error {
-	return nil
+	return ctx.conn.Write(frame.Encode(frame.OPCODE_BINARY, data).Payload())
+}
+
+// Comment
+func (ctx *Ws) WriteJson(v any) error {
+	json, err := json.Marshal(v)
+
+	if err != nil {
+		return err
+	}
+
+	return ctx.Write(json)
 }
 
 // Comment

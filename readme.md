@@ -294,25 +294,25 @@ import (
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Ws("/", func(req *http.Request, socket *ws.Ws) {
-		socket.OnReady(func(socket *ws.Ws) {
-			socket.OnMessage(func(data []byte) {
+	server.Route().Ws("/", func(req *http.Request, ws *ws.Ws) {
+		ws.OnReady(func(ws *ws.Ws) {
+			ws.OnMessage(func(data []byte) {
 				fmt.Println("On Message:", string(data))
 			})
 
-			socket.OnPing(func(data []byte) {
+			ws.OnPing(func(data []byte) {
 				fmt.Println("On Ping:", string(data))
 			})
 
-			socket.OnPong(func(data []byte) {
+			ws.OnPong(func(data []byte) {
 				fmt.Println("On Pong:", string(data))
 			})
 
-			socket.OnClose(func(data []byte) {
+			ws.OnClose(func(data []byte) {
 				fmt.Println("On Close:", string(data))
 			})
 
-			socket.OnError(func(data []byte) {
+			ws.OnError(func(data []byte) {
 				fmt.Println("On Error:", string(data))
 			})
 		})
@@ -323,6 +323,78 @@ func main() {
 	server.Listen()
 }
 ```
+
+Lets example websocket callback which are:
+
+- `OnReady`   - This event is called when then websocket handshake is complete.
+- `OnMessage` - This event is called when the is when data send through websocket connection.
+- `OnPing`    - This event is called when the is `ping` event through websocket connection.
+- `OnPong`    - This event is called when the is `pong` event through websocket connection.
+- `OnClose`   - This event is called when websocket connection is closed.
+- `OnError`   - This event is called the is error through websocket connection.
+
+The above is all about receiving data/events now lets create a simple websocket that send random coordinates every two seconds.
+
+```go
+package main
+import (
+	"fmt"
+	"math/rand"
+	"time"
+
+	"github.com/lucas11776-golang/http"
+)
+
+type Coordinate struct {
+	Longitude float32 `json:"longitude"`
+	Latitude  float32 `json:"latitude"`
+	Altitude  int     `json:"altitude"`
+}
+
+func main() {
+	server := http.Server("127.0.0.1", 8080)
+
+	server.Route().Ws("coordinate", func(req *http.Request, ws *http.Ws) {
+		ws.OnReady(func(ws *http.Ws) {
+			for {
+				if !ws.Alive {
+					break
+				}
+
+				time.Sleep(time.Second * 2)
+
+				ws.WriteJson(Coordinate{
+					Longitude: rand.Float32() * 360,
+					Latitude:  rand.Float32() * 180,
+					Altitude:  int(rand.Float32() * 100),
+				})
+			}
+		})
+	})
+
+	fmt.Println("Server running ", server.Host())
+
+	server.Listen()
+}
+```
+
+Here is simple `JavaScript` code to listen to coordinates from the server.
+
+```javascript
+const ws = new WebSocket("ws://127.0.0.1:8080/coordinate");
+
+ws.onopen = () => {
+	ws.onmessage = e => console.log(JSON.parse(e.data));
+}
+
+ws.onclose = e => console.log(e)
+```
+
+The are three type of writes which are:
+
+- `Write`       - This will write/send text payload to websocket connection.
+- `WriteBinary` - This will write/send binary payload to websocket connection. 
+- `WriteJson`   - This will convert `struct`/`map` to json text string and write/send to connection.
 
 
 ### Middleware

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/lucas11776-golang/http/server"
@@ -81,8 +82,44 @@ func (ctx *Request) GetHeader(key string) string {
 }
 
 // Comment
+func (ctx *Request) contentType() string {
+	header := strings.Split(ctx.GetHeader("content-type"), ";")
+
+	if len(header) == 0 {
+		return ""
+	}
+
+	return header[0]
+}
+
+// Comment
+func (ctx *Request) parseBodyX_WWW_FORM_URLENCODED() {
+	buf := make([]byte, ctx.ContentLength)
+
+	n, err := ctx.Body.Read(buf)
+
+	if err != nil {
+		return
+	}
+
+	ctx.Form, _ = url.ParseQuery(string(buf[:n]))
+}
+
+// Comment
 func (ctx *Request) IP() string {
 	return ctx.Conn.IP()
+}
+
+// Comment
+func (ctx *Request) ParseBody() {
+	switch strings.ToLower(ctx.contentType()) {
+	case "application/x-www-form-urlencoded":
+		ctx.parseBodyX_WWW_FORM_URLENCODED()
+		break
+	case "multipart/form-data":
+		ctx.ParseMultipartForm(ctx.ContentLength)
+		break
+	}
 }
 
 // Comment
