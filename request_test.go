@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -77,8 +76,6 @@ func TestRequest(t *testing.T) {
 		}
 
 		req.ParseBody()
-
-		fmt.Println("")
 
 		if req.Form.Get("username") != "test123" {
 			t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))

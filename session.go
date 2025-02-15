@@ -68,24 +68,28 @@ func (ctx *Sessions) MaxAge(seconds int) SessionsManager {
 	return ctx
 }
 
+// Comment
 func (ctx *Sessions) Secure(secure bool) SessionsManager {
 	ctx.store.Options.Secure = secure
 
 	return ctx
 }
 
+// Comment
 func (ctx *Sessions) Domain(domain string) SessionsManager {
 	ctx.store.Options.Domain = domain
 
 	return ctx
 }
 
+// Comment
 func (ctx *Sessions) HttpOnly(httpOnly bool) SessionsManager {
 	ctx.store.Options.HttpOnly = httpOnly
 
 	return ctx
 }
 
+// Comment
 func (ctx *Sessions) SameSite(sameSite bool) SessionsManager {
 	if sameSite {
 		ctx.store.Options.SameSite = 1

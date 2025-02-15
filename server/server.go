@@ -21,7 +21,7 @@ type Server struct {
 	address        string
 	port           int32
 	listener       net.Listener
-	connection     []ConnectionCallback
+	connection     ConnectionCallback
 	MaxRequestSize int64
 	dependency     Dependencies
 }
@@ -70,7 +70,7 @@ func (ctx *Server) Host() string {
 
 // Comment
 func (ctx *Server) Connection(callback ConnectionCallback) *Server {
-	ctx.connection = append(ctx.connection, callback)
+	ctx.connection = callback
 
 	return ctx
 }
@@ -110,11 +110,7 @@ func (ctx *Server) Listen() {
 		}
 
 		go func() {
-			for _, callback := range ctx.connection {
-				go func() {
-					callback(ctx, connection.Init(&conn, ctx.MaxRequestSize))
-				}()
-			}
+			ctx.connection(ctx, connection.Init(&conn, ctx.MaxRequestSize))
 		}()
 	}
 }

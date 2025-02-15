@@ -17,8 +17,8 @@ func TestServerWeb(t *testing.T) {
 	server := Server("127.0.0.1", 0)
 
 	users := []User{
-		(User{ID: 1, Email: "jane@doe.com"}),
-		(User{ID: 2, Email: "jeo@doe.com"}),
+		(User{ID: 1, Role: 1, Email: "jane@doe.com"}),
+		(User{ID: 2, Role: 0, Email: "jeo@doe.com"}),
 	}
 
 	server.Route().Group("api", func(route *Router) {
@@ -36,6 +36,24 @@ func TestServerWeb(t *testing.T) {
 			})
 		})
 	})
+
+	server.Route().Group("authentication", func(route *Router) {
+		route.Group("login", func(route *Router) {
+			route.Post("/", func(req *Request, res *Response) *Response {
+				// res.Session.Set("user_id", strconv.Itoa(int(users[0].ID)))
+
+				return res.Redirect("dashboard")
+			})
+		})
+	})
+
+	server.Route().Group("dashboard", func(route *Router) {
+		route.Get("/", func(req *Request, res *Response) *Response {
+			html := strings.Join([]string{"<h1>Welcome to dashboard user ", req.Session.Get("user_id"), "</h1>"}, "")
+
+			return res.Html(html)
+		})
+	}).Middleware()
 
 	go func() {
 		server.Listen()
@@ -115,7 +133,31 @@ func TestServerWeb(t *testing.T) {
 		}
 	})
 
-	server.Close()
+	t.Run("TestSession", func(t *testing.T) {
+		// server.Session([]byte(str.Random(10)))
+
+		// r := req.CreateRequest()
+
+		// for _, route := range server.Router().web {
+
+		// 	fmt.Println(route.Path())
+
+		// }
+
+		// http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
+
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying to login: %s", err.Error())
+		// }
+
+		// fmt.Println(http)
+	})
+
+	err := server.Close()
+
+	if err != nil {
+		t.Fatalf("Something went wrong when trying to close server: %s", err.Error())
+	}
 }
 
 var AuthKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
@@ -126,6 +168,7 @@ type Message struct {
 
 type User struct {
 	ID    int64  `json:"id"`
+	Role  byte   `json:"role"`
 	Email string `json:"email"`
 }
 

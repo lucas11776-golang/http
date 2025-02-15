@@ -26,8 +26,9 @@ type Route struct {
 type Routes []*Route
 
 type RouterGroup struct {
-	web Routes
-	ws  Routes
+	web      Routes
+	ws       Routes
+	fallback WebCallback
 }
 
 type Router struct {
@@ -209,12 +210,16 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route
 }
 
 // Comment
-func (ctx *Router) Group(prefix string, group GroupCallback) {
-	group(&Router{
+func (ctx *Router) Group(prefix string, group GroupCallback) *Router {
+	router := &Router{
 		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
 		middleware: ctx.middleware,
-	})
+	}
+
+	group(router)
+
+	return router
 }
 
 // Comment
@@ -271,4 +276,9 @@ func (ctx *Router) Ws(uri string, callback WsCallback) *Route {
 	ctx.routes.ws = append(ctx.routes.ws, route)
 
 	return route
+}
+
+// Comment
+func (ctx *Router) Fallback(fallback WebCallback) {
+	ctx.routes.fallback = fallback
 }

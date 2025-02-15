@@ -21,6 +21,7 @@ type Request struct {
 	Conn     *connection.Connection
 	Server   *server.Server
 	Response *Response
+	Session  SessionManager
 }
 
 type HttpRequestHeader struct {

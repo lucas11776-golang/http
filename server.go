@@ -126,7 +126,8 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 			}
 		}
 
-		// TODO Error response
+		responseWrite(req, []byte(ParseHttpResponse(htp.Router().fallback(req, req.Response))))
+
 		return
 	}
 
@@ -204,6 +205,13 @@ func (ctx *HTTP) SetStatic(statics string) *HTTP {
 }
 
 // Comment
+func (ctx *HTTP) Session(key []byte) SessionsManager {
+	ctx.Set("session", InitSession("session", key))
+
+	return ctx.Get("session").(SessionsManager)
+}
+
+// Comment
 func Server(address string, port int32) *HTTP {
 	server, err := server.Serve(address, port)
 
@@ -211,15 +219,40 @@ func Server(address string, port int32) *HTTP {
 		log.Fatal(err)
 	}
 
-	http := &HTTP{
-		Server: server,
-	}
+	http := &HTTP{Server: server}
 
-	http.Set("router", InitRouter())
+	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
-	http.Connection(func(server *serve.Server, conn *connection.Connection) {
-		newConnection(http, conn)
-	})
+	http.Connection(func(server *serve.Server, conn *connection.Connection) { newConnection(http, conn) })
 
 	return http
+}
+
+type message struct {
+	Message string `json:"message"`
+}
+
+// Comment
+func defaultRouteFallback(req *Request, res *Response) *Response {
+	res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
+
+	if req.contentType() == "application/json" {
+		return res.Json(message{
+			Message: "Route " + req.Path() + " is not found",
+		})
+	}
+
+	return res.Html(strings.Join([]string{
+		`<!DOCTYPE html>`,
+		`<html lang="en">`,
+		`<head>`,
+		`  <meta charset="UTF-8">`,
+		`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
+		`  <title>Route ` + req.Path() + ` not found</title>`,
+		`</head>`,
+		`<body>`,
+		`  <h1>Route ` + req.Path() + ` not found</h1>`,
+		`</body>`,
+		`</html>`,
+	}, "\r\n"))
 }

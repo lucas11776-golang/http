@@ -140,8 +140,13 @@ func main() {
 		route.Get("html", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Html("<h1 style='color: green; font-size: 3em;'>Hello World!!!</h1>")
 		})
+		route.Get("view", func(req *http.Request, res *http.Response) *http.Response {
+			return res.View("hello_world")
+		})
 		route.Get("json", func(req *http.Request, res *http.Response) *http.Response {
-			return res.Html("<h1 style='color: green; font-size: 3em;'>Hello World!!!</h1>")
+			return res.Json(struct {
+				Message string `json:"message"`
+			}{Message: "Hello World!!!"})
 		})
 		route.Get("redirect", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Redirect("http://www.google.com/")
@@ -439,12 +444,76 @@ func main() {
 If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `401` with message `Unauthorized Access`.
 
 
-### Websocket
+### Session
 
-HTTP support session
+HTTP support session to allow us to store user `data` like user ID, user role etc below is a simple code of how session works we will example everything below the sample code. 
 
 ```go
+package main
 
+import (
+	"fmt"
+
+	"github.com/lucas11776-golang/http"
+)
+
+// Comment
+func IsUser(req *http.Request, res *http.Response, next *http.Next) *http.Response {
+	if req.Session.Get("user_id") != "" {
+		return res.Redirect("/")
+	}
+
+	return next()
+}
+
+// Comment
+func IsGuest(req *http.Request, res *http.Response, next *http.Next) *http.Response {
+	if req.Session.Get("user_id") != "" {
+		return res.Redirect("/")
+	}
+
+	return next()
+}
+
+func main() {
+	server := http.Server("127.0.0.1", 8080)
+
+	// Initialize application session
+	server.Session([]byte("session-key"))
+
+	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
+		return res.Html("<h1>Home Page</h1>")
+	})
+
+	server.Route().Group("authentication", func(route *http.Router) {
+		route.Group("login", func() {
+			route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
+				return res.Html("<h1>Add Post form to login</h1>")
+			})
+			route.Post("/", func(req *http.Request, res *http.Response) *http.Response {
+				res.Session.Set("user_id", "1") // or req.Session.Set("user_id", "1")
+
+				return res.Redirect("dashboard")
+			})
+		}).Middleware(IsGuest)
+
+		route.Post("logout", func(req *http.Request, res *http.Response) *http.Response {
+			res.Session.Remove("user_id")
+
+			return res.Redirect("authentication/login")
+		}).Middleware(IsUser)
+	})
+
+	server.Route().Middleware(IsUser).Group("dashboard", func(route *http.Router) {
+		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
+			return res.Html("<h1>Dashboard Page Can Be Viewed By Login Users</h1>")
+		})
+	})
+
+	fmt.Printf("Server running %s", server.Host())
+
+	server.Listen()
+}
 ```
 
 

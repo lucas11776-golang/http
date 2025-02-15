@@ -87,6 +87,7 @@ type Response struct {
 	_Body   []byte
 	Writer  *Writer
 	Request *Request
+	Session SessionManager
 }
 
 type Writer struct {
