@@ -1,8 +1,6 @@
 package http
 
 import (
-	"log"
-
 	"github.com/gorilla/sessions"
 )
 
@@ -51,11 +49,7 @@ func InitSession(name string, key []byte) *Sessions {
 
 // Comment
 func (ctx *Sessions) Session(req *Request) SessionManager {
-	session, err := ctx.store.Get(req.Request, ctx.name)
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	session, _ := ctx.store.Get(req.Request, ctx.name)
 
 	return &Session{
 		session: session,
