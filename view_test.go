@@ -131,6 +131,20 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 	})
+
+	t.Run("TestSubDirectoryView", func(t *testing.T) {
+		data, err := view.Read("authentication.login", ViewData{})
+
+		if err != nil {
+			t.Fatalf("Failed to parse view: %s", err.Error())
+		}
+
+		expected := "<h1>Login page</h1>"
+
+		if expected != string(data) {
+			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
+		}
+	})
 }
 
 var viewReaderTestFS = scriggo.Files{
@@ -145,6 +159,9 @@ var viewReaderTestFS = scriggo.Files{
 	}, "\r\n")),
 	"switch.html": []byte(strings.Join([]string{
 		`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
+	}, "\r\n")),
+	"authentication/login.html": []byte(strings.Join([]string{
+		"<h1>Login page</h1>",
 	}, "\r\n")),
 }
 

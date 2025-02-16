@@ -86,7 +86,7 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		}
 	}
 
-	vw := strings.Join([]string{view, ctx.extension}, ".")
+	vw := strings.Join([]string{strings.ReplaceAll(view, ".", "/"), ctx.extension}, ".")
 
 	views, err := ctx.fs.Cache(vw)
 
