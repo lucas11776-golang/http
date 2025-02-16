@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -33,7 +32,7 @@ type HttpRequestHeader struct {
 type HttpRequestContent struct {
 	host    string
 	headers types.Headers
-	body    []byte
+	body    io.Reader
 }
 
 // Comment
@@ -112,7 +111,7 @@ func (ctx *Request) IP() string {
 }
 
 // Comment
-func (ctx *Request) ParseBody() {
+func (ctx *Request) parseBody() {
 	switch strings.ToLower(ctx.contentType()) {
 	case "application/x-www-form-urlencoded":
 		ctx.parseBodyX_WWW_FORM_URLENCODED()
@@ -146,7 +145,8 @@ func httpContent(http []string) (*HttpRequestContent, error) {
 
 	for i, line := range http[1:] {
 		if line == "" {
-			content.body = []byte(strings.Trim(strings.Join(http[i:], "\r\n"), "\r\n"))
+			content.body = strings.NewReader(strings.TrimRight(strings.Join(http[i+2:], "\r\n"), "\r\n"))
+
 			break
 		}
 
@@ -192,7 +192,7 @@ func ParseHttpRequest(http string) (*Request, error) {
 		header.path,
 		header.protocol,
 		content.headers,
-		bytes.NewReader(content.body),
+		content.body,
 	)
 
 	if err != nil {
@@ -201,11 +201,7 @@ func ParseHttpRequest(http string) (*Request, error) {
 
 	req.Host = content.host
 
-	err = req.ParseForm()
-
-	if err != nil {
-		return nil, err
-	}
+	req.parseBody()
 
 	return req, nil
 }

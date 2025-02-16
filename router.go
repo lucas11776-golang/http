@@ -102,14 +102,14 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 	rt := ctx.callback.Call(value)
 
 	if len(rt) == 0 {
-		return []byte("")
+		return []byte{}
 	}
 
-	switch rt[0].Type().String() {
-	case "*http.Response":
+	switch rt[0].Interface().(type) {
+	case *Response:
 		return []byte(ParseHttpResponse((rt[0].Interface().(*Response))))
 	default:
-		return []byte("")
+		return []byte{}
 	}
 }
 

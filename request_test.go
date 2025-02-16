@@ -10,11 +10,15 @@ import (
 
 // Comment
 func TestRequest(t *testing.T) {
-	const httpText = "POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1\r\n" +
-		"HOST: example.com\r\n" +
-		"Content-Type: application/x-www-form-urlencoded\r\n" +
-		"Content-Length: 6\r\n\r\n" +
-		"user=1\r\n"
+	body := []byte("username=test123&password=pass1234")
+
+	httpText := strings.Join([]string{
+		"POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1",
+		"HOST: example.com",
+		"Content-Type: application/x-www-form-urlencoded",
+		"Content-Length: " + strconv.Itoa(len(body)) + "\r\n",
+		string(body) + "\r\n",
+	}, "\r\n")
 
 	req, _ := ParseHttpRequest(httpText)
 
@@ -57,26 +61,12 @@ func TestRequest(t *testing.T) {
 			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/x-www-form-urlencoded", req.GetHeader("content-type"))
 		}
 
-		if req.GetHeader("content-length") != "6" {
+		if req.GetHeader("content-length") != strconv.Itoa(len(body)) {
 			t.Fatalf("Expected content length to be (%s) but got (%s)", "6", req.GetHeader("content-length"))
 		}
 	})
+
 	t.Run("TestParseBodyX_WWW_FORM_URLENCODED", func(t *testing.T) {
-		body := "username=test123&password=pass1234"
-
-		headers := types.Headers{
-			"content-type":   "application/x-www-form-urlencoded",
-			"content-length": strconv.Itoa(len(body)),
-		}
-
-		req, err := NewRequest("POST", "login", "HTTP/1.1", headers, strings.NewReader(body))
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
-		}
-
-		req.ParseBody()
-
 		if req.Form.Get("username") != "test123" {
 			t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))
 		}
@@ -111,8 +101,6 @@ func TestRequest(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
 		}
-
-		req.ParseBody()
 
 		if req.FormValue("name") != "My list" {
 			t.Fatalf("Expected name to be (%s) but go (%s)", "My list", req.FormValue("name"))

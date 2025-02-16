@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"io/fs"
 	"math/rand"
 	"strconv"
@@ -154,8 +155,34 @@ func TestServerWeb(t *testing.T) {
 	}
 }
 
+var (
+	INVALID_HTTP_RESPONSE = errors.New("Invalid http response")
+)
+
 // Comment
 func HttpToResponse(http string) (*Request, error) {
+	hp := strings.Split(http, "\r\n")
+
+	if len(hp) < 2 {
+		return nil, INVALID_HTTP_RESPONSE
+	}
+
+	header := strings.Split(hp[0], " ")
+
+	if len(header) < 3 {
+		return nil, INVALID_HTTP_RESPONSE
+	}
+
+	// headers := make(types.Headers)
+	// body := make([]byte{}, 0)
+
+	for _, v := range hp[1:] {
+
+		if v == "" {
+			// y :=
+		}
+
+	}
 
 	return nil, nil
 }

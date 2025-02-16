@@ -169,8 +169,6 @@ func newConnection(htp *HTTP, conn *connection.Connection) {
 
 	req.Response.Request = req
 
-	req.ParseBody()
-
 	switch req.Protocol() {
 	case "HTTP/1.1":
 		handleHTTP1_1(htp, req)
