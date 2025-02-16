@@ -138,12 +138,6 @@ func TestServerWeb(t *testing.T) {
 
 		// r := req.CreateRequest()
 
-		// for _, route := range server.Router().web {
-
-		// 	fmt.Println(route.Path())
-
-		// }
-
 		// http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
 
 		// if err != nil {
@@ -158,6 +152,12 @@ func TestServerWeb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Something went wrong when trying to close server: %s", err.Error())
 	}
+}
+
+// Comment
+func HttpToResponse(http string) (*Request, error) {
+
+	return nil, nil
 }
 
 var AuthKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))

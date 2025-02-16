@@ -61,12 +61,9 @@ func handShakeReplay(req *Request) ([]byte, error) {
 
 	alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
 
-	hashed := base64.StdEncoding.EncodeToString(alg.Sum(nil))
-
-	// res.SetStatus(101)
 	res.SetHeader("Upgrade", "websocket")
 	res.SetHeader("Connection", "Upgrade")
-	res.SetHeader("Sec-WebSocket-Accept", hashed)
+	res.SetHeader("Sec-WebSocket-Accept", base64.StdEncoding.EncodeToString(alg.Sum(nil)))
 
 	return []byte(ParseHttpResponse(res)), nil
 }
@@ -76,21 +73,24 @@ func webSocketRequest(htp *HTTP, req *Request) {
 	route := htp.Router().MatchWsRoute(req)
 
 	if route == nil {
-		// TODO Error response
+		req.Conn.Close()
+
 		return
 	}
 
 	reply, err := handShakeReplay(req)
 
 	if err != nil {
-		// TODO Error response
+		req.Conn.Close()
+
 		return
 	}
 
 	err = req.Conn.Write(reply)
 
 	if err != nil {
-		// TODO Error response
+		req.Conn.Close()
+
 		return
 	}
 
@@ -107,7 +107,7 @@ func webSocketRequest(htp *HTTP, req *Request) {
 
 // Comment
 func handleHTTP1_1(htp *HTTP, req *Request) {
-	if strings.ToLower(req.GetHeader("Upgrade")) == "websocket" {
+	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
 		webSocketRequest(htp, req)
 
 		return

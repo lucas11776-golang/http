@@ -114,25 +114,33 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 }
 
 // Comment
-func parametersRouteMatch(route []string, path []string) (Parameters, bool) {
+func parametersRouteMatch(route *Route, path []string) (Parameters, bool) {
 	regex, _ := regexp.Compile(ParameterRegex)
 	parameters := make(Parameters)
 
 	for i, seg := range path {
-		if i >= len(route) {
+		if i >= len(route.path) {
 			return nil, false
 		}
 
-		if route[i] == "*" {
+		if route.path[i] == "*" {
 			return parameters, true
 		}
 
-		if seg == route[i] {
+		if seg == route.path[i] {
 			continue
 		}
 
-		if regex.Match([]byte(route[i])) {
-			parameters[strings.Trim(strings.Trim(route[i], "{"), "}")] = path[i]
+		if regex.Match([]byte(route.path[i])) {
+			name := strings.Trim(strings.Trim(route.path[i], "{"), "}")
+			value := path[i]
+
+			// TODO Will add route parameter match regex in future
+			// if !regex_match {
+			// 	return nil, false
+			// }
+
+			parameters[name] = value
 
 			continue
 		}
@@ -160,7 +168,7 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 			return route, make(Parameters)
 		}
 
-		parameters, ok := parametersRouteMatch(route.path, path)
+		parameters, ok := parametersRouteMatch(route, path)
 
 		if !ok {
 			continue
