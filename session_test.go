@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"fmt"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -26,9 +25,9 @@ func TestSession(t *testing.T) {
 
 		session := sessions.Session(req)
 
-		session.Set("user_id", userId)
+		session.Set("user_id", userId).Save()
 
-		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.Header["Set-Cookie"][0], "; ", "&"))
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("set-cookie"), "; ", "&"))
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to parse cookie to query: %s", err)
@@ -51,11 +50,9 @@ func TestSession(t *testing.T) {
 		if session.Get("user_id") != userId {
 			t.Fatalf("Expected value session_id from user_id to be (%s) but got (%s)", userId, session.Get("user_id"))
 		}
-
-		fmt.Println("TEST:")
 	})
 
-	t.Run("TestOptionsSessionsManager", func(t *testing.T) {
+	t.Run("TestSessionsManager", func(t *testing.T) {
 		domain := "map.guarded.com"
 		maxAge := ((60 * 60) * 24) * 5
 		secure := true
@@ -87,7 +84,9 @@ func TestSession(t *testing.T) {
 		}
 	})
 
-	t.Run("TestOptionSessionManager", func(t *testing.T) {
+	t.Run("TestSessionManager", func(t *testing.T) {
+		userId := "1"
+		userRole := "1"
 		path := "dashboard"
 		sessions := InitSession("session", []byte(str.Random(10)))
 
@@ -99,16 +98,45 @@ func TestSession(t *testing.T) {
 
 		session := sessions.Session(req).Path(path)
 
-		session.Set("user_id", "1")
+		session.Set("user_id", userId).Set("role", userRole).Save()
 
-		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.Header["Set-Cookie"][0], "; ", "&"))
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to parse cookie to query: %s", err)
 		}
 
 		if cookie.Get("Path") != path {
-			t.Fatalf("Expected the path to be (%s) but got (%s)", path, cookie["path"][0])
+			t.Fatalf("Expected the path to be (%s) but got (%s)", path, cookie.Get("Path"))
+		}
+
+		// Second Request
+		headers := types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		session = sessions.Session(req)
+
+		if session.Get("user_id") != userId {
+			t.Fatalf("Expected user id to be (%s) but got (%s)", userId, session.Get("user_id"))
+		}
+
+		if session.Get("role") != userRole {
+			t.Fatalf("Expected role id to be (%s) but got (%s)", userRole, session.Get("role"))
+		}
+
+		session.Clear().Save()
+
+		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to parse cookie to query: %s", err)
+		}
+
+		if cookie.Get("Max-Age") != "0" {
+			t.Fatalf("Expected session cookie max age to be (%s) but got (%s)", "0", cookie.Get("Max-Age"))
 		}
 	})
 }

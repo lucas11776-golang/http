@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sort"
 	"strconv"
@@ -81,6 +82,10 @@ const (
 	HTTP_RESPONSE_NETWORK_AUTHENTICATION_REQUIRED Status = 511
 )
 
+var (
+	INVALID_HTTP_RESPONSE = errors.New("Invalid http response")
+)
+
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
@@ -113,9 +118,10 @@ func (ctx *Writer) WriteHeader(status int) {
 func NewResponse(protocol string, status Status, headers types.Headers, body []byte) *Response {
 	res := &Response{
 		Response: &http.Response{
-			Proto:  protocol,
-			Status: strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
-			Header: h.ToHeader(headers),
+			Proto:      protocol,
+			StatusCode: int(status),
+			Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
+			Header:     h.ToHeader(headers),
 		},
 	}
 
@@ -141,6 +147,17 @@ func (ctx *Response) SetHeader(key string, value string) *Response {
 	ctx.Header[key] = strings.Split(value, ";")
 
 	return ctx
+}
+
+// Comment
+func (ctx *Response) GetHeader(key string) string {
+	header, ok := ctx.Header[cases.Title(language.English).String(key)]
+
+	if !ok {
+		return ""
+	}
+
+	return strings.Join(header, ",")
 }
 
 // Comment
@@ -230,6 +247,47 @@ func ParseHttpResponse(res *Response) string {
 	}
 
 	return strings.Join(append(http, strings.Join([]string{"\r\n", string(res._Body), "\r\n"}, "")), "\r\n")
+}
+
+// Comment
+func HttpToResponse(http string) (*Response, error) {
+	hp := strings.Split(http, "\r\n")
+
+	if len(hp) < 2 {
+		return nil, INVALID_HTTP_RESPONSE
+	}
+
+	h := strings.Split(hp[0], " ")
+
+	if len(h) < 3 {
+		return nil, INVALID_HTTP_RESPONSE
+	}
+
+	status, err := strconv.Atoi(h[1])
+
+	if err != nil {
+		return nil, INVALID_HTTP_RESPONSE
+	}
+
+	headers := make(types.Headers)
+	body := []byte{}
+
+	for i, line := range hp[1:] {
+		if line == "" {
+			body = append(body, []byte(strings.TrimRight(strings.Join(hp[i+2:], "\r\n"), "\r\n"))...)
+
+			break
+		}
+
+		header := strings.Split(line, ":")
+
+		key := cases.Title(language.English).String(header[0])
+		value := strings.Trim(strings.Join(header[1:], ","), " ")
+
+		headers[key] = value
+	}
+
+	return NewResponse(h[0], Status(status), headers, body), nil
 }
 
 // Comment

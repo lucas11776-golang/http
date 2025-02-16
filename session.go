@@ -11,7 +11,9 @@ const SESSION_DEFAULT_EXPIRE = (60 * 60) * 24
 type SessionManager interface {
 	Set(key string, value string) SessionManager
 	Get(key string) string
+	Clear() SessionManager
 	Path(path string) SessionManager
+	Save()
 }
 
 type SessionsManager interface {
@@ -111,12 +113,6 @@ func (ctx *Session) Path(path string) SessionManager {
 func (ctx *Session) Set(key string, value string) SessionManager {
 	ctx.session.Values[key] = value
 
-	err := ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
-
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
 	return ctx
 }
 
@@ -129,4 +125,20 @@ func (ctx *Session) Get(key string) string {
 	}
 
 	return value.(string)
+}
+
+// Comment
+func (ctx *Session) Clear() SessionManager {
+	ctx.session.Options.MaxAge = -1
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) Save() {
+	err := ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }

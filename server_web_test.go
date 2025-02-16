@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"io/fs"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,6 +11,7 @@ import (
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/reader"
 	req "github.com/lucas11776-golang/http/utils/request"
+	str "github.com/lucas11776-golang/http/utils/strings"
 	"github.com/open2b/scriggo"
 )
 
@@ -39,22 +40,28 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	server.Route().Group("authentication", func(route *Router) {
-		route.Group("login", func(route *Router) {
+		route.Middleware(IsGuest).Group("login", func(route *Router) {
+			route.Get("/", func(req *Request, res *Response) *Response {
+				return res.Html("<h1>Login page</h1>")
+			})
 			route.Post("/", func(req *Request, res *Response) *Response {
-				// res.Session.Set("user_id", strconv.Itoa(int(users[0].ID)))
+				user := users[0]
+
+				res.Session.Set("user_id", strconv.Itoa(int(user.ID)))
+				res.Session.Set("role", strconv.Itoa(int(user.Role)))
 
 				return res.Redirect("dashboard")
 			})
 		})
 	})
 
-	server.Route().Group("dashboard", func(route *Router) {
+	server.Route().Middleware(IsUser, IsAdmin).Group("dashboard", func(route *Router) {
 		route.Get("/", func(req *Request, res *Response) *Response {
 			html := strings.Join([]string{"<h1>Welcome to dashboard user ", req.Session.Get("user_id"), "</h1>"}, "")
 
 			return res.Html(html)
 		})
-	}).Middleware()
+	})
 
 	go func() {
 		server.Listen()
@@ -135,17 +142,49 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestSession", func(t *testing.T) {
-		// server.Session([]byte(str.Random(10)))
+		server.Session([]byte(str.Random(10)))
 
-		// r := req.CreateRequest()
+		r := req.CreateRequest()
 
-		// http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
+		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying to login: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to login: %s", err.Error())
+		}
 
-		// fmt.Println(http)
+		res, err := HttpToResponse(http)
+
+		if err != nil {
+			t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
+		}
+
+		if res.StatusCode != int(HTTP_RESPONSE_TEMPORARY_REDIRECT) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", 307, res.StatusCode)
+		}
+
+		cookie, err := url.ParseQuery(strings.ReplaceAll(res.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
+		}
+
+		r = req.CreateRequest().Header("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
+
+		http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to get dashboard view: %s", err.Error())
+		}
+
+		res, err = HttpToResponse(http)
+
+		if err != nil {
+			t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
+		}
+
+		if res.StatusCode != int(HTTP_RESPONSE_OK) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
+		}
 	})
 
 	err := server.Close()
@@ -153,38 +192,6 @@ func TestServerWeb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Something went wrong when trying to close server: %s", err.Error())
 	}
-}
-
-var (
-	INVALID_HTTP_RESPONSE = errors.New("Invalid http response")
-)
-
-// Comment
-func HttpToResponse(http string) (*Request, error) {
-	hp := strings.Split(http, "\r\n")
-
-	if len(hp) < 2 {
-		return nil, INVALID_HTTP_RESPONSE
-	}
-
-	header := strings.Split(hp[0], " ")
-
-	if len(header) < 3 {
-		return nil, INVALID_HTTP_RESPONSE
-	}
-
-	// headers := make(types.Headers)
-	// body := make([]byte{}, 0)
-
-	for _, v := range hp[1:] {
-
-		if v == "" {
-			// y :=
-		}
-
-	}
-
-	return nil, nil
 }
 
 var AuthKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
@@ -238,4 +245,31 @@ func (ctx *webServerReaderTest) Open(name string) (fs.File, error) {
 // Comment
 func (ctx *webServerReaderTest) Cache(name string) (scriggo.Files, error) {
 	return reader.ReadCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func IsGuest(req *Request, res *Response, next Next) *Response {
+	if req.Session.Get("user_id") != "" {
+		return res.Redirect("/")
+	}
+
+	return next()
+}
+
+// Comment
+func IsUser(req *Request, res *Response, next Next) *Response {
+	if req.Session.Get("user_id") == "" {
+		return res.Redirect("authentication/login")
+	}
+
+	return next()
+}
+
+// Comment
+func IsAdmin(req *Request, res *Response, next Next) *Response {
+	if req.Session.Get("role") != "1" {
+		return res.Redirect("/")
+	}
+
+	return next()
 }

@@ -14,6 +14,7 @@ import (
 	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
+	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
 type HTTP struct {
@@ -168,6 +169,8 @@ func newConnection(htp *HTTP, conn *connection.Connection) {
 	}
 
 	req.Response.Request = req
+	req.Session = htp.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
 
 	switch req.Protocol() {
 	case "HTTP/1.1":
@@ -222,6 +225,8 @@ func Server(address string, port int32) *HTTP {
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
 	http.Connection(func(server *serve.Server, conn *connection.Connection) { newConnection(http, conn) })
+
+	http.Session([]byte(str.Random(10)))
 
 	return http
 }

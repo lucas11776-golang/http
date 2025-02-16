@@ -107,7 +107,11 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 
 	switch rt[0].Interface().(type) {
 	case *Response:
-		return []byte(ParseHttpResponse((rt[0].Interface().(*Response))))
+		res, _ := rt[0].Interface().(*Response)
+
+		res.Session.Save()
+
+		return []byte(ParseHttpResponse(res))
 	default:
 		return []byte{}
 	}
