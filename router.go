@@ -8,6 +8,10 @@ import (
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
+const (
+	ParameterRegex string = "\\{[a-zA-Z_]+\\}"
+)
+
 type Next func() *Response
 
 type Middleware func(req *Request, res *Response, next Next) *Response
@@ -109,12 +113,39 @@ func (ctx *Route) Call(value ...reflect.Value) []byte {
 	}
 }
 
+// Comment
+func parametersRouteMatch(route []string, path []string) (Parameters, bool) {
+	regex, _ := regexp.Compile(ParameterRegex)
+	parameters := make(Parameters)
+
+	for i, seg := range path {
+		if i >= len(route) {
+			return nil, false
+		}
+
+		if route[i] == "*" {
+			return parameters, true
+		}
+
+		if seg == route[i] {
+			continue
+		}
+
+		if regex.Match([]byte(route[i])) {
+			parameters[strings.Trim(strings.Trim(route[i], "{"), "}")] = path[i]
+
+			continue
+		}
+
+		return nil, false
+	}
+
+	return parameters, true
+}
+
 // comment
 func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
-	parameters := make(Parameters)
 	path := strings.Split(strings.Trim(uri, "/"), "/")
-	regexGlobal, _ := regexp.Compile("[\\*]")
-	regexParameter, _ := regexp.Compile("\\{[a-zA-Z_]+\\}")
 
 	for _, route := range routes {
 		if strings.ToUpper(method) != route.Method() {
@@ -122,36 +153,17 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 		}
 
 		if route.Path() == "*" {
-			return route, parameters
+			return route, make(Parameters)
 		}
 
 		if strings.Trim(uri, "/") == route.Path() {
-			return route, parameters
+			return route, make(Parameters)
 		}
 
-		// TODO Fix this garbage :(
-		if len(path) != len(route.path) {
-			if (path[0] == route.path[0] && regexGlobal.Match([]byte(route.Path()))) == false {
-				continue
-			}
-		}
+		parameters, ok := parametersRouteMatch(route.path, path)
 
-		for i, segment := range route.path {
-			if segment == "*" {
-				return route, parameters
-			}
-
-			if segment == path[i] {
-				continue
-			}
-
-			if regexParameter.Match([]byte(segment)) {
-				parameters[strings.Trim(strings.Trim(segment, "{"), "}")] = path[i]
-
-				continue
-			}
-
-			return nil, nil
+		if !ok {
+			continue
 		}
 
 		return route, parameters
