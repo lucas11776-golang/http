@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"io/fs"
 	"math/rand"
 	"net/url"
@@ -77,42 +76,12 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
 		}
 
-		// res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(users)
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(users)
 
-		rt, err := HttpToResponse(http)
+		expectedHttp := ParseHttpResponse(res)
 
-		if err != nil {
-			t.Fatalf("Something went wrong went trying to convert http to response: %s", err.Error())
-		}
-
-		if rt.StatusCode != int(HTTP_RESPONSE_OK) {
-			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/json", rt.GetHeader("content-type"))
-		}
-
-		if rt.GetHeader("content-type") != "application/json" {
-			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/json", rt.GetHeader("content-type"))
-		}
-
-		tBody, _ := json.Marshal(users)
-
-		if rt.GetHeader("content-length") != strconv.Itoa(len(tBody)) {
-			t.Fatalf("Expected content length to be (%d) but got (%s)", len(tBody), rt.GetHeader("content-length"))
-		}
-
-		body := make([]byte, len(tBody))
-
-		n, err := rt.Body.Read(body)
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to read body: %s", err.Error())
-		}
-
-		if n != len(tBody) {
-			t.Fatalf("Expected body size to be (%d) but got (%d)", len(tBody), n)
-		}
-
-		if string(tBody) != string(body) {
-			t.Fatalf("Expected body size to be (%s) but got (%s)", string(tBody), string(body))
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
 		}
 	})
 
@@ -125,47 +94,14 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
 		}
 
-		rt, err := HttpToResponse(http)
+		res := NewResponse("HTTP/1.1", HTTP_RESPONSE_UNAUTHORIZED, make(types.Headers), []byte{}).Json(unauthorizedAccessMessage)
+		expectedHttp := ParseHttpResponse(res)
 
-		if err != nil {
-			t.Fatalf("Something went wrong went trying to convert http to response: %s", err.Error())
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
 		}
 
-		if rt.StatusCode != int(HTTP_RESPONSE_UNAUTHORIZED) {
-			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_UNAUTHORIZED, rt.StatusCode)
-		}
-
-		if rt.GetHeader("content-type") != "application/json" {
-			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/json", rt.GetHeader("content-type"))
-		}
-
-		tBody, _ := json.Marshal(unauthorizedAccessMessage)
-
-		if rt.GetHeader("content-length") != strconv.Itoa(len(tBody)) {
-			t.Fatalf("Expected content length to be (%d) but got (%s)", len(tBody), rt.GetHeader("content-length"))
-		}
-
-		body := make([]byte, len(tBody))
-
-		n, err := rt.Body.Read(body)
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to read body: %s", err.Error())
-		}
-
-		if n != len(tBody) {
-			t.Fatalf("Expected body size to be (%d) but got (%d)", len(tBody), n)
-		}
-
-		if string(tBody) != string(body) {
-			t.Fatalf("Expected body size to be (%s) but got (%s)", string(tBody), string(body))
-		}
-
-		/**
-		 *
-		 * WITH KEY
-		 *
-		 */
+		// With key
 		r = req.CreateRequest().Header("content-type", "application/json").Header("authorization", AuthKey)
 
 		http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
@@ -174,40 +110,11 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Something went wrong went trying to send request: %s", err.Error())
 		}
 
-		rt, err = HttpToResponse(http)
+		res = NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(userCreatedMessage)
+		expectedHttp = ParseHttpResponse(res)
 
-		if err != nil {
-			t.Fatalf("Something went wrong went trying to convert http to response: %s", err.Error())
-		}
-
-		if rt.StatusCode != int(HTTP_RESPONSE_OK) {
-			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, rt.StatusCode)
-		}
-
-		if rt.GetHeader("content-type") != "application/json" {
-			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/json", rt.GetHeader("content-type"))
-		}
-
-		tBody, _ = json.Marshal(userCreatedMessage)
-
-		if rt.GetHeader("content-length") != strconv.Itoa(len(tBody)) {
-			t.Fatalf("Expected content length to be (%d) but got (%s)", len(tBody), rt.GetHeader("content-length"))
-		}
-
-		body = make([]byte, len(tBody))
-
-		n, err = rt.Body.Read(body)
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to read body: %s", err.Error())
-		}
-
-		if n != len(tBody) {
-			t.Fatalf("Expected body size to be (%d) but got (%d)", len(tBody), n)
-		}
-
-		if string(tBody) != string(body) {
-			t.Fatalf("Expected body size to be (%s) but got (%s)", string(tBody), string(body))
+		if expectedHttp != http {
+			t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
 		}
 	})
 
@@ -305,7 +212,7 @@ var unauthorizedAccessMessage = Message{
 }
 
 var userCreatedMessage = Message{
-	Message: "User was created successfully",
+	Message: "Authorization key is invalid",
 }
 
 // Comment

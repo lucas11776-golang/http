@@ -127,16 +127,38 @@ func TestSession(t *testing.T) {
 			t.Fatalf("Expected role id to be (%s) but got (%s)", userRole, session.Get("role"))
 		}
 
-		session.Clear().Save()
+		session.Remove("user_id").Save()
 
+		// Third Request
 		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
 
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to parse cookie to query: %s", err)
+		headers = types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
 		}
 
-		if cookie.Get("Max-Age") != "0" {
-			t.Fatalf("Expected session cookie max age to be (%s) but got (%s)", "0", cookie.Get("Max-Age"))
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		session = sessions.Session(req)
+
+		if session.Get("user_id") != "" {
+			t.Fatalf("Expected session user id to be empty but got (%s)", session.Get("user_id"))
+		}
+
+		if session.Get("role") != userRole {
+			t.Fatalf("Expected role id to be (%s) but got (%s)", userRole, session.Get("role"))
+		}
+
+		session.Clear()
+
+		// Fourth Request
+		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		headers = types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		if session.Get("role") != "" {
+			t.Fatalf("Expected session user id to be empty but got (%s)", session.Get("role"))
 		}
 	})
 }

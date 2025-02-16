@@ -11,6 +11,8 @@ type SessionManager interface {
 	Get(key string) string
 	Clear() SessionManager
 	Path(path string) SessionManager
+	Remove(key string) SessionManager
+	CanSave() bool
 	Save() SessionManager
 }
 
@@ -31,6 +33,7 @@ type Sessions struct {
 type Session struct {
 	session *sessions.Session
 	request *Request
+	save    bool
 }
 
 // Comment
@@ -106,6 +109,7 @@ func (ctx *Session) Path(path string) SessionManager {
 // Comment
 func (ctx *Session) Set(key string, value string) SessionManager {
 	ctx.session.Values[key] = value
+	ctx.save = true
 
 	return ctx
 }
@@ -123,14 +127,34 @@ func (ctx *Session) Get(key string) string {
 
 // Comment
 func (ctx *Session) Clear() SessionManager {
-	ctx.session.Options.MaxAge = -1
+	for k := range ctx.session.Values {
+		delete(ctx.session.Values, k)
+	}
+
+	ctx.save = true
 
 	return ctx
 }
 
 // Comment
+func (ctx *Session) Remove(key string) SessionManager {
+	delete(ctx.session.Values, key)
+
+	ctx.save = true
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) CanSave() bool {
+	return ctx.save
+}
+
+// Comment
 func (ctx *Session) Save() SessionManager {
-	ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
+	if ctx.CanSave() {
+		ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
+	}
 
 	return ctx
 }
