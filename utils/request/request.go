@@ -35,6 +35,17 @@ func (ctx *Request) Header(key string, value string) *Request {
 }
 
 // Comment
+func (ctx *Request) GetHeader(key string) string {
+	header, ok := ctx.headers[key]
+
+	if !ok {
+		return ""
+	}
+
+	return header
+}
+
+// Comment
 func (ctx *Request) Post(url string, data []byte) (string, error) {
 	return ctx.Request("POST", url, data)
 }

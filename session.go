@@ -13,7 +13,7 @@ type SessionManager interface {
 	Get(key string) string
 	Clear() SessionManager
 	Path(path string) SessionManager
-	Save()
+	Save() SessionManager
 }
 
 type SessionsManager interface {
@@ -135,10 +135,8 @@ func (ctx *Session) Clear() SessionManager {
 }
 
 // Comment
-func (ctx *Session) Save() {
-	err := ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
+func (ctx *Session) Save() SessionManager {
+	ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer)
 
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	return ctx
 }

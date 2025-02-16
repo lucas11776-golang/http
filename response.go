@@ -1,8 +1,10 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -114,6 +116,15 @@ func (ctx *Writer) WriteHeader(status int) {
 	ctx.response.Status = strings.Join([]string{strconv.Itoa(status), StatusText(Status(status))}, "")
 }
 
+type responseBodyReader struct {
+	io.Reader
+}
+
+// Comment
+func (ctx *responseBodyReader) Close() error {
+	return nil
+}
+
 // Comment
 func NewResponse(protocol string, status Status, headers types.Headers, body []byte) *Response {
 	res := &Response{
@@ -122,6 +133,9 @@ func NewResponse(protocol string, status Status, headers types.Headers, body []b
 			StatusCode: int(status),
 			Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
 			Header:     h.ToHeader(headers),
+			Body: &responseBodyReader{
+				Reader: bytes.NewReader(body),
+			},
 		},
 	}
 

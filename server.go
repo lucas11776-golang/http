@@ -142,6 +142,8 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 		})
 
 		if !next {
+			req.Session.Save()
+
 			responseWrite(req, []byte(ParseHttpResponse(res)))
 
 			return
