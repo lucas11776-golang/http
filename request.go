@@ -15,6 +15,19 @@ import (
 	"golang.org/x/text/language"
 )
 
+type Method string
+
+const (
+	METHOD_GET     Method = "GET"
+	METHOD_POST    Method = "POST"
+	METHOD_PUT     Method = "PUT"
+	METHOD_PATCH   Method = "PATCH"
+	METHOD_DELETE  Method = "DELETE"
+	METHOD_HEAD    Method = "HEAD"
+	METHOD_OPTIONS Method = "OPTIONS"
+	METHOD_CONNECT Method = "CONNECT"
+)
+
 type Request struct {
 	*http.Request
 	Conn     *connection.Connection
@@ -36,8 +49,8 @@ type HttpRequestContent struct {
 }
 
 // Comment
-func NewRequest(method string, path string, protocol string, headers types.Headers, body io.Reader) (*Request, error) {
-	r, err := http.NewRequest(method, path, body)
+func NewRequest(method Method, path string, protocol string, headers types.Headers, body io.Reader) (*Request, error) {
+	r, err := http.NewRequest(string(method), path, body)
 
 	if err != nil {
 		return nil, err
@@ -188,7 +201,7 @@ func ParseHttpRequest(http string) (*Request, error) {
 	}
 
 	req, err := NewRequest(
-		header.method,
+		Method(header.method),
 		header.path,
 		header.protocol,
 		content.headers,

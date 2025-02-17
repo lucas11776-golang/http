@@ -88,18 +88,33 @@ var (
 	INVALID_HTTP_RESPONSE = errors.New("Invalid http response")
 )
 
+type RedirectBag struct {
+	To string
+}
+
+type ViewBag struct {
+	Name string
+	Data ViewData
+}
+
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	_Body    []byte
-	Writer   *Writer
-	Request  *Request
-	Session  SessionManager
-	ViewName string
+	_Body       []byte
+	Writer      *Writer
+	Request     *Request
+	Session     SessionManager
+	ViewBag     *ViewBag
+	RedirectBag *RedirectBag
 }
 
 type Writer struct {
 	response *Response
+}
+
+// Comment
+func (ctx *Response) Protocol() string {
+	return ctx.Proto
 }
 
 // Comment
@@ -202,13 +217,15 @@ func (ctx *Response) Json(v any) *Response {
 
 // Comment
 func (ctx *Response) Redirect(path string) *Response {
+	ctx.RedirectBag = &RedirectBag{To: strings.Trim(path, "/")}
+
 	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(strings.Join([]string{
 		`<!DOCTYPE html>`,
 		`<head>`,
-		`  <meta http-equiv="Refresh" content="0, url='` + path + `'">`,
+		`  <meta http-equiv="Refresh" content="0, url='` + ctx.RedirectBag.To + `'">`,
 		`</head>`,
 		`<body>`,
-		`  <p>You will be redirected to ` + path + `</p>`,
+		`  <p>You will be redirected to ` + ctx.RedirectBag.To + `</p>`,
 		`</body>`,
 		`</html>`,
 	}, "\r\n"))
@@ -224,12 +241,15 @@ func (ctx *Response) Download(contentType string, filename string, binary []byte
 
 // Comment
 func (ctx *Response) View(view string, data ViewData) *Response {
-	ctx.ViewName = view
+	ctx.ViewBag = &ViewBag{
+		Name: view,
+		Data: data,
+	}
 
-	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.ViewName, data)
+	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.ViewBag.Name, ctx.ViewBag.Data)
 
 	if err != nil {
-		// TODO Error page 500
+		// TODO Error response 500
 		return ctx
 	}
 

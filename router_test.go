@@ -8,7 +8,7 @@ import (
 )
 
 // Comment
-func makeRequest(method string, path string) *Request {
+func makeRequest(method Method, path string) *Request {
 	req, _ := NewRequest(method, path, "HTTP/1.1", make(types.Headers), strings.NewReader(""))
 
 	return req
