@@ -26,73 +26,62 @@ func handleStatic(conn *connection.Connection, static *Static, req *Request) err
 	res, err := static.HandleRequest(req)
 
 	if err != nil {
+		// TODO Check request is asset e.g (.js,.css and etc.) and return 404 not found request with empty body
 		return err
 	}
 
 	return conn.Write([]byte(ParseHttpResponse(res)))
 }
 
-// Comment
-func responseWrite(req *Request, http []byte) {
-	err := req.Conn.Write(http)
-
-	if err != nil {
-		return
-	}
-}
-
 const (
-	ESTABLISH_CONNECTION_PAYLOAD_SIZE = 2048
-	SEC_WEB_SOCKET_ACCEPT_STATIC      = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 )
 
-var ERROR_INVALID_WEBSOCKET_REQUEST = errors.New("Invalid http request")
+var (
+	INVALID_WEBSOCKET_REQUEST = errors.New("Invalid http request")
+)
 
 // Comment
-func handShakeReplay(req *Request) ([]byte, error) {
-	res := NewResponse(req.Protocol(), HTTP_RESPONSE_SWITCHING_PROTOCOLS, make(types.Headers), []byte{})
-
+func websocketHandshake(req *Request) error {
 	secWebsocketKey := req.GetHeader("sec-websocket-key")
 
 	if secWebsocketKey == "" {
-		return nil, ERROR_INVALID_WEBSOCKET_REQUEST
+		return INVALID_WEBSOCKET_REQUEST
 	}
 
 	alg := sha1.New()
 
-	alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
+	_, err := alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
 
-	res.SetHeader("Upgrade", "websocket")
-	res.SetHeader("Connection", "Upgrade")
-	res.SetHeader("Sec-WebSocket-Accept", base64.StdEncoding.EncodeToString(alg.Sum(nil)))
+	if err != nil {
+		return err
+	}
 
-	return []byte(ParseHttpResponse(res)), nil
+	headers := types.Headers{
+		"upgrade":              "websocket",
+		"connection":           "Upgrade",
+		"sec-webSocket-accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
+	}
+
+	res := NewResponse(req.Protocol(), HTTP_RESPONSE_SWITCHING_PROTOCOLS, headers, []byte{})
+
+	return req.Conn.Write([]byte(ParseHttpResponse(res)))
 }
 
 // Comment
-func webSocketRequest(htp *HTTP, req *Request) {
+func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 	route := htp.Router().MatchWsRoute(req)
 
 	if route == nil {
 		req.Conn.Close()
 
-		return
+		return nil
 	}
 
-	reply, err := handShakeReplay(req)
-
-	if err != nil {
+	if websocketHandshake(req) != nil {
 		req.Conn.Close()
 
-		return
-	}
-
-	err = req.Conn.Write(reply)
-
-	if err != nil {
-		req.Conn.Close()
-
-		return
+		return nil
 	}
 
 	ws := InitWs(req.Conn)
@@ -104,14 +93,14 @@ func webSocketRequest(htp *HTTP, req *Request) {
 	ws.Emit(EVENT_READY, []byte{})
 
 	ws.Listen()
+
+	return nil
 }
 
 // Comment
-func handleHTTP1_1(htp *HTTP, req *Request) {
+func handleHTTP1_1(htp *HTTP, req *Request) *Response {
 	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
-		webSocketRequest(htp, req)
-
-		return
+		return webSocketRequestHandler(htp, req)
 	}
 
 	route := htp.Router().MatchWebRoute(req)
@@ -123,13 +112,11 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 			if err == nil {
 				req.Conn.Close()
 
-				return
+				return nil
 			}
 		}
 
-		responseWrite(req, []byte(ParseHttpResponse(htp.Router().fallback(req, req.Response))))
-
-		return
+		return htp.Router().fallback(req, req.Response)
 	}
 
 	for _, middleware := range route.middleware {
@@ -144,43 +131,61 @@ func handleHTTP1_1(htp *HTTP, req *Request) {
 		if !next {
 			req.Session.Save()
 
-			responseWrite(req, []byte(ParseHttpResponse(res)))
-
-			return
+			return res
 		}
 	}
 
-	responseWrite(req, route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response)))
-
-	req.Conn.Close()
+	return route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
 }
 
 // Comment
-func newConnection(htp *HTTP, conn *connection.Connection) {
-	rq, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(htp.MaxRequestSize))))
+func (ctx *HTTP) HandleRequest(req *Request) *Response {
+	req.Session = ctx.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
 
-	if err != nil {
-		return
+	switch req.Protocol() {
+	case "HTTP/1.1":
+		res := handleHTTP1_1(ctx, req)
+
+		req.Session.Save()
+
+		return res
+	default:
+		return nil
 	}
+}
 
+// Comment
+func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Request {
 	req := &Request{
 		Request:  rq,
-		Server:   htp.Server,
+		Server:   ctx.Server,
 		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
 
 	req.Response.Request = req
-	req.Session = htp.Get("session").(SessionsManager).Session(req)
-	req.Response.Session = req.Session
 
-	switch req.Protocol() {
-	case "HTTP/1.1":
-		handleHTTP1_1(htp, req)
-		break
-	default:
+	return req
+}
+
+// Comment
+func (ctx *HTTP) newConnection(conn *connection.Connection) {
+	req, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(ctx.MaxRequestSize))))
+
+	if err != nil {
 		conn.Close()
+
+		return
 	}
+
+	res := ctx.HandleRequest(ctx.NewRequest(req, conn))
+
+	if res != nil {
+		conn.Write([]byte(ParseHttpResponse(res)))
+	}
+
+	conn.Close()
 }
 
 // Comment
@@ -226,7 +231,9 @@ func Server(address string, port int32) *HTTP {
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
-	http.Connection(func(server *serve.Server, conn *connection.Connection) { newConnection(http, conn) })
+	http.Connection(func(server *serve.Server, conn *connection.Connection) {
+		http.newConnection(conn)
+	})
 
 	http.Session([]byte(str.Random(10)))
 

@@ -12,24 +12,35 @@ import (
 	"golang.org/x/text/language"
 )
 
-const MAX_REQUEST_SIZE = 1024 * 1000
+const MAX_RESPONSE_SIZE = 1024 * 1000
 
 type Request struct {
-	method  string
-	headers types.Headers
-	data    []byte
+	method          string
+	headers         types.Headers
+	data            []byte
+	maxResponseSize int
 }
 
 // Comment
 func CreateRequest() *Request {
 	return &Request{
-		headers: make(types.Headers),
+		headers:         make(types.Headers),
+		maxResponseSize: MAX_RESPONSE_SIZE,
 	}
 }
 
 // Comment
-func (ctx *Request) Header(key string, value string) *Request {
+func (ctx *Request) SetHeader(key string, value string) *Request {
 	ctx.headers[key] = value
+
+	return ctx
+}
+
+// Comment
+func (ctx *Request) SetHeaders(headers types.Headers) *Request {
+	for k, v := range headers {
+		ctx.headers[k] = v
+	}
 
 	return ctx
 }
@@ -46,13 +57,38 @@ func (ctx *Request) GetHeader(key string) string {
 }
 
 // Comment
+func (ctx *Request) Get(url string) (string, error) {
+	return ctx.Request("GET", url, []byte{})
+}
+
+// Comment
 func (ctx *Request) Post(url string, data []byte) (string, error) {
 	return ctx.Request("POST", url, data)
 }
 
 // Comment
-func (ctx *Request) Get(url string) (string, error) {
-	return ctx.Request("GET", url, []byte{})
+func (ctx *Request) PUT(url string, data []byte) (string, error) {
+	return ctx.Request("PUT", url, data)
+}
+
+// Comment
+func (ctx *Request) Patch(url string, data []byte) (string, error) {
+	return ctx.Request("PATCH", url, data)
+}
+
+// Comment
+func (ctx *Request) Delete(url string) (string, error) {
+	return ctx.Request("DELETE", url, []byte{})
+}
+
+// Comment
+func (ctx *Request) Options(url string) (string, error) {
+	return ctx.Request("Options", url, []byte{})
+}
+
+// Comment
+func (ctx *Request) Connect(url string, data []byte) (string, error) {
+	return ctx.Request("Connect", url, data)
 }
 
 // Comment
@@ -100,7 +136,7 @@ func (ctx *Request) Request(method string, address string, data []byte) (string,
 		return "", err
 	}
 
-	http := make([]byte, MAX_REQUEST_SIZE)
+	http := make([]byte, ctx.maxResponseSize)
 
 	n, err := listener.Read(http)
 

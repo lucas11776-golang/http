@@ -91,10 +91,11 @@ var (
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	_Body   []byte
-	Writer  *Writer
-	Request *Request
-	Session SessionManager
+	_Body    []byte
+	Writer   *Writer
+	Request  *Request
+	Session  SessionManager
+	ViewName string
 }
 
 type Writer struct {
@@ -223,7 +224,9 @@ func (ctx *Response) Download(contentType string, filename string, binary []byte
 
 // Comment
 func (ctx *Response) View(view string, data ViewData) *Response {
-	html, err := ctx.Request.Server.Get("view").(*View).Read(view, data)
+	ctx.ViewName = view
+
+	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.ViewName, data)
 
 	if err != nil {
 		// TODO Error page 500

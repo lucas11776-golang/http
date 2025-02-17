@@ -41,10 +41,10 @@ func TestRouterRouteResponse(t *testing.T) {
 		}, []byte(""))
 
 		httpExpected := ParseHttpResponse(res.Json(data))
-		httpRoute := string(route.Call(reflect.ValueOf(req), reflect.ValueOf(res)))
+		httpResponse := ParseHttpResponse(route.Call(reflect.ValueOf(req), reflect.ValueOf(res)))
 
-		if httpExpected != httpRoute {
-			t.Fatalf("Excepted http json (%s) but got (%s)", httpExpected, httpRoute)
+		if httpExpected != httpResponse {
+			t.Fatalf("Excepted http json (%s) but got (%s)", httpExpected, httpResponse)
 		}
 	})
 }

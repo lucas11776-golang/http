@@ -98,25 +98,32 @@ func (ctx *Route) Middleware(middleware ...Middleware) *Route {
 }
 
 // Comment
-func (ctx *Route) Call(value ...reflect.Value) []byte {
+func (ctx *Route) Call(value ...reflect.Value) *Response {
 	rt := ctx.callback.Call(value)
 
 	if len(rt) == 0 {
-		return []byte{}
+		return nil
 	}
 
 	switch rt[0].Interface().(type) {
 	case *Response:
-		res, _ := rt[0].Interface().(*Response)
-
-		if res.Session != nil {
-			res.Session.Save()
-		}
-
-		return []byte(ParseHttpResponse(res))
+		return rt[0].Interface().(*Response)
 	default:
-		return []byte{}
+		return nil
 	}
+
+	// switch rt[0].Interface().(type) {
+	// case *Response:
+	// 	res, _ := rt[0].Interface().(*Response)
+
+	// 	if res.Session != nil {
+	// 		res.Session.Save()
+	// 	}
+
+	// 	return []byte(ParseHttpResponse(res))
+	// default:
+	// 	return []byte{}
+	// }
 }
 
 // Comment

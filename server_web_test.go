@@ -68,7 +68,7 @@ func TestServerWeb(t *testing.T) {
 	}()
 
 	t.Run("TestApiGetUsers", func(t *testing.T) {
-		r := req.CreateRequest().Header("content-type", "application/json")
+		r := req.CreateRequest().SetHeader("content-type", "application/json")
 
 		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))
 
@@ -86,7 +86,7 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestMiddlewareUserPost", func(t *testing.T) {
-		r := req.CreateRequest().Header("content-type", "application/json")
+		r := req.CreateRequest().SetHeader("content-type", "application/json")
 
 		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
 
@@ -102,7 +102,7 @@ func TestServerWeb(t *testing.T) {
 		}
 
 		// With key
-		r = req.CreateRequest().Header("content-type", "application/json").Header("authorization", AuthKey)
+		r = req.CreateRequest().SetHeader("content-type", "application/json").SetHeader("authorization", AuthKey)
 
 		http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
 
@@ -123,7 +123,7 @@ func TestServerWeb(t *testing.T) {
 			cache: make(scriggo.Files),
 		}))
 
-		r := req.CreateRequest().Header("Accept", "text/css")
+		r := req.CreateRequest().SetHeader("Accept", "text/css")
 
 		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", cssNameWebServer}, ""))
 
@@ -169,7 +169,7 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
 		}
 
-		r = req.CreateRequest().Header("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
+		r = req.CreateRequest().SetHeader("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
 
 		http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
 
