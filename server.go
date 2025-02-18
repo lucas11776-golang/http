@@ -156,9 +156,6 @@ func handleHTTP1_1(htp *HTTP, req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) HandleRequest(req *Request) *Response {
-	req.Session = ctx.Get("session").(SessionsManager).Session(req)
-	req.Response.Session = req.Session
-
 	switch req.Protocol() {
 	case "HTTP/1.1":
 		res := handleHTTP1_1(ctx, req)
@@ -181,6 +178,8 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 	}
 
 	req.Response.Request = req
+	req.Session = ctx.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
 
 	return req
 }

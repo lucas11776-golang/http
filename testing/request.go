@@ -43,13 +43,17 @@ type Request struct {
 
 // Comment
 func NewRequest(testcase *TestCase) *Request {
-	return &Request{
+	req := &Request{
 		TestCase: testcase,
 		protocol: "HTTP/1.1",
 		method:   "GET",
 		headers:  make(types.Headers),
 		values:   make(Values),
 	}
+
+	req.Request, _ = req.make()
+
+	return req
 }
 
 // Comment

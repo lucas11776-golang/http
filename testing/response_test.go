@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/lucas11776-golang/http"
@@ -30,6 +31,8 @@ func TestResponseBody(t *testing.T) {
 		if res.Testing.hasError() {
 			t.Fatalf("Expected assert protocol to not log error")
 		}
+
+		res.TestCase.Cleanup()
 	})
 
 	t.Run("TestAssertStatus", func(t *testing.T) {
@@ -46,6 +49,8 @@ func TestResponseBody(t *testing.T) {
 		if res.Testing.hasError() {
 			t.Fatalf("Expected assert status code to not log error")
 		}
+
+		res.TestCase.Cleanup()
 	})
 
 	t.Run("TestAssertHeaders", func(t *testing.T) {
@@ -77,6 +82,8 @@ func TestResponseBody(t *testing.T) {
 		if res.Testing.hasError() {
 			t.Fatalf("Expected assert header to not log error")
 		}
+
+		res.TestCase.Cleanup()
 	})
 
 	t.Run("TestBody", func(t *testing.T) {
@@ -97,13 +104,12 @@ func TestResponseBody(t *testing.T) {
 		}
 	})
 
-	req.TestCase.Cleanup()
+	res.TestCase.Cleanup()
 }
 
 func TestResponseRedirect(t *testing.T) {
 	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
-	headers := types.Headers{"content-type": "text/html"}
-	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, headers, []byte{})
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 	res := NewResponse(req, r)
 
 	// Is Redirect
@@ -140,13 +146,12 @@ func TestResponseRedirect(t *testing.T) {
 		t.Fatalf("Expected assert is redirect to not log error")
 	}
 
-	req.TestCase.Cleanup()
+	res.TestCase.Cleanup()
 }
 
 func TestResponseView(t *testing.T) {
 	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
-	headers := types.Headers{"content-type": "text/html"}
-	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, headers, []byte{})
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 	res := NewResponse(req, r)
 
 	// Is View
@@ -191,7 +196,7 @@ func TestResponseView(t *testing.T) {
 	// View Has
 	res.AssertViewHas([]string{"message"})
 
-	if res.Testing.hasError() {
+	if !res.Testing.hasError() {
 		t.Fatalf("Expected assert view has to not log error")
 	}
 
@@ -203,9 +208,49 @@ func TestResponseView(t *testing.T) {
 		t.Fatalf("Expected assert view has to not log error")
 	}
 
-	req.TestCase.Cleanup()
+	res.TestCase.Cleanup()
 }
 
 func TestResponseSession(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
 
+	res.Response.Session = req.Request.Session
+
+	// Has Session
+	res.AssertSessionHas([]string{"user_id"})
+
+	if !res.Testing.hasError() {
+		t.Fatalf("Expected assert has session to log error")
+	}
+
+	res.Testing.popError()
+
+	res.Response.Session.Set("user_id", strconv.Itoa(1))
+
+	res.AssertSessionHas([]string{"user_id"})
+
+	if res.Testing.hasError() {
+		t.Fatalf("Expected assert has session to not log error")
+	}
+
+	// Session
+	res.AssertSession("is_admin", "1")
+
+	if !res.Testing.hasError() {
+		t.Fatalf("Expected assert session to log error")
+	}
+
+	res.Testing.popError()
+
+	res.Response.Session.Set("is_admin", strconv.Itoa(1))
+
+	res.AssertSession("is_admin", "1")
+
+	if res.Testing.hasError() {
+		t.Fatalf("Expected assert session to not log error")
+	}
+
+	res.TestCase.Cleanup()
 }

@@ -154,6 +154,40 @@ func (ctx *Response) AssertView(view string) *Response {
 
 // Comment
 func (ctx *Response) AssertViewHas(keys []string) *Response {
+	ctx.AssertIsView()
+
+	for _, key := range keys {
+		_, ok := ctx.Response.Bag.View.Data[key]
+
+		if !ok {
+			ctx.Testing.Fatalf("Expected view data to have (%s)", key)
+		}
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertSessionHas(keys []string) *Response {
+	for _, key := range keys {
+		if ctx.Response.Session.Get(key) == "" {
+			ctx.Testing.Fatalf("Expected session to have (%s)", key)
+		}
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertSession(key string, value string) *Response {
+	if ctx.Response.Session.Get(key) != value {
+		ctx.Testing.Fatalf(
+			"Expected session %s to but (%s) but got (%s)",
+			key,
+			value,
+			ctx.Response.Session.Get(key),
+		)
+	}
 
 	return ctx
 }
