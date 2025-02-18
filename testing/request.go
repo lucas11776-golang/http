@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	h "net/http"
+	"net/url"
+	"strings"
 
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
@@ -27,6 +29,7 @@ type RequestReadCloser struct {
 
 type Request struct {
 	TestCase *TestCase
+	Testing  *Testing
 	Request  *http.Request
 	values   Values
 	files    Files
@@ -46,6 +49,7 @@ func (ctx *RequestReadCloser) Close() error {
 func NewRequest(testcase *TestCase) *Request {
 	req := &Request{
 		TestCase: testcase,
+		Testing:  testcase.Testing,
 		protocol: "HTTP/1.1",
 		method:   "GET",
 		headers:  make(types.Headers),
@@ -115,21 +119,54 @@ func (ctx *Request) make() (*http.Request, error) {
 	req := ctx.TestCase.HTTP.NewRequest(r, nil)
 
 	req.Proto = ctx.protocol
-
 	req.Header = headers.ToHeader(ctx.headers)
 
 	return req, nil
 }
 
 // Comment
+func (ctx *Request) addSessionHeader(req *http.Request) *http.Request {
+	if len(ctx.session) == 0 {
+		return req
+	}
+
+	r, err := h.NewRequest("GET", "/", bytes.NewReader([]byte{}))
+
+	if err != nil {
+		ctx.Testing.Fatalf("Something went wrong when trying to create request for session: %v", err)
+	}
+
+	rq := ctx.TestCase.HTTP.NewRequest(r, nil)
+	session := ctx.TestCase.HTTP.Get("session").(http.SessionsManager).Session(rq)
+
+	for k, v := range ctx.session {
+		session.Set(k, v)
+	}
+
+	session.Save()
+
+	cookie, err := url.ParseQuery(strings.ReplaceAll(rq.Response.GetHeader("set-cookie"), ";", "&"))
+
+	if err != nil {
+		ctx.Testing.Fatalf("Something went wrong when trying to convert session to query: %v", err)
+	}
+
+	req.Header["Cookie"] = []string{strings.Join([]string{http.SESSION_NAME, cookie.Get(http.SESSION_NAME)}, "=")}
+
+	return req
+}
+
+// Comment
 func (ctx *Request) makeRequest(req *http.Request) *Response {
 	ctx.Request = req
 
-	res := ctx.TestCase.HTTP.HandleRequest(req)
+	res := ctx.TestCase.HTTP.HandleRequest(ctx.addSessionHeader(req))
 
 	if res == nil {
 		ctx.TestCase.Testing.Fatalf("Request does not support WebSocket request use Ws testing")
 	}
+
+	req.Response = res
 
 	return NewResponse(ctx, res)
 }
@@ -147,6 +184,22 @@ func (ctx *Request) Call(method http.Method, uri string, body []byte) *Response 
 	}
 
 	return ctx.makeRequest(req)
+}
+
+// Comment
+func (ctx *Request) Session(key string, value string) *Request {
+	ctx.session[key] = value
+
+	return ctx
+}
+
+// Comment
+func (ctx *Request) Sessions(sessions Values) *Request {
+	for k, v := range sessions {
+		ctx.Session(k, v)
+	}
+
+	return ctx
 }
 
 // Comment
@@ -193,4 +246,25 @@ func (ctx *Request) Connect(uri string, body []byte) *Response {
 // Comment
 func (ctx *Request) Json(method http.Method, uri string, body []byte) *Response {
 	return ctx.Call(method, uri, body)
+}
+
+type MultiPartForm struct {
+	request *Request
+	values  Values
+	files   Files
+}
+
+// Comment
+func (ctx *Request) MultiPartForm() *MultiPartForm {
+	return &MultiPartForm{request: ctx}
+}
+
+// comment
+func (ctx *MultiPartForm) File(name string, filename string, contentType string, data []byte) *MultiPartForm {
+	return ctx
+}
+
+// Comment
+func (ctx *MultiPartForm) Value(name string, value string) *MultiPartForm {
+	return ctx
 }

@@ -216,6 +216,10 @@ func TestResponseSession(t *testing.T) {
 	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 	res := NewResponse(req, r)
 
+	req.Request.Response = res.Response
+	res.Request.Request = req.Request
+
+	req.Request.Session = req.TestCase.HTTP.Get("session").(http.SessionsManager).Session(req.Request)
 	res.Response.Session = req.Request.Session
 
 	// Has Session

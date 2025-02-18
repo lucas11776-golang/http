@@ -65,50 +65,94 @@ func TestRequest(t *testing.T) {
 
 		req.TestCase.Cleanup()
 	})
+}
 
-	t.Run("TestSendJson", func(t *testing.T) {
-		req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+func TestRoute(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
 
-		user := struct {
-			ID    int    `json:"id"`
-			Email string `json:"email"`
-		}{
-			ID:    1,
-			Email: "jeo@doe.com",
-		}
+	user := struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+	}{
+		ID:    1,
+		Email: "jeo@doe.com",
+	}
 
-		req.TestCase.HTTP.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
-			return res.Json(user)
-		})
-
-		res := req.Json(http.METHOD_GET, "users/1", []byte{})
-
-		res.AssertHeader("content-type", "text/html")
-
-		if !res.Testing.hasError() {
-			t.Fatalf("Expected assert header to log error because content-type is not text/html it`s application/json")
-		}
-
-		res.Testing.popError()
-
-		res.AssertHeader("content-type", "application/json")
-
-		if res.Testing.hasError() {
-			t.Fatalf("Expected assert header to not log error because content-type is application/json")
-		}
-
-		tBody, _ := json.Marshal(user)
-
-		res.AssertBody(tBody)
-
-		if res.Testing.hasError() {
-
-			fmt.Println(res.Testing.errors)
-
-			t.Fatalf("Expected assert body to not log error")
-		}
-
-		req.TestCase.Cleanup()
+	req.TestCase.HTTP.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
+		return res.Json(user)
 	})
 
+	res := req.Json(http.METHOD_GET, "users/1", []byte{})
+
+	res.AssertHeader("content-type", "text/html")
+
+	if !res.Testing.hasError() {
+		t.Fatalf("Expected assert header to log error because content-type is not text/html it`s application/json")
+	}
+
+	res.Testing.popError()
+
+	res.AssertHeader("content-type", "application/json")
+
+	if res.Testing.hasError() {
+		t.Fatalf("Expected assert header to not log error because content-type is application/json")
+	}
+
+	tBody, _ := json.Marshal(user)
+
+	res.AssertBody(tBody)
+
+	if res.Testing.hasError() {
+
+		fmt.Println(res.Testing.errors)
+
+		t.Fatalf("Expected assert body to not log error")
+	}
+
+	req.TestCase.Cleanup()
+}
+
+func TestSession(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+
+	body := "<h1>Welcome to dashboard</h1>"
+
+	isUser := func(req *http.Request, res *http.Response, next http.Next) *http.Response {
+		if req.Session.Get("role") == "" {
+			return res.Redirect("authentication/login")
+		}
+
+		return next()
+	}
+
+	isAdmin := func(req *http.Request, res *http.Response, next http.Next) *http.Response {
+		if req.Session.Get("role") != "1" {
+			return res.Redirect("/")
+		}
+
+		return next()
+	}
+
+	req.TestCase.HTTP.Route().Get("dashboard", func(req *http.Request, res *http.Response) *http.Response {
+		return res.Html(body)
+	}).Middleware(isUser, isAdmin)
+
+	req.Sessions(map[string]string{
+		"user_id": "1",
+		"role":    "1",
+	})
+
+	res := req.Get("dashboard")
+
+	res.AssertHeader("content-type", "text/html")
+
+	if res.Testing.hasError() {
+		t.Fatalf("Expected response content-type to be (%s) but got (%s)", "text/html", res.Response.GetHeader("content-type"))
+	}
+
+	res.AssertBody([]byte(body))
+
+	if res.Testing.hasError() {
+		t.Fatalf("Expected assert body to not log")
+	}
 }

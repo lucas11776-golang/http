@@ -25,6 +25,7 @@ type HTTP struct {
 
 const (
 	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	SESSION_NAME                 = "session"
 )
 
 var (
@@ -134,18 +135,18 @@ func (ctx *HTTP) handleWebRouteMiddleware(route *Route, req *Request) *Response 
 }
 
 // Comment
-func handleHTTP1_1(htp *HTTP, req *Request) *Response {
+func (ctx *HTTP) handleHTTP1_1(req *Request) *Response {
 	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
-		return webSocketRequestHandler(htp, req)
+		return webSocketRequestHandler(ctx, req)
 	}
 
-	route := htp.Router().MatchWebRoute(req)
+	route := ctx.Router().MatchWebRoute(req)
 
 	if route == nil {
-		return htp.routeNotFound(req)
+		return ctx.routeNotFound(req)
 	}
 
-	res := htp.handleWebRouteMiddleware(route, req)
+	res := ctx.handleWebRouteMiddleware(route, req)
 
 	if res != nil {
 		return res
@@ -155,10 +156,19 @@ func handleHTTP1_1(htp *HTTP, req *Request) *Response {
 }
 
 // Comment
+func (ctx *HTTP) initRequestSession(req *Request) *HTTP {
+	req.Response.Request = req
+	req.Session = ctx.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
+
+	return ctx
+}
+
+// Comment
 func (ctx *HTTP) HandleRequest(req *Request) *Response {
 	switch req.Protocol() {
 	case "HTTP/1.1":
-		res := handleHTTP1_1(ctx, req)
+		res := ctx.initRequestSession(req).handleHTTP1_1(req)
 
 		req.Session.Save()
 
@@ -170,18 +180,12 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Request {
-	req := &Request{
+	return &Request{
 		Request:  rq,
 		Server:   ctx.Server,
 		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
-
-	req.Response.Request = req
-	req.Session = ctx.Get("session").(SessionsManager).Session(req)
-	req.Response.Session = req.Session
-
-	return req
 }
 
 // Comment
@@ -229,7 +233,7 @@ func (ctx *HTTP) SetStatic(statics string) *HTTP {
 
 // Comment
 func (ctx *HTTP) Session(key []byte) SessionsManager {
-	ctx.Set("session", InitSession("session", key))
+	ctx.Set("session", InitSession(SESSION_NAME, key))
 
 	return ctx.Get("session").(SessionsManager)
 }
@@ -246,10 +250,7 @@ func Server(address string, port int32) *HTTP {
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
-	http.Connection(func(server *serve.Server, conn *connection.Connection) {
-		http.newConnection(conn)
-	})
-
+	http.Connection(func(server *serve.Server, conn *connection.Connection) { http.newConnection(conn) })
 	http.Session([]byte(str.Random(10)))
 
 	return http
@@ -264,9 +265,7 @@ func defaultRouteFallback(req *Request, res *Response) *Response {
 	res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
 
 	if req.contentType() == "application/json" {
-		return res.Json(message{
-			Message: "Route " + req.Path() + " is not found",
-		})
+		return res.Json(message{Message: "Route " + req.Path() + " is not found"})
 	}
 
 	return res.Html(pages.NotFound(req.Path()))
