@@ -106,7 +106,6 @@ type Bag struct {
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	_Body   []byte
 	Writer  *Writer
 	Request *Request
 	Session SessionManager
@@ -153,9 +152,7 @@ func InitHttpResponse(protocol string, status Status, headers types.Headers, bod
 		StatusCode: int(status),
 		Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
 		Header:     h.ToHeader(headers),
-		Body: &responseBodyReader{
-			Reader: bytes.NewReader(body),
-		},
+		Body:       &responseBodyReader{Reader: bytes.NewReader(body)},
 	}
 }
 
@@ -185,7 +182,7 @@ func (ctx *Response) SetStatus(status Status) *Response {
 
 // Comment
 func (ctx *Response) SetHeader(key string, value string) *Response {
-	ctx.Header[key] = strings.Split(value, ";")
+	ctx.Header[cases.Title(language.English).String(key)] = strings.Split(value, ",")
 
 	return ctx
 }
@@ -203,7 +200,9 @@ func (ctx *Response) GetHeader(key string) string {
 
 // Comment
 func (ctx *Response) SetBody(body []byte) *Response {
-	ctx._Body = body
+	ctx.Body = &responseBodyReader{
+		Reader: bytes.NewReader(body),
+	}
 
 	return ctx
 }
@@ -286,13 +285,19 @@ func ParseHttpResponse(res *Response) string {
 		http = append(http, strings.Join([]string{k, v}, ": "))
 	}
 
-	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(res._Body))}, ": "))
+	body, err := io.ReadAll(res.Body)
 
-	if len(res._Body) == 0 {
+	if err != nil {
+		body = []byte{}
+	}
+
+	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": "))
+
+	if len(body) == 0 {
 		return strings.Join(append(http, "\r\n"), "\r\n")
 	}
 
-	return strings.Join(append(http, strings.Join([]string{"\r\n", string(res._Body), "\r\n"}, "")), "\r\n")
+	return strings.Join(append(http, strings.Join([]string{"\r\n", string(body), "\r\n"}, "")), "\r\n")
 }
 
 // Comment

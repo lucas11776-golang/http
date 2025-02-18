@@ -1,20 +1,16 @@
 package http
 
 import (
-	"io/fs"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 )
 
 func TestView(t *testing.T) {
-	view := InitView(&viewReaderTest{
-		cache: make(scriggo.Files),
-	}, "html")
+	view := InitView(viewReaderTest, "html")
 
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)
@@ -147,34 +143,23 @@ func TestView(t *testing.T) {
 	})
 }
 
-var viewReaderTestFS = scriggo.Files{
-	"simple.html": []byte(strings.Join([]string{
-		`<h1>Hello World: {{ world }}</h1>`,
-	}, "\r\n")),
-	"for.html": []byte(strings.Join([]string{
-		`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
-	}, "\r\n")),
-	"if.html": []byte(strings.Join([]string{
-		`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
-	}, "\r\n")),
-	"switch.html": []byte(strings.Join([]string{
-		`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
-	}, "\r\n")),
-	"authentication/login.html": []byte(strings.Join([]string{
-		"<h1>Login page</h1>",
-	}, "\r\n")),
-}
-
-type viewReaderTest struct {
-	cache scriggo.Files
-}
-
-// Comment
-func (ctx *viewReaderTest) Open(name string) (fs.File, error) {
-	return viewReaderTestFS.Open(name)
-}
-
-// Comment
-func (ctx *viewReaderTest) Cache(name string) (scriggo.Files, error) {
-	return reader.ReadCache(ctx, ctx.cache, name)
+var viewReaderTest = &ViewReaderTest{
+	Files: scriggo.Files{
+		"simple.html": []byte(strings.Join([]string{
+			`<h1>Hello World: {{ world }}</h1>`,
+		}, "\r\n")),
+		"for.html": []byte(strings.Join([]string{
+			`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
+		}, "\r\n")),
+		"if.html": []byte(strings.Join([]string{
+			`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
+		}, "\r\n")),
+		"switch.html": []byte(strings.Join([]string{
+			`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
+		}, "\r\n")),
+		"authentication/login.html": []byte(strings.Join([]string{
+			"<h1>Login page</h1>",
+		}, "\r\n")),
+	},
+	cache: make(scriggo.Files),
 }

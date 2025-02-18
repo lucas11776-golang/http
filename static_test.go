@@ -1,6 +1,7 @@
 package http
 
 import (
+	"io"
 	"io/fs"
 	"strings"
 	"testing"
@@ -37,17 +38,21 @@ func TestStatic(t *testing.T) {
 		response, err := static.HandleRequest(request)
 
 		if err != nil {
-			t.Errorf("Something went wrong when getting static: %s", err.Error())
+			t.Fatalf("Something went wrong when getting static: %s", err.Error())
 		}
 
-		contentType := strings.Join(response.Header["content-type"], ",")
-
-		if "text/css" != contentType {
-			t.Fatalf("Expected content type to be but (%s) but go (%s)", "text/css", contentType)
+		if "text/css" != response.GetHeader("content-type") {
+			t.Fatalf("Expected content type to be but (%s) but go (%s)", "text/css", response.GetHeader("content-type"))
 		}
 
-		if cssContent != string(response._Body) {
-			t.Fatalf("Expected content body to be but (%s) but go (%s)", cssContent, string(response._Body))
+		tBody, err := io.ReadAll(response.Body)
+
+		if err != nil {
+			t.Fatalf("Something went wrong went trying to read body: %s", tBody)
+		}
+
+		if cssContent != string(tBody) {
+			t.Fatalf("Expected content body to be but (%s) but go (%s)", cssContent, string(tBody))
 		}
 	})
 }

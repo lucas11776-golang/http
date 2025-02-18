@@ -65,7 +65,7 @@ func (ctx *Response) AssertUnauthorized() *Response {
 }
 
 // Comment
-func (ctx *Response) AssertHasHeader(header string) *Response {
+func (ctx *Response) AssertHeadersHas(header string) *Response {
 	_, ok := ctx.Response.Header[cases.Title(language.English).String(header)]
 
 	if !ok {
@@ -102,7 +102,7 @@ func (ctx *Response) AssertBody(body []byte) *Response {
 	}
 
 	if string(tBody) != string(body) {
-		ctx.Testing.Fatalf("Expected response body to be (%s) but got (%s)", string(body), string(body))
+		ctx.Testing.Fatalf("Expected response body to be (%s) but got (%s)", string(body), string(tBody))
 	}
 
 	return ctx

@@ -54,7 +54,7 @@ func TestResponseBody(t *testing.T) {
 	})
 
 	t.Run("TestAssertHeaders", func(t *testing.T) {
-		res.AssertHasHeader("x-forward")
+		res.AssertHeadersHas("x-forward")
 
 		if !res.Testing.hasError() {
 			t.Fatalf("Expected assert has header to log error")
@@ -62,7 +62,7 @@ func TestResponseBody(t *testing.T) {
 
 		res.Testing.popError()
 
-		res.AssertHasHeader("content-type")
+		res.AssertHeadersHas("content-type")
 
 		if res.Testing.hasError() {
 			t.Fatalf("Expected assert has header to not log error")

@@ -1,6 +1,8 @@
 package testing
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/lucas11776-golang/http"
@@ -65,11 +67,7 @@ func TestRequest(t *testing.T) {
 	})
 
 	t.Run("TestSendJson", func(t *testing.T) {
-		server := http.Server("127.0.0.1", 0)
-
-		req := NewRequest(&TestCase{
-			HTTP: server,
-		})
+		req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
 
 		user := struct {
 			ID    int    `json:"id"`
@@ -79,17 +77,36 @@ func TestRequest(t *testing.T) {
 			Email: "jeo@doe.com",
 		}
 
-		server.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
+		req.TestCase.HTTP.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Json(user)
 		})
 
-		// req := NewRequest(&Testing{
-		// 	HTTP: server,
-		// })
+		res := req.Json(http.METHOD_GET, "users/1", []byte{})
 
-		// req.Headers(types.Headers{
-		// 	"authorization": strings.Join([]string{str.Random(50)}, "."),
-		// })
+		res.AssertHeader("content-type", "text/html")
+
+		if !res.Testing.hasError() {
+			t.Fatalf("Expected assert header to log error because content-type is not text/html it`s application/json")
+		}
+
+		res.Testing.popError()
+
+		res.AssertHeader("content-type", "application/json")
+
+		if res.Testing.hasError() {
+			t.Fatalf("Expected assert header to not log error because content-type is application/json")
+		}
+
+		tBody, _ := json.Marshal(user)
+
+		res.AssertBody(tBody)
+
+		if res.Testing.hasError() {
+
+			fmt.Println(res.Testing.errors)
+
+			t.Fatalf("Expected assert body to not log error")
+		}
 
 		req.TestCase.Cleanup()
 	})

@@ -96,11 +96,13 @@ func (ctx *Static) HandleRequest(req *Request) (*Response, error) {
 		return nil, fmt.Errorf("File does not exists in statics (%s)", req.Path())
 	}
 
-	req.Response._Body, err = ctx.Read(u.Path)
+	body, err := ctx.Read(u.Path)
 
 	if err != nil {
 		return nil, err
 	}
+
+	req.Response.SetBody(body)
 
 	p := strings.Split(u.Path, ".")
 

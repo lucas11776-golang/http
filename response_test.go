@@ -3,7 +3,6 @@ package http
 import (
 	"bytes"
 	"encoding/json"
-	"io/fs"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
-	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 )
 
@@ -140,7 +138,6 @@ func TestResponse(t *testing.T) {
 
 		http := ParseHttpResponse(res)
 
-		// TODO Test will fail sometimes because map does not go by order on loop
 		if httpExpected != http {
 			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
 		}
@@ -179,9 +176,7 @@ func TestResponse(t *testing.T) {
 
 		res.Request = req
 
-		vw := InitView(&responseReaderViewTest{
-			cache: make(scriggo.Files),
-		}, "html")
+		vw := InitView(responseViewTest, "html")
 
 		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", vw)
 
@@ -218,31 +213,21 @@ func TestResponse(t *testing.T) {
 	})
 }
 
-var responseReaderTestFS = scriggo.Files{
-	"home.html": []byte(strings.Join([]string{
-		`<!DOCTYPE html>`,
-		`<html lang="en">`,
-		`<head>`,
-		`  <meta charset="UTF-8">`,
-		`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
-		`  <title>Home Page</title>`,
-		`</head>`,
-		`<body>`,
-		`  <h1>Hello user {{ name }}</h1>`,
-		`</body>`,
-		`</html>`,
-	}, "\r\n")),
-}
-
-type responseReaderViewTest struct {
-	cache scriggo.Files
-}
-
-func (ctx *responseReaderViewTest) Open(name string) (fs.File, error) {
-	return responseReaderTestFS.Open(name)
-}
-
-// Comment
-func (ctx *responseReaderViewTest) Cache(name string) (scriggo.Files, error) {
-	return reader.ReadCache(ctx, ctx.cache, name)
+var responseViewTest = &ViewReaderTest{
+	Files: scriggo.Files{
+		"home.html": []byte(strings.Join([]string{
+			`<!DOCTYPE html>`,
+			`<html lang="en">`,
+			`<head>`,
+			`  <meta charset="UTF-8">`,
+			`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
+			`  <title>Home Page</title>`,
+			`</head>`,
+			`<body>`,
+			`  <h1>Hello user {{ name }}</h1>`,
+			`</body>`,
+			`</html>`,
+		}, "\r\n")),
+	},
+	cache: make(scriggo.Files),
 }

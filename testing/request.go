@@ -10,8 +10,6 @@ import (
 	"github.com/lucas11776-golang/http/utils/headers"
 )
 
-type Values map[string]string
-
 type File struct {
 	Name        string
 	Filename    string
@@ -19,26 +17,29 @@ type File struct {
 	Content     []byte
 }
 
-// type Files map[]
+type Values map[string]string
+
+type Files []Files
 
 type RequestReadCloser struct {
 	io.Reader
-}
-
-func (ctx *RequestReadCloser) Close() error {
-	return nil
 }
 
 type Request struct {
 	TestCase *TestCase
 	Request  *http.Request
 	values   Values
-	files    []File
+	files    Files
+	session  Values
 	protocol string
 	path     string
 	method   http.Method
 	headers  types.Headers
 	body     []byte
+}
+
+func (ctx *RequestReadCloser) Close() error {
+	return nil
 }
 
 // Comment
@@ -49,6 +50,7 @@ func NewRequest(testcase *TestCase) *Request {
 		method:   "GET",
 		headers:  make(types.Headers),
 		values:   make(Values),
+		session:  make(Values),
 	}
 
 	req.Request, _ = req.make()
@@ -125,16 +127,16 @@ func (ctx *Request) makeRequest(req *http.Request) *Response {
 
 	res := ctx.TestCase.HTTP.HandleRequest(req)
 
-	if res != nil {
+	if res == nil {
 		ctx.TestCase.Testing.Fatalf("Request does not support WebSocket request use Ws testing")
 	}
 
-	return nil
+	return NewResponse(ctx, res)
 }
 
 // Comment
 func (ctx *Request) Call(method http.Method, uri string, body []byte) *Response {
-	ctx.setMethod(http.METHOD_POST)
+	ctx.setMethod(method)
 	ctx.setPath(uri)
 	ctx.setBody(body)
 

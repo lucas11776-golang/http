@@ -108,3 +108,22 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
+
+type ViewReaderTest struct {
+	Files scriggo.Files
+	cache scriggo.Files
+}
+
+func (ctx *ViewReaderTest) open(name string) (fs.File, error) {
+	return ctx.Files.Open(name)
+}
+
+// Comment
+func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
+	return ctx.Files.Open(name)
+}
+
+// Comment
+func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
+	return reader.ReadCache(ctx, ctx.cache, name)
+}
