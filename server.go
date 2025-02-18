@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/server"
 	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
@@ -19,18 +20,7 @@ import (
 
 type HTTP struct {
 	*serve.Server
-}
-
-// Comment
-func handleStatic(conn *connection.Connection, static *Static, req *Request) error {
-	res, err := static.HandleRequest(req)
-
-	if err != nil {
-		// TODO Check request is asset e.g (.js,.css and etc.) and return 404 not found request with empty body
-		return err
-	}
-
-	return conn.Write([]byte(ParseHttpResponse(res)))
+	Debug bool
 }
 
 const (
@@ -40,6 +30,18 @@ const (
 var (
 	INVALID_WEBSOCKET_REQUEST = errors.New("Invalid http request")
 )
+
+// Comment
+func (ctx *HTTP) handleStatic(req *Request) *Response {
+	res, err := ctx.Get("static").(*Static).HandleRequest(req)
+
+	if err != nil {
+		// TODO Check request is asset e.g (.js,.css and etc.) and return 404 not found request with empty body
+		return nil
+	}
+
+	return res
+}
 
 // Comment
 func websocketHandshake(req *Request) error {
@@ -98,27 +100,20 @@ func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 }
 
 // Comment
-func handleHTTP1_1(htp *HTTP, req *Request) *Response {
-	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
-		return webSocketRequestHandler(htp, req)
-	}
+func (ctx *HTTP) routeNotFound(req *Request) *Response {
+	if ctx.Server.Get("static") != nil {
+		res := ctx.handleStatic(req)
 
-	route := htp.Router().MatchWebRoute(req)
-
-	if route == nil {
-		if htp.Server.Get("static") != nil {
-			err := handleStatic(req.Conn, htp.Get("static").(*Static), req)
-
-			if err == nil {
-				req.Conn.Close()
-
-				return nil
-			}
+		if res != nil {
+			return res
 		}
-
-		return htp.Router().fallback(req, req.Response)
 	}
 
+	return ctx.Router().fallback(req, req.Response)
+}
+
+// Comment
+func (ctx *HTTP) handleWebRouteMiddleware(route *Route, req *Request) *Response {
 	for _, middleware := range route.middleware {
 		next := false
 
@@ -133,6 +128,27 @@ func handleHTTP1_1(htp *HTTP, req *Request) *Response {
 
 			return res
 		}
+	}
+
+	return nil
+}
+
+// Comment
+func handleHTTP1_1(htp *HTTP, req *Request) *Response {
+	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
+		return webSocketRequestHandler(htp, req)
+	}
+
+	route := htp.Router().MatchWebRoute(req)
+
+	if route == nil {
+		return htp.routeNotFound(req)
+	}
+
+	res := htp.handleWebRouteMiddleware(route, req)
+
+	if res != nil {
+		return res
 	}
 
 	return route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
@@ -254,17 +270,5 @@ func defaultRouteFallback(req *Request, res *Response) *Response {
 		})
 	}
 
-	return res.Html(strings.Join([]string{
-		`<!DOCTYPE html>`,
-		`<html lang="en">`,
-		`<head>`,
-		`  <meta charset="UTF-8">`,
-		`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
-		`  <title>Route ` + req.Path() + ` not found</title>`,
-		`</head>`,
-		`<body>`,
-		`  <h1>Route ` + req.Path() + ` not found</h1>`,
-		`</body>`,
-		`</html>`,
-	}, "\r\n"))
+	return res.Html(pages.NotFound(req.Path()))
 }

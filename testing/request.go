@@ -3,10 +3,11 @@ package testing
 import (
 	"bytes"
 	"io"
-	"strings"
+	h "net/http"
 
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/headers"
 )
 
 type Values map[string]string
@@ -41,10 +42,11 @@ type Request struct {
 }
 
 // Comment
-func NewRequest(testing *TestCase) *Request {
+func NewRequest(testcase *TestCase) *Request {
 	return &Request{
-		TestCase: testing,
+		TestCase: testcase,
 		protocol: "HTTP/1.1",
+		method:   "GET",
 		headers:  make(types.Headers),
 		values:   make(Values),
 	}
@@ -94,17 +96,21 @@ func (ctx *Request) setBody(body []byte) *Request {
 
 // Comment
 func (ctx *Request) make() (*http.Request, error) {
-	req, err := http.NewRequest(
-		http.Method(strings.ToUpper(string(ctx.method))),
+	r, err := h.NewRequest(
+		string(ctx.method),
 		ctx.path,
-		ctx.protocol,
-		ctx.headers,
 		bytes.NewReader(ctx.body),
 	)
 
 	if err != nil {
 		return nil, err
 	}
+
+	req := ctx.TestCase.HTTP.NewRequest(r, nil)
+
+	req.Proto = ctx.protocol
+
+	req.Header = headers.ToHeader(ctx.headers)
 
 	return req, nil
 }

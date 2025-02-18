@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
 	"golang.org/x/text/cases"
@@ -97,15 +98,19 @@ type ViewBag struct {
 	Data ViewData
 }
 
+type Bag struct {
+	View     *ViewBag
+	Redirect *RedirectBag
+}
+
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	_Body       []byte
-	Writer      *Writer
-	Request     *Request
-	Session     SessionManager
-	ViewBag     *ViewBag
-	RedirectBag *RedirectBag
+	_Body   []byte
+	Writer  *Writer
+	Request *Request
+	Session SessionManager
+	Bag     *Bag
 }
 
 type Writer struct {
@@ -142,17 +147,23 @@ func (ctx *responseBodyReader) Close() error {
 }
 
 // Comment
+func InitHttpResponse(protocol string, status Status, headers types.Headers, body []byte) *http.Response {
+	return &http.Response{
+		Proto:      protocol,
+		StatusCode: int(status),
+		Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
+		Header:     h.ToHeader(headers),
+		Body: &responseBodyReader{
+			Reader: bytes.NewReader(body),
+		},
+	}
+}
+
+// Comment
 func NewResponse(protocol string, status Status, headers types.Headers, body []byte) *Response {
 	res := &Response{
-		Response: &http.Response{
-			Proto:      protocol,
-			StatusCode: int(status),
-			Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
-			Header:     h.ToHeader(headers),
-			Body: &responseBodyReader{
-				Reader: bytes.NewReader(body),
-			},
-		},
+		Bag:      &Bag{},
+		Response: InitHttpResponse(protocol, status, headers, body),
 	}
 
 	res.Writer = &Writer{response: res}
@@ -216,19 +227,17 @@ func (ctx *Response) Json(v any) *Response {
 }
 
 // Comment
-func (ctx *Response) Redirect(path string) *Response {
-	ctx.RedirectBag = &RedirectBag{To: strings.Trim(path, "/")}
+// func (ctx *Response) RedirectBack() *Response {
+// 	// ctx.Bag.Redirect = &RedirectBag{To: strings.Trim(path, "/")}
+// 	// referer to redirect back....
+// 	return ctx
+// }
 
-	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(strings.Join([]string{
-		`<!DOCTYPE html>`,
-		`<head>`,
-		`  <meta http-equiv="Refresh" content="0, url='` + ctx.RedirectBag.To + `'">`,
-		`</head>`,
-		`<body>`,
-		`  <p>You will be redirected to ` + ctx.RedirectBag.To + `</p>`,
-		`</body>`,
-		`</html>`,
-	}, "\r\n"))
+// Comment
+func (ctx *Response) Redirect(path string) *Response {
+	ctx.Bag.Redirect = &RedirectBag{To: strings.Trim(path, "/")}
+
+	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.Redirect(ctx.Bag.Redirect.To))
 }
 
 // Comment
@@ -241,12 +250,12 @@ func (ctx *Response) Download(contentType string, filename string, binary []byte
 
 // Comment
 func (ctx *Response) View(view string, data ViewData) *Response {
-	ctx.ViewBag = &ViewBag{
+	ctx.Bag.View = &ViewBag{
 		Name: view,
 		Data: data,
 	}
 
-	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.ViewBag.Name, ctx.ViewBag.Data)
+	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.Bag.View.Name, ctx.Bag.View.Data)
 
 	if err != nil {
 		// TODO Error response 500

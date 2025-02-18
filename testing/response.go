@@ -1,9 +1,8 @@
 package testing
 
 import (
-	"fmt"
 	"io"
-	"testing"
+	"strings"
 
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
@@ -11,31 +10,20 @@ import (
 	"golang.org/x/text/language"
 )
 
-type TestingT struct {
-	T      *testing.T
-	catch  bool
-	errors []string
-}
-
 type Response struct {
 	TestCase *TestCase
 	Request  *Request
 	Response *http.Response
-	Testing  *TestingT
+	Testing  *Testing
 }
 
 // Comment
-func InitTestingResponse(t *testing.T, catchErrors bool) *TestingT {
-	return &TestingT{T: t, catch: catchErrors}
-}
-
-// Comment
-func InitResponse(req *Request, res *http.Response, catchErrors bool) *Response {
+func NewResponse(req *Request, res *http.Response) *Response {
 	return &Response{
 		TestCase: req.TestCase,
 		Request:  req,
 		Response: res,
-		Testing:  InitTestingResponse(req.TestCase.Testing, catchErrors),
+		Testing:  req.TestCase.Testing,
 	}
 }
 
@@ -122,7 +110,7 @@ func (ctx *Response) AssertBody(body []byte) *Response {
 
 // Comment
 func (ctx *Response) AssertIsRedirect() *Response {
-	if ctx.Response.RedirectBag == nil {
+	if ctx.Response.Bag.Redirect == nil {
 		ctx.Testing.Fatalf("Expected response to be redirect")
 	}
 
@@ -130,30 +118,42 @@ func (ctx *Response) AssertIsRedirect() *Response {
 }
 
 // Comment
-func (ctx *TestingT) Fatalf(format string, args ...any) {
-	if ctx.catch {
-		ctx.errors = append(ctx.errors, fmt.Sprintf(format, args...))
+func (ctx *Response) AssertRedirectTo(path string) *Response {
+	ctx.AssertIsRedirect()
 
-		return
+	if strings.Trim(path, "/") != strings.Trim(ctx.Response.Bag.Redirect.To, "/") {
+		ctx.Testing.Fatalf(
+			"Expected redirect path to be (%s) but go (%s)",
+			strings.Trim(path, "/"),
+			strings.Trim(ctx.Response.Bag.Redirect.To, "/"),
+		)
 	}
 
-	ctx.T.Fatalf(format, args...)
+	return ctx
 }
 
 // Comment
-func (ctx *TestingT) hasError() bool {
-	return len(ctx.errors) > 0
+func (ctx *Response) AssertIsView() *Response {
+	if ctx.Response.Bag.View == nil {
+		ctx.Testing.Fatalf("Expected response to be view")
+	}
+
+	return ctx
 }
 
 // Comment
-func (ctx *TestingT) popError() string {
-	if !ctx.hasError() {
-		return ""
+func (ctx *Response) AssertView(view string) *Response {
+	ctx.AssertIsView()
+
+	if view != ctx.Response.Bag.View.Name {
+		ctx.Testing.Fatalf("Expected view to be (%s) but go (%s)", view, ctx.Response.Bag.View.Name)
 	}
 
-	err := ctx.errors[len(ctx.errors)-1]
+	return ctx
+}
 
-	ctx.errors = ctx.errors[:len(ctx.errors)-1]
+// Comment
+func (ctx *Response) AssertViewHas(keys []string) *Response {
 
-	return err
+	return ctx
 }
