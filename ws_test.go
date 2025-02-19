@@ -52,6 +52,8 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 			ws.Emit(EVENT_READY, []byte{})
 
 			ws.Listen()
+
+			server.Close()
 		}
 	}()
 
