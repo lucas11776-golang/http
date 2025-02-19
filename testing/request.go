@@ -42,6 +42,14 @@ type Request struct {
 	body     []byte
 }
 
+type MultiPartForm struct {
+	request  *Request
+	values   Values
+	files    Files
+	boundary string
+}
+
+// Comment
 func (ctx *RequestReadCloser) Close() error {
 	return nil
 }
@@ -250,13 +258,6 @@ func (ctx *Request) Json(method http.Method, uri string, body []byte) *Response 
 	return ctx.Call(method, uri, body)
 }
 
-type MultiPartForm struct {
-	request  *Request
-	values   Values
-	files    Files
-	boundary string
-}
-
 // Comment
 func (ctx *Request) MultipartForm() *MultiPartForm {
 	return &MultiPartForm{
@@ -299,7 +300,8 @@ func (ctx *MultiPartForm) Sessions(sessions Values) *MultiPartForm {
 	return ctx
 }
 
-func (ctx *MultiPartForm) valueToString(name string, value string) string {
+// Comment
+func (ctx *MultiPartForm) value(name string, value string) string {
 	return fmt.Sprintf(
 		strings.Join([]string{
 			"Content-Disposition: form-data; name=\"%s\"\r\n",
@@ -308,7 +310,8 @@ func (ctx *MultiPartForm) valueToString(name string, value string) string {
 	)
 }
 
-func (ctx *MultiPartForm) fileToString(file *File) string {
+// Comment
+func (ctx *MultiPartForm) file(file *File) string {
 	return fmt.Sprintf(
 		strings.Join([]string{
 			"Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"",
@@ -318,6 +321,7 @@ func (ctx *MultiPartForm) fileToString(file *File) string {
 	)
 }
 
+// Comment
 func (ctx *MultiPartForm) body() string {
 	if len(ctx.values) == 0 && len(ctx.files) == 0 {
 		return ""
@@ -326,11 +330,11 @@ func (ctx *MultiPartForm) body() string {
 	body := []string{}
 
 	for name, value := range ctx.values {
-		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.valueToString(name, value))
+		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.value(name, value))
 	}
 
 	for _, file := range ctx.files {
-		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.fileToString(file))
+		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.file(file))
 	}
 
 	return strings.Join(append(body, fmt.Sprintf("--%s--", ctx.boundary)), "\r\n")
@@ -351,4 +355,52 @@ func (ctx *MultiPartForm) Send(method http.Method, uri string) *Response {
 		)
 		return nil
 	}
+}
+
+// Comment
+type FormUrlencoded struct {
+	request *Request
+	values  Values
+}
+
+// Comment
+func (ctx *Request) FormUrlencoded() *FormUrlencoded {
+	return &FormUrlencoded{
+		request: ctx,
+		values:  make(Values),
+	}
+}
+
+// Comment
+func (ctx *FormUrlencoded) Value(key string, value string) *FormUrlencoded {
+	ctx.values[key] = value
+
+	return ctx
+}
+
+// Comment
+func (ctx *FormUrlencoded) Values(values Values) *FormUrlencoded {
+	for k, v := range values {
+		ctx.Value(k, v)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *FormUrlencoded) body() string {
+	query := []string{}
+
+	for v, k := range ctx.values {
+		query = append(query, strings.Join([]string{v, k}, "="))
+	}
+
+	return strings.Join(query, "&")
+}
+
+// Comment
+func (ctx *FormUrlencoded) Send(method http.Method, uri string) *Response {
+	ctx.request.SetHeader("content-type", "application/x-www-form-urlencoded")
+
+	return ctx.request.Call(method, uri, []byte(ctx.body()))
 }

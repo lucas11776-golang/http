@@ -3,6 +3,9 @@ package testing
 import (
 	"encoding/json"
 	"io"
+	"math/rand/v2"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/lucas11776-golang/http"
@@ -193,6 +196,40 @@ func TestMultipartForm(t *testing.T) {
 		Value: value.data,
 		File:  string(file.Data),
 	})
+
+	res.AssertOk()
+	res.AssertHeader("content-type", "application/json")
+	res.AssertBody(tBody)
+
+	req.TestCase.Cleanup()
+}
+
+func TestFormUrlencoded(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), false))
+
+	type response struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	body := &response{
+		Email:    "jane@deo.com",
+		Password: strings.Join([]string{"password", strconv.Itoa(int(rand.Float32() * 10000))}, "@"),
+	}
+
+	req.TestCase.HTTP.Route().Post("api/authentication/login", func(req *http.Request, res *http.Response) *http.Response {
+		return res.Json(&response{
+			Email:    req.FormValue("email"),
+			Password: req.FormValue("password"),
+		})
+	})
+
+	res := req.FormUrlencoded().Values(Values{
+		"email":    body.Email,
+		"password": body.Password,
+	}).Send(http.METHOD_POST, "api/authentication/login")
+
+	tBody, _ := json.Marshal(body)
 
 	res.AssertOk()
 	res.AssertHeader("content-type", "application/json")
