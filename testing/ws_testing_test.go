@@ -11,7 +11,7 @@ import (
 )
 
 func TestTestingWs(t *testing.T) {
-	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0).SetMaxWebsocketPayload(int(math.Pow(2, 18))), true))
+	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0).SetMaxWebsocketPayload(int(math.Pow(2, 16)+2)), true))
 
 	type coordinate struct {
 		Longitude float32 `json:"longitude"`
