@@ -136,6 +136,10 @@ func (ctx *HTTP) handleWebRouteMiddleware(route *Route, req *Request) *Response 
 
 // Comment
 func (ctx *HTTP) handleHTTP1_1(req *Request) *Response {
+	if req.FormValue("__METHOD__") != "" {
+		req.Method = strings.ToUpper(req.FormValue("__METHOD__"))
+	}
+
 	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
 		return webSocketRequestHandler(ctx, req)
 	}

@@ -2,7 +2,7 @@ package testing
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
 	"testing"
 
 	"github.com/lucas11776-golang/http"
@@ -68,7 +68,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestRoute(t *testing.T) {
-	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), false))
 
 	user := struct {
 		ID    int    `json:"id"`
@@ -82,38 +82,18 @@ func TestRoute(t *testing.T) {
 		return res.Json(user)
 	})
 
-	res := req.Json(http.METHOD_GET, "users/1", []byte{})
-
-	res.AssertHeader("content-type", "text/html")
-
-	if !res.Testing.hasError() {
-		t.Fatalf("Expected assert header to log error because content-type is not text/html it`s application/json")
-	}
-
-	res.Testing.popError()
-
-	res.AssertHeader("content-type", "application/json")
-
-	if res.Testing.hasError() {
-		t.Fatalf("Expected assert header to not log error because content-type is application/json")
-	}
-
 	tBody, _ := json.Marshal(user)
 
+	res := req.Json(http.METHOD_GET, "users/1", []byte{})
+
+	res.AssertHeader("content-type", "application/json")
 	res.AssertBody(tBody)
-
-	if res.Testing.hasError() {
-
-		fmt.Println(res.Testing.errors)
-
-		t.Fatalf("Expected assert body to not log error")
-	}
 
 	req.TestCase.Cleanup()
 }
 
 func TestSession(t *testing.T) {
-	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), false))
 
 	body := "<h1>Welcome to dashboard</h1>"
 
@@ -145,14 +125,78 @@ func TestSession(t *testing.T) {
 	res := req.Get("dashboard")
 
 	res.AssertHeader("content-type", "text/html")
-
-	if res.Testing.hasError() {
-		t.Fatalf("Expected response content-type to be (%s) but got (%s)", "text/html", res.Response.GetHeader("content-type"))
-	}
-
 	res.AssertBody([]byte(body))
 
-	if res.Testing.hasError() {
-		t.Fatalf("Expected assert body to not log")
+	req.TestCase.Cleanup()
+}
+
+// Comment
+func TestMultipartForm(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), false))
+
+	value := &struct {
+		name string
+		data string
+	}{
+		name: "name",
+		data: "Test Image",
 	}
+
+	file := &File{
+		Name:     "picture",
+		Filename: "image.jpeg",
+		Type:     "image/jpeg",
+		Data:     []byte{54, 34, 67, 46, 120, 255},
+	}
+
+	type response struct {
+		Value string `json:"value"`
+		File  string `json:"file"`
+	}
+
+	type message struct {
+		Message string `json:"message"`
+	}
+
+	isUser := func(req *http.Request, res *http.Response, next http.Next) *http.Response {
+		if req.Session.Get("user_id") == "" {
+			return res.Redirect("/")
+		}
+
+		return next()
+	}
+
+	req.TestCase.HTTP.Route().Put("api/gallery", func(req *http.Request, res *http.Response) *http.Response {
+		file, _, err := req.FormFile(file.Name)
+
+		if err != nil {
+			return res.SetStatus(http.HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(message{
+				Message: "The file is request",
+			})
+		}
+
+		fileData, _ := io.ReadAll(file)
+
+		return res.SetStatus(http.HTTP_RESPONSE_CREATED).Json(&response{
+			Value: req.FormValue(value.name),
+			File:  string(fileData),
+		})
+	}).Middleware(isUser)
+
+	r := req.MultipartForm().Value(value.name, value.data).File(file.Name, file.Filename, file.Type, file.Data)
+
+	r.Session("user_id", "1")
+
+	res := r.Send(http.METHOD_PUT, "api/gallery")
+
+	tBody, _ := json.Marshal(&response{
+		Value: value.data,
+		File:  string(file.Data),
+	})
+
+	res.AssertOk()
+	res.AssertHeader("content-type", "application/json")
+	res.AssertBody(tBody)
+
+	req.TestCase.Cleanup()
 }

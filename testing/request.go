@@ -2,9 +2,12 @@ package testing
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"math/rand"
 	h "net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/lucas11776-golang/http"
@@ -13,15 +16,15 @@ import (
 )
 
 type File struct {
-	Name        string
-	Filename    string
-	ContentType string
-	Content     []byte
+	Name     string
+	Filename string
+	Type     string
+	Data     []byte
 }
 
 type Values map[string]string
 
-type Files []Files
+type Files []*File
 
 type RequestReadCloser struct {
 	io.Reader
@@ -31,8 +34,6 @@ type Request struct {
 	TestCase *TestCase
 	Testing  *Testing
 	Request  *http.Request
-	values   Values
-	files    Files
 	session  Values
 	protocol string
 	path     string
@@ -53,7 +54,6 @@ func NewRequest(testcase *TestCase) *Request {
 		protocol: "HTTP/1.1",
 		method:   "GET",
 		headers:  make(types.Headers),
-		values:   make(Values),
 		session:  make(Values),
 	}
 
@@ -106,6 +106,8 @@ func (ctx *Request) setBody(body []byte) *Request {
 
 // Comment
 func (ctx *Request) make() (*http.Request, error) {
+	ctx.SetHeader("content-length", strconv.Itoa(len(ctx.body)))
+
 	r, err := h.NewRequest(
 		string(ctx.method),
 		ctx.path,
@@ -249,22 +251,104 @@ func (ctx *Request) Json(method http.Method, uri string, body []byte) *Response 
 }
 
 type MultiPartForm struct {
-	request *Request
-	values  Values
-	files   Files
+	request  *Request
+	values   Values
+	files    Files
+	boundary string
 }
 
 // Comment
-func (ctx *Request) MultiPartForm() *MultiPartForm {
-	return &MultiPartForm{request: ctx}
+func (ctx *Request) MultipartForm() *MultiPartForm {
+	return &MultiPartForm{
+		request:  ctx,
+		values:   make(Values),
+		boundary: fmt.Sprintf("--------------------------%d", 100*(1000+rand.Int()*9999)),
+	}
 }
 
 // comment
 func (ctx *MultiPartForm) File(name string, filename string, contentType string, data []byte) *MultiPartForm {
+	ctx.files = append(ctx.files, &File{
+		Name:     name,
+		Filename: filename,
+		Type:     contentType,
+		Data:     data,
+	})
+
 	return ctx
 }
 
 // Comment
 func (ctx *MultiPartForm) Value(name string, value string) *MultiPartForm {
+	ctx.values[name] = value
+
 	return ctx
+}
+
+// Comment
+func (ctx *MultiPartForm) Session(key string, value string) *MultiPartForm {
+	ctx.request.Session(key, value)
+
+	return ctx
+}
+
+// Comment
+func (ctx *MultiPartForm) Sessions(sessions Values) *MultiPartForm {
+	ctx.request.Sessions(sessions)
+
+	return ctx
+}
+
+func (ctx *MultiPartForm) valueToString(name string, value string) string {
+	return fmt.Sprintf(
+		strings.Join([]string{
+			"Content-Disposition: form-data; name=\"%s\"\r\n",
+			value,
+		}, "\r\n"), name,
+	)
+}
+
+func (ctx *MultiPartForm) fileToString(file *File) string {
+	return fmt.Sprintf(
+		strings.Join([]string{
+			"Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"",
+			"Content-Type: %s\r\n",
+			string(file.Data),
+		}, "\r\n"), file.Name, file.Filename, file.Type,
+	)
+}
+
+func (ctx *MultiPartForm) body() string {
+	if len(ctx.values) == 0 && len(ctx.files) == 0 {
+		return ""
+	}
+
+	body := []string{}
+
+	for name, value := range ctx.values {
+		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.valueToString(name, value))
+	}
+
+	for _, file := range ctx.files {
+		body = append(body, fmt.Sprintf("--%s", ctx.boundary), ctx.fileToString(file))
+	}
+
+	return strings.Join(append(body, fmt.Sprintf("--%s--", ctx.boundary)), "\r\n")
+}
+
+// Comment
+func (ctx *MultiPartForm) Send(method http.Method, uri string) *Response {
+	switch method {
+	case http.METHOD_POST, http.METHOD_PUT, http.METHOD_PATCH:
+		ctx.request.SetHeader("content-type", fmt.Sprintf("multipart/form-data; boundary=%s", ctx.boundary))
+
+		return ctx.Value("__METHOD__", string(method)).request.Call(http.METHOD_POST, uri, []byte(ctx.body()))
+	default:
+		ctx.request.Testing.Fatalf(
+			"Multipart form does not support (%s) it only support (%v)",
+			method,
+			[]http.Method{http.METHOD_POST, http.METHOD_PUT, http.METHOD_PATCH},
+		)
+		return nil
+	}
 }
