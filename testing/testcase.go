@@ -7,13 +7,15 @@ import (
 	"github.com/lucas11776-golang/http"
 )
 
+type Values map[string]string
+
 type TestCase struct {
-	HTTP    *http.HTTP
-	Testing *Testing
+	http    *http.HTTP
+	testing *Testing
 }
 
 type Testing struct {
-	T         *testing.T
+	t         *testing.T
 	catchLogs bool
 	errors    []string
 }
@@ -21,9 +23,9 @@ type Testing struct {
 // Comment
 func NewTestCase(t *testing.T, HTTP *http.HTTP, catchLog bool) *TestCase {
 	return &TestCase{
-		HTTP: HTTP,
-		Testing: &Testing{
-			T:         t,
+		http: HTTP,
+		testing: &Testing{
+			t:         t,
 			catchLogs: catchLog,
 		},
 	}
@@ -31,11 +33,7 @@ func NewTestCase(t *testing.T, HTTP *http.HTTP, catchLog bool) *TestCase {
 
 // Comment
 func (ctx *TestCase) Request() *Request {
-	// return NewRequest(ctx)
-	return nil
-}
-
-type Ws struct {
+	return NewRequest(ctx)
 }
 
 // Comment
@@ -45,7 +43,7 @@ func (ctx *TestCase) Ws() *Ws {
 
 // Comment
 func (ctx *TestCase) Cleanup() {
-	ctx.HTTP.Close()
+	ctx.http.Close()
 }
 
 // Comment
@@ -56,7 +54,7 @@ func (ctx *Testing) Log(args ...any) {
 		return
 	}
 
-	ctx.T.Log(args...)
+	ctx.t.Log(args...)
 }
 
 // Comment
@@ -67,7 +65,7 @@ func (ctx *Testing) Logf(format string, args ...any) {
 		return
 	}
 
-	ctx.T.Logf(format, args...)
+	ctx.t.Logf(format, args...)
 }
 
 // Comment
@@ -78,7 +76,7 @@ func (ctx *Testing) Error(args ...any) {
 		return
 	}
 
-	ctx.T.Error(args...)
+	ctx.t.Error(args...)
 }
 
 // Comment
@@ -89,7 +87,7 @@ func (ctx *Testing) Errorf(format string, args ...any) {
 		return
 	}
 
-	ctx.T.Errorf(format, args...)
+	ctx.t.Errorf(format, args...)
 }
 
 // Comment
@@ -100,7 +98,7 @@ func (ctx *Testing) Fatal(args ...any) {
 		return
 	}
 
-	ctx.T.Fatal(args...)
+	ctx.t.Fatal(args...)
 }
 
 // Comment
@@ -111,7 +109,7 @@ func (ctx *Testing) Fatalf(format string, args ...any) {
 		return
 	}
 
-	ctx.T.Fatalf(format, args...)
+	ctx.t.Fatalf(format, args...)
 }
 
 // Comment

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"math/rand"
 	"net"
 	"strconv"
@@ -8,13 +9,19 @@ import (
 	"time"
 
 	"github.com/lucas11776-golang/http/server/connection"
+	"github.com/lucas11776-golang/http/types"
 )
 
 // [opcode, len, mask, data]
 
 // Comment
 func replyServerWsTest(concat []byte) (net.Listener, error) {
+	// TODO Refactor ws test...
 	listener, err := net.Listen("tcp", ":0")
+	server := Server("127.0.0.1", 0)
+	req, _ := NewRequest(METHOD_GET, "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+	req.Server = server
 
 	if err != nil {
 		return nil, err
@@ -29,6 +36,8 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 			}
 
 			ws := InitWs(connection.Init(&conn, MAX_PAYLOAD_SIZE))
+
+			ws.Request = req
 
 			ws.OnReady(func(ws *Ws) {
 				ws.OnMessage(func(data []byte) {

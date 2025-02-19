@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/open2b/scriggo"
 )
@@ -178,7 +177,9 @@ func TestResponse(t *testing.T) {
 
 		vw := InitView(responseViewTest, "html")
 
-		res.Request.Server = server.Init("127.0.0.1", 8080, nil).Set("view", vw)
+		res.Request.Server = Server("127.0.0.1", 0)
+
+		res.Request.Server.Set("view", vw)
 
 		res.View("home", ViewData{
 			"name": name,

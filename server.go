@@ -20,7 +20,8 @@ import (
 
 type HTTP struct {
 	*serve.Server
-	Debug bool
+	Debug                   bool
+	MaxWebSocketPayloadSize int
 }
 
 const (
@@ -186,7 +187,7 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Request {
 	return &Request{
 		Request:  rq,
-		Server:   ctx.Server,
+		Server:   ctx,
 		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
@@ -236,6 +237,13 @@ func (ctx *HTTP) SetStatic(statics string) *HTTP {
 }
 
 // Comment
+func (ctx *HTTP) SetMaxWebsocketPayload(size int) *HTTP {
+	ctx.MaxWebSocketPayloadSize = size
+
+	return ctx
+}
+
+// Comment
 func (ctx *HTTP) Session(key []byte) SessionsManager {
 	ctx.Set("session", InitSession(SESSION_NAME, key))
 
@@ -250,7 +258,10 @@ func Server(address string, port int32) *HTTP {
 		log.Fatal(err)
 	}
 
-	http := &HTTP{Server: server}
+	http := &HTTP{
+		Server:                  server,
+		MaxWebSocketPayloadSize: MAX_PAYLOAD_SIZE,
+	}
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 

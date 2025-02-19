@@ -65,7 +65,7 @@ func TestFrame(t *testing.T) {
 			t.Fatalf("Expected payload opcode flag to be (%d) but got (%d)", opcode+OPCODE_START, frame.Payload()[0])
 		}
 
-		if frame.Payload()[1] != 126 {
+		if frame.Payload()[1] != 127 {
 			t.Fatalf("Expected payload length flag to be (%d) but got (%d)", 127, frame.Payload()[1])
 		}
 

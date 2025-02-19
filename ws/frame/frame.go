@@ -39,6 +39,7 @@ func unmask(mask []byte, data []byte) []byte {
 	for i, masked := range data {
 		data[i] = masked ^ mask[i%len(mask)]
 	}
+
 	return data
 }
 
@@ -133,7 +134,7 @@ func Encode(opcode Opcode, data []byte) *Frame {
 
 	payload := make([]byte, 2)
 	payload[0] = byte(opcode + OPCODE_START)
-	payload[1] = 126
+	payload[1] = 127
 
 	length := make([]byte, 8)
 

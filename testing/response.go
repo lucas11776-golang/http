@@ -11,26 +11,26 @@ import (
 )
 
 type Response struct {
-	TestCase *TestCase
-	Request  *Request
+	testcase *TestCase
+	request  *Request
 	Response *http.Response
-	Testing  *Testing
+	testing  *Testing
 }
 
 // Comment
 func NewResponse(req *Request, res *http.Response) *Response {
 	return &Response{
-		TestCase: req.TestCase,
-		Request:  req,
+		testcase: req.testCase,
+		request:  req,
 		Response: res,
-		Testing:  req.TestCase.Testing,
+		testing:  req.testCase.testing,
 	}
 }
 
 // Comment
 func (ctx *Response) AssertProtocol(protocol string) *Response {
 	if ctx.Response.Protocol() != protocol {
-		ctx.Testing.Fatalf("Expected response protocol to be (%s) but got (%s)", ctx.Response.Protocol(), protocol)
+		ctx.testing.Fatalf("Expected response protocol to be (%s) but got (%s)", ctx.Response.Protocol(), protocol)
 	}
 
 	return ctx
@@ -39,7 +39,7 @@ func (ctx *Response) AssertProtocol(protocol string) *Response {
 // Comment
 func (ctx *Response) AssertStatusCode(status http.Status) *Response {
 	if ctx.Response.StatusCode != int(status) {
-		ctx.Testing.Fatalf("Expected response status code to be (%d) but got (%d)", status, ctx.Response.StatusCode)
+		ctx.testing.Fatalf("Expected response status code to be (%d) but got (%d)", status, ctx.Response.StatusCode)
 	}
 
 	return ctx
@@ -48,7 +48,7 @@ func (ctx *Response) AssertStatusCode(status http.Status) *Response {
 // Comment
 func (ctx *Response) AssertOk() *Response {
 	if !(ctx.Response.StatusCode >= int(http.HTTP_RESPONSE_OK) && ctx.Response.StatusCode <= int(http.HTTP_RESPONSE_ACCEPTED)) {
-		ctx.Testing.Fatalf("Expected response status code to be (200, 201, 202) but got (%d)", ctx.Response.StatusCode)
+		ctx.testing.Fatalf("Expected response status code to be (200, 201, 202) but got (%d)", ctx.Response.StatusCode)
 	}
 
 	return ctx
@@ -69,7 +69,7 @@ func (ctx *Response) AssertHeadersHas(header string) *Response {
 	_, ok := ctx.Response.Header[cases.Title(language.English).String(header)]
 
 	if !ok {
-		ctx.Testing.Fatalf("Expected response to contain header (%s)", header)
+		ctx.testing.Fatalf("Expected response to contain header (%s)", header)
 	}
 
 	return ctx
@@ -78,7 +78,7 @@ func (ctx *Response) AssertHeadersHas(header string) *Response {
 // Comment
 func (ctx *Response) AssertHeader(header string, value string) *Response {
 	if ctx.Response.GetHeader(header) != value {
-		ctx.Testing.Fatalf("Expected response header (%s) to be (%s) but got (%s)", header, value, ctx.Response.GetHeader(header))
+		ctx.testing.Fatalf("Expected response header (%s) to be (%s) but got (%s)", header, value, ctx.Response.GetHeader(header))
 	}
 
 	return ctx
@@ -98,11 +98,11 @@ func (ctx *Response) AssertBody(body []byte) *Response {
 	tBody, err := io.ReadAll(ctx.Response.Body)
 
 	if err != nil {
-		ctx.Testing.Fatalf("Something went wrong when trying to read body: %v", err)
+		ctx.testing.Fatalf("Something went wrong when trying to read body: %v", err)
 	}
 
 	if string(tBody) != string(body) {
-		ctx.Testing.Fatalf("Expected response body to be (%s) but got (%s)", string(body), string(tBody))
+		ctx.testing.Fatalf("Expected response body to be (%s) but got (%s)", string(body), string(tBody))
 	}
 
 	return ctx
@@ -111,7 +111,7 @@ func (ctx *Response) AssertBody(body []byte) *Response {
 // Comment
 func (ctx *Response) AssertIsRedirect() *Response {
 	if ctx.Response.Bag.Redirect == nil {
-		ctx.Testing.Fatalf("Expected response to be redirect")
+		ctx.testing.Fatalf("Expected response to be redirect")
 	}
 
 	return ctx
@@ -122,7 +122,7 @@ func (ctx *Response) AssertRedirectTo(path string) *Response {
 	ctx.AssertIsRedirect()
 
 	if strings.Trim(path, "/") != strings.Trim(ctx.Response.Bag.Redirect.To, "/") {
-		ctx.Testing.Fatalf(
+		ctx.testing.Fatalf(
 			"Expected redirect path to be (%s) but go (%s)",
 			strings.Trim(path, "/"),
 			strings.Trim(ctx.Response.Bag.Redirect.To, "/"),
@@ -135,7 +135,7 @@ func (ctx *Response) AssertRedirectTo(path string) *Response {
 // Comment
 func (ctx *Response) AssertIsView() *Response {
 	if ctx.Response.Bag.View == nil {
-		ctx.Testing.Fatalf("Expected response to be view")
+		ctx.testing.Fatalf("Expected response to be view")
 	}
 
 	return ctx
@@ -146,7 +146,7 @@ func (ctx *Response) AssertView(view string) *Response {
 	ctx.AssertIsView()
 
 	if view != ctx.Response.Bag.View.Name {
-		ctx.Testing.Fatalf("Expected view to be (%s) but go (%s)", view, ctx.Response.Bag.View.Name)
+		ctx.testing.Fatalf("Expected view to be (%s) but go (%s)", view, ctx.Response.Bag.View.Name)
 	}
 
 	return ctx
@@ -160,7 +160,7 @@ func (ctx *Response) AssertViewHas(keys []string) *Response {
 		_, ok := ctx.Response.Bag.View.Data[key]
 
 		if !ok {
-			ctx.Testing.Fatalf("Expected view data to have (%s)", key)
+			ctx.testing.Fatalf("Expected view data to have (%s)", key)
 		}
 	}
 
@@ -171,7 +171,7 @@ func (ctx *Response) AssertViewHas(keys []string) *Response {
 func (ctx *Response) AssertSessionHas(keys []string) *Response {
 	for _, key := range keys {
 		if ctx.Response.Session.Get(key) == "" {
-			ctx.Testing.Fatalf("Expected session to have (%s)", key)
+			ctx.testing.Fatalf("Expected session to have (%s)", key)
 		}
 	}
 
@@ -181,7 +181,7 @@ func (ctx *Response) AssertSessionHas(keys []string) *Response {
 // Comment
 func (ctx *Response) AssertSession(key string, value string) *Response {
 	if ctx.Response.Session.Get(key) != value {
-		ctx.Testing.Fatalf(
+		ctx.testing.Fatalf(
 			"Expected session %s to but (%s) but got (%s)",
 			key,
 			value,

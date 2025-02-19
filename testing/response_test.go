@@ -20,91 +20,91 @@ func TestResponseBody(t *testing.T) {
 	t.Run("TestAssertProtocol", func(t *testing.T) {
 		res.AssertProtocol("HTTP/2.0")
 
-		if !res.Testing.hasError() {
+		if !res.testing.hasError() {
 			t.Fatalf("Expected assert protocol to log error")
 		}
 
-		res.Testing.popError()
+		res.testing.popError()
 
 		res.AssertProtocol("HTTP/1.1")
 
-		if res.Testing.hasError() {
+		if res.testing.hasError() {
 			t.Fatalf("Expected assert protocol to not log error")
 		}
 
-		res.TestCase.Cleanup()
+		res.testcase.Cleanup()
 	})
 
 	t.Run("TestAssertStatus", func(t *testing.T) {
 		res.AssertStatusCode(http.HTTP_RESPONSE_NOT_FOUND)
 
-		if !res.Testing.hasError() {
+		if !res.testing.hasError() {
 			t.Fatalf("Expected assert status code to log error")
 		}
 
-		res.Testing.popError()
+		res.testing.popError()
 
 		res.AssertStatusCode(http.HTTP_RESPONSE_OK)
 
-		if res.Testing.hasError() {
+		if res.testing.hasError() {
 			t.Fatalf("Expected assert status code to not log error")
 		}
 
-		res.TestCase.Cleanup()
+		res.testcase.Cleanup()
 	})
 
 	t.Run("TestAssertHeaders", func(t *testing.T) {
 		res.AssertHeadersHas("x-forward")
 
-		if !res.Testing.hasError() {
+		if !res.testing.hasError() {
 			t.Fatalf("Expected assert has header to log error")
 		}
 
-		res.Testing.popError()
+		res.testing.popError()
 
 		res.AssertHeadersHas("content-type")
 
-		if res.Testing.hasError() {
+		if res.testing.hasError() {
 			t.Fatalf("Expected assert has header to not log error")
 		}
 
 		// header assert
 		res.AssertHeader("content-type", "text/html")
 
-		if !res.Testing.hasError() {
+		if !res.testing.hasError() {
 			t.Fatalf("Expected assert header to log error")
 		}
 
-		res.Testing.popError()
+		res.testing.popError()
 
 		res.AssertHeader("content-type", "application/json")
 
-		if res.Testing.hasError() {
+		if res.testing.hasError() {
 			t.Fatalf("Expected assert header to not log error")
 		}
 
-		res.TestCase.Cleanup()
+		res.testcase.Cleanup()
 	})
 
 	t.Run("TestBody", func(t *testing.T) {
 		res.AssertBody([]byte("Testing Fails Body"))
 
-		if !res.Testing.hasError() {
+		if !res.testing.hasError() {
 			t.Fatalf("Expected assert body to log error")
 		}
 
-		res.Testing.popError()
+		res.testing.popError()
 
 		res.AssertBody([]byte(body))
 
-		res.Testing.popError()
+		res.testing.popError()
 
-		if res.Testing.hasError() {
+		if res.testing.hasError() {
 			t.Fatalf("Expected assert body to not log error")
 		}
 	})
 
-	res.TestCase.Cleanup()
+	res.testcase.Cleanup()
 }
 
 func TestResponseRedirect(t *testing.T) {
@@ -115,11 +115,11 @@ func TestResponseRedirect(t *testing.T) {
 	// Is Redirect
 	res.AssertIsRedirect()
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert is redirect to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	bag := &http.RedirectBag{To: "authentication/login"}
 
@@ -127,26 +127,26 @@ func TestResponseRedirect(t *testing.T) {
 
 	res.AssertIsRedirect()
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert is redirect to not log error")
 	}
 
 	// Redirect To
 	res.AssertRedirectTo("dashboard")
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert redirect to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	res.AssertRedirectTo(bag.To)
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert is redirect to not log error")
 	}
 
-	res.TestCase.Cleanup()
+	res.testcase.Cleanup()
 }
 
 func TestResponseView(t *testing.T) {
@@ -157,11 +157,11 @@ func TestResponseView(t *testing.T) {
 	// Is View
 	res.AssertIsView()
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert is view to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	bag := &http.ViewBag{
 		Name: "authentication.password.reset",
@@ -174,41 +174,41 @@ func TestResponseView(t *testing.T) {
 
 	res.AssertIsView()
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert is view to not log error")
 	}
 
 	// View
 	res.AssertView("dashboard")
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert view to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	res.AssertView(bag.Name)
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert is view to not log error")
 	}
 
 	// View Has
 	res.AssertViewHas([]string{"message"})
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert view has to not log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	res.AssertViewHas([]string{"error"})
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert view has to not log error")
 	}
 
-	res.TestCase.Cleanup()
+	res.testcase.Cleanup()
 }
 
 func TestResponseSession(t *testing.T) {
@@ -216,45 +216,45 @@ func TestResponseSession(t *testing.T) {
 	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
 	res := NewResponse(req, r)
 
-	req.Request.Response = res.Response
-	res.Request.Request = req.Request
+	req.request.Response = res.Response
+	res.request.request = req.request
 
-	req.Request.Session = req.TestCase.HTTP.Get("session").(http.SessionsManager).Session(req.Request)
-	res.Response.Session = req.Request.Session
+	req.request.Session = req.testCase.http.Get("session").(http.SessionsManager).Session(req.request)
+	res.Response.Session = req.request.Session
 
 	// Has Session
 	res.AssertSessionHas([]string{"user_id"})
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert has session to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	res.Response.Session.Set("user_id", strconv.Itoa(1))
 
 	res.AssertSessionHas([]string{"user_id"})
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert has session to not log error")
 	}
 
 	// Session
 	res.AssertSession("is_admin", "1")
 
-	if !res.Testing.hasError() {
+	if !res.testing.hasError() {
 		t.Fatalf("Expected assert session to log error")
 	}
 
-	res.Testing.popError()
+	res.testing.popError()
 
 	res.Response.Session.Set("is_admin", strconv.Itoa(1))
 
 	res.AssertSession("is_admin", "1")
 
-	if res.Testing.hasError() {
+	if res.testing.hasError() {
 		t.Fatalf("Expected assert session to not log error")
 	}
 
-	res.TestCase.Cleanup()
+	res.testcase.Cleanup()
 }

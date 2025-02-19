@@ -16,7 +16,7 @@ func TestRequest(t *testing.T) {
 
 	t.Run("TestSetProtocolPathMethodHeadersBody", func(t *testing.T) {
 		req := NewRequest(&TestCase{
-			HTTP: http.Server("127.0.0.1", 0),
+			http: http.Server("127.0.0.1", 0),
 		})
 
 		body := `{"id":1,"email":"jeo@doe.com"}`
@@ -66,7 +66,7 @@ func TestRequest(t *testing.T) {
 			t.Fatalf("Expected request body to be (%s) but got (%s)", body, tBody)
 		}
 
-		req.TestCase.Cleanup()
+		req.testCase.Cleanup()
 	})
 }
 
@@ -81,7 +81,7 @@ func TestRoute(t *testing.T) {
 		Email: "jeo@doe.com",
 	}
 
-	req.TestCase.HTTP.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
+	req.testCase.http.Route().Get("users/{id}", func(req *http.Request, res *http.Response) *http.Response {
 		return res.Json(user)
 	})
 
@@ -92,7 +92,7 @@ func TestRoute(t *testing.T) {
 	res.AssertHeader("content-type", "application/json")
 	res.AssertBody(tBody)
 
-	req.TestCase.Cleanup()
+	req.testCase.Cleanup()
 }
 
 func TestSession(t *testing.T) {
@@ -116,7 +116,7 @@ func TestSession(t *testing.T) {
 		return next()
 	}
 
-	req.TestCase.HTTP.Route().Get("dashboard", func(req *http.Request, res *http.Response) *http.Response {
+	req.testCase.http.Route().Get("dashboard", func(req *http.Request, res *http.Response) *http.Response {
 		return res.Html(body)
 	}).Middleware(isUser, isAdmin)
 
@@ -130,7 +130,7 @@ func TestSession(t *testing.T) {
 	res.AssertHeader("content-type", "text/html")
 	res.AssertBody([]byte(body))
 
-	req.TestCase.Cleanup()
+	req.testCase.Cleanup()
 }
 
 // Comment
@@ -169,7 +169,7 @@ func TestMultipartForm(t *testing.T) {
 		return next()
 	}
 
-	req.TestCase.HTTP.Route().Put("api/gallery", func(req *http.Request, res *http.Response) *http.Response {
+	req.testCase.http.Route().Put("api/gallery", func(req *http.Request, res *http.Response) *http.Response {
 		file, _, err := req.FormFile(file.Name)
 
 		if err != nil {
@@ -201,7 +201,7 @@ func TestMultipartForm(t *testing.T) {
 	res.AssertHeader("content-type", "application/json")
 	res.AssertBody(tBody)
 
-	req.TestCase.Cleanup()
+	req.testCase.Cleanup()
 }
 
 func TestFormUrlencoded(t *testing.T) {
@@ -217,7 +217,7 @@ func TestFormUrlencoded(t *testing.T) {
 		Password: strings.Join([]string{"password", strconv.Itoa(int(rand.Float32() * 10000))}, "@"),
 	}
 
-	req.TestCase.HTTP.Route().Post("api/authentication/login", func(req *http.Request, res *http.Response) *http.Response {
+	req.testCase.http.Route().Post("api/authentication/login", func(req *http.Request, res *http.Response) *http.Response {
 		return res.Json(&response{
 			Email:    req.FormValue("email"),
 			Password: req.FormValue("password"),
@@ -235,5 +235,5 @@ func TestFormUrlencoded(t *testing.T) {
 	res.AssertHeader("content-type", "application/json")
 	res.AssertBody(tBody)
 
-	req.TestCase.Cleanup()
+	req.testCase.Cleanup()
 }

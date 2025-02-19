@@ -22,8 +22,6 @@ type File struct {
 	Data     []byte
 }
 
-type Values map[string]string
-
 type Files []*File
 
 type RequestReadCloser struct {
@@ -31,9 +29,9 @@ type RequestReadCloser struct {
 }
 
 type Request struct {
-	TestCase *TestCase
-	Testing  *Testing
-	Request  *http.Request
+	testCase *TestCase
+	testing  *Testing
+	request  *http.Request
 	session  Values
 	protocol string
 	path     string
@@ -57,15 +55,15 @@ func (ctx *RequestReadCloser) Close() error {
 // Comment
 func NewRequest(testcase *TestCase) *Request {
 	req := &Request{
-		TestCase: testcase,
-		Testing:  testcase.Testing,
+		testCase: testcase,
+		testing:  testcase.testing,
 		protocol: "HTTP/1.1",
 		method:   "GET",
 		headers:  make(types.Headers),
 		session:  make(Values),
 	}
 
-	req.Request, _ = req.make()
+	req.request, _ = req.make()
 
 	return req
 }
@@ -126,7 +124,7 @@ func (ctx *Request) make() (*http.Request, error) {
 		return nil, err
 	}
 
-	req := ctx.TestCase.HTTP.NewRequest(r, nil)
+	req := ctx.testCase.http.NewRequest(r, nil)
 
 	req.Proto = ctx.protocol
 	req.Header = headers.ToHeader(ctx.headers)
@@ -143,11 +141,11 @@ func (ctx *Request) addSessionHeader(req *http.Request) *http.Request {
 	r, err := h.NewRequest("GET", "/", bytes.NewReader([]byte{}))
 
 	if err != nil {
-		ctx.Testing.Fatalf("Something went wrong when trying to create request for session: %v", err)
+		ctx.testing.Fatalf("Something went wrong when trying to create request for session: %v", err)
 	}
 
-	rq := ctx.TestCase.HTTP.NewRequest(r, nil)
-	session := ctx.TestCase.HTTP.Get("session").(http.SessionsManager).Session(rq)
+	rq := ctx.testCase.http.NewRequest(r, nil)
+	session := ctx.testCase.http.Get("session").(http.SessionsManager).Session(rq)
 
 	for k, v := range ctx.session {
 		session.Set(k, v)
@@ -158,7 +156,7 @@ func (ctx *Request) addSessionHeader(req *http.Request) *http.Request {
 	cookie, err := url.ParseQuery(strings.ReplaceAll(rq.Response.GetHeader("set-cookie"), ";", "&"))
 
 	if err != nil {
-		ctx.Testing.Fatalf("Something went wrong when trying to convert session to query: %v", err)
+		ctx.testing.Fatalf("Something went wrong when trying to convert session to query: %v", err)
 	}
 
 	req.Header["Cookie"] = []string{strings.Join([]string{http.SESSION_NAME, cookie.Get(http.SESSION_NAME)}, "=")}
@@ -168,12 +166,12 @@ func (ctx *Request) addSessionHeader(req *http.Request) *http.Request {
 
 // Comment
 func (ctx *Request) makeRequest(req *http.Request) *Response {
-	ctx.Request = req
+	ctx.request = req
 
-	res := ctx.TestCase.HTTP.HandleRequest(ctx.addSessionHeader(req))
+	res := ctx.testCase.http.HandleRequest(ctx.addSessionHeader(req))
 
 	if res == nil {
-		ctx.TestCase.Testing.Fatalf("Request does not support WebSocket request use Ws testing")
+		ctx.testCase.testing.Fatalf("Request does not support WebSocket request use Ws testing")
 	}
 
 	req.Response = res
@@ -190,7 +188,7 @@ func (ctx *Request) Call(method http.Method, uri string, body []byte) *Response 
 	req, err := ctx.make()
 
 	if err != nil {
-		ctx.TestCase.Testing.Fatalf("Something went wrong when create request: %v", err)
+		ctx.testCase.testing.Fatalf("Something went wrong when create request: %v", err)
 	}
 
 	return ctx.makeRequest(req)
@@ -348,7 +346,7 @@ func (ctx *MultiPartForm) Send(method http.Method, uri string) *Response {
 
 		return ctx.Value("__METHOD__", string(method)).request.Call(http.METHOD_POST, uri, []byte(ctx.body()))
 	default:
-		ctx.request.Testing.Fatalf(
+		ctx.request.testing.Fatalf(
 			"Multipart form does not support (%s) it only support (%v)",
 			method,
 			[]http.Method{http.METHOD_POST, http.METHOD_PUT, http.METHOD_PATCH},

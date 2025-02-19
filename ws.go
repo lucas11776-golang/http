@@ -114,7 +114,7 @@ func (ctx *Ws) WriteJson(v any) error {
 // Comment
 func (ctx *Ws) Listen() {
 	for {
-		payload := make([]byte, MAX_PAYLOAD_SIZE)
+		payload := make([]byte, ctx.Request.Server.MaxWebSocketPayloadSize)
 
 		_, err := ctx.conn.Conn().Read(payload)
 
