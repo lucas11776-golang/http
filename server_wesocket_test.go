@@ -13,7 +13,7 @@ import (
 )
 
 func TestServerWebSocket(t *testing.T) {
-	server := Server("127.0.0.1", 0)
+	server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
 	const wsResponse = "Hello World from :name !!!"
 
@@ -56,7 +56,7 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Something went wrong when trying send request: %s", err.Error())
 		}
 
-		buf := make([]byte, 2048)
+		buf := make([]byte, server.MaxWebSocketPayloadSize)
 
 		n, err := conn.Read(buf)
 
@@ -96,7 +96,9 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Something went wrong when trying send payload: %s", err.Error())
 		}
 
-		n, err = conn.Read(buf)
+		buffNew := make([]byte, server.MaxWebSocketPayloadSize)
+
+		n, err = conn.Read(buffNew)
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
@@ -104,7 +106,7 @@ func TestServerWebSocket(t *testing.T) {
 
 		expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
 
-		response := string(buf[2:n])
+		response := string(buffNew[2:n])
 
 		if err != nil {
 			t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())

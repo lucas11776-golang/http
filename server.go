@@ -260,7 +260,7 @@ func Server(address string, port int32) *HTTP {
 
 	http := &HTTP{
 		Server:                  server,
-		MaxWebSocketPayloadSize: MAX_PAYLOAD_SIZE,
+		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 	}
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback

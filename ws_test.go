@@ -35,7 +35,7 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 				break
 			}
 
-			ws := InitWs(connection.Init(&conn, MAX_PAYLOAD_SIZE))
+			ws := InitWs(connection.Init(&conn, MAX_WEBSOCKET_PAYLOAD))
 
 			ws.Request = req
 
@@ -120,7 +120,7 @@ func TestWs(t *testing.T) {
 			t.Fatalf("Something went wrong when connecting to server: %s", err.Error())
 		}
 
-		buffer := make([]byte, MAX_PAYLOAD_SIZE)
+		buffer := make([]byte, MAX_WEBSOCKET_PAYLOAD)
 
 		_, err = conn.Read(buffer)
 

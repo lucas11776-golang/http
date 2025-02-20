@@ -7,7 +7,9 @@ import (
 	"github.com/lucas11776-golang/http/ws/frame"
 )
 
-const MAX_PAYLOAD_SIZE = 2048
+const (
+	MAX_WEBSOCKET_PAYLOAD = 1024 * 2
+)
 
 type Event string
 
@@ -112,11 +114,32 @@ func (ctx *Ws) WriteJson(v any) error {
 }
 
 // Comment
+func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
+	switch opcode {
+	case frame.OPCODE_CONTINUATION:
+		break
+	case frame.OPCODE_BINARY, frame.OPCODE_TEXT:
+		ctx.Emit(EVENT_MESSAGE, data)
+		break
+	case frame.OPCODE_CONNECTION_CLOSE:
+		ctx.Emit(EVENT_CLOSE, data)
+		break
+	case frame.OPCODE_PING:
+		ctx.Emit(EVENT_PING, data)
+		break
+	case frame.OPCODE_PONG:
+		ctx.Emit(EVENT_PONG, data)
+		break
+	default:
+	}
+}
+
+// Comment
 func (ctx *Ws) Listen() {
 	for {
 		payload := make([]byte, ctx.Request.Server.MaxWebSocketPayloadSize)
 
-		_, err := ctx.conn.Conn().Read(payload)
+		n, err := ctx.conn.Conn().Read(payload)
 
 		if err != nil {
 			ctx.Alive = false
@@ -126,28 +149,12 @@ func (ctx *Ws) Listen() {
 			break
 		}
 
-		frm, err := frame.Decode(payload)
+		frm, err := frame.Decode(payload[:n])
 
 		if err != nil {
 			continue
 		}
 
-		switch frm.Opcode() {
-		case frame.OPCODE_CONTINUATION:
-			break
-		case frame.OPCODE_BINARY, frame.OPCODE_TEXT:
-			ctx.Emit(EVENT_MESSAGE, frm.Data())
-			break
-		case frame.OPCODE_CONNECTION_CLOSE:
-			ctx.Emit(EVENT_CLOSE, frm.Data())
-			break
-		case frame.OPCODE_PING:
-			ctx.Emit(EVENT_PING, frm.Data())
-			break
-		case frame.OPCODE_PONG:
-			ctx.Emit(EVENT_PONG, frm.Data())
-			break
-		default:
-		}
+		ctx.emitter(frm.Opcode(), frm.Data())
 	}
 }

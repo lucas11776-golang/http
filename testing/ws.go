@@ -62,7 +62,7 @@ func (ctx *Ws) Connect(uri string) *WsResponse {
 		ctx.testing.Fatalf("Something went wrong when trying to establish connection: %v", err)
 	}
 
-	connection := connection.Init(&conn, http.MAX_PAYLOAD_SIZE)
+	connection := connection.Init(&conn, http.MAX_WEBSOCKET_PAYLOAD)
 
 	err = ctx.handshake(uri, connection)
 
