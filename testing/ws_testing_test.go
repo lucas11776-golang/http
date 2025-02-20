@@ -11,7 +11,7 @@ import (
 )
 
 func TestTestingWs(t *testing.T) {
-	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0).SetMaxWebsocketPayload(int(math.Pow(2, 16))), true))
+	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0).SetMaxWebsocketPayload(int(math.Pow(2, 17))), true))
 
 	type coordinate struct {
 		Longitude float32 `json:"longitude"`
@@ -24,8 +24,6 @@ func TestTestingWs(t *testing.T) {
 		Latitude:  rand.Float32() * 180,
 		Altitude:  rand.Int() * 10,
 	}
-
-	// c <-
 
 	ws.testcase.http.Route().Ws("position", func(req *http.Request, ws *http.Ws) {
 		ws.OnReady(func(ws *http.Ws) {
@@ -81,7 +79,7 @@ func TestTestingWs(t *testing.T) {
 	}
 
 	// Length greater then 126 less then 2^16
-	data2__16 := strings.Random(int(math.Pow(2, 16)))
+	data2__16 := strings.Random(int(math.Pow(2, 16) + 100))
 
 	res.WriteText([]byte(data2__16))
 

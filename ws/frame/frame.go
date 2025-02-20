@@ -3,6 +3,7 @@ package frame
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -97,53 +98,38 @@ func Decode(payload []byte) (*Frame, error) {
 
 // Comment
 func Encode(opcode Opcode, data []byte) *Frame {
-	size := len(data)
-	frame := &Frame{data: data}
-	opc := OPCODE_START + opcode
-
-	frame.size = uint64(size)
-
-	if size < 126 {
-		payload := make([]byte, 2)
-		payload[0] = byte(opc)
-		payload[1] = byte(size)
-
-		payload = append(payload, data...)
-
-		frame.payload = payload
-
-		return frame
+	frame := &Frame{
+		opcode: OPCODE_START + opcode,
+		data:   data,
+		size:   uint64(len(data)),
 	}
 
-	if size >= 126 && size < int(math.Pow(2, 16)) {
-		payload := make([]byte, 2)
-		payload[0] = byte(opc)
-		payload[1] = 126
+	frame.payload = []byte{byte(frame.opcode)}
 
+	if frame.size < 126 {
+		frame.payload = append(frame.payload, byte(frame.size))
+	}
+
+	if frame.size >= 126 && frame.size < uint64(math.Pow(2, 16)) {
 		length := make([]byte, 2)
 
-		binary.BigEndian.PutUint16(length, uint16(size))
+		binary.BigEndian.PutUint16(length, uint16(frame.size))
 
-		payload = append(payload, length...)
-		payload = append(payload, data...)
-
-		frame.payload = payload
-
-		return frame
+		frame.payload = append(frame.payload, 126)
+		frame.payload = append(frame.payload, length...)
 	}
 
-	payload := make([]byte, 2)
-	payload[0] = byte(opcode + OPCODE_START)
-	payload[1] = 127
+	if frame.size >= uint64(math.Pow(2, 16)) {
+		length := make([]byte, 8)
 
-	length := make([]byte, 8)
+		binary.BigEndian.PutUint64(length, uint64(frame.size))
 
-	binary.BigEndian.PutUint64(length, uint64(size))
+		fmt.Println("DSASDASFAF")
+		frame.payload = append(frame.payload, 127)
+		frame.payload = append(frame.payload, length...)
+	}
 
-	payload = append(payload, length...)
-	payload = append(payload, data...)
-
-	frame.payload = payload
+	frame.payload = append(frame.payload, data...)
 
 	return frame
 }

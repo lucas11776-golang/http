@@ -159,29 +159,23 @@ func (ctx *WsResponse) WriteJson(v any) error {
 
 // Comment
 func (ctx WsResponse) Read() []byte {
-	data := make([]byte, int(math.Pow(2, 18)))
+	data := make([]byte, int(ctx.testcase.http.MaxWebSocketPayloadSize))
 
-	n, err := ctx.conn.Conn().Read(data)
+	_, err := ctx.conn.Conn().Read(data)
 
 	if err != nil {
 		ctx.testcase.testing.Fatalf("Something went wrong when trying to read payload: %v", err)
 	}
 
-	size := data[1]
-
-	if size < 126 {
-		return data[2 : size+2]
+	if data[1] < 126 {
+		return data[2 : data[1]+2]
 	}
 
-	if size == 126 {
+	if data[1] == 126 {
 		return data[4 : binary.BigEndian.Uint16(data[2:4])+4]
 	}
 
-	if size == 127 {
-		return data[10 : binary.BigEndian.Uint64(data[2:10])+10]
-	}
-
-	return data[:n]
+	return data[10 : binary.BigEndian.Uint64(data[2:10])+10]
 }
 
 // Comment
