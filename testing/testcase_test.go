@@ -56,7 +56,6 @@ func TestTestCaseWs(t *testing.T) {
 					break
 				default:
 				}
-
 			})
 		})
 	})
