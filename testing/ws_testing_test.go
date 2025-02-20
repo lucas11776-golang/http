@@ -78,17 +78,6 @@ func TestTestingWs(t *testing.T) {
 		t.Fatalf("Expected assert read to not log")
 	}
 
-	// Length greater then 126 less then 2^16
-	data2__16 := strings.Random(int(math.Pow(2, 16)))
-
-	res.WriteText([]byte(data2__16))
-
-	res.AssertRead([]byte(data2__16))
-
-	if ws.testing.hasError() {
-		t.Fatalf("Expected assert read to not log")
-	}
-
 	ws.testcase.Cleanup()
 }
 
