@@ -79,7 +79,7 @@ func TestTestingWs(t *testing.T) {
 	}
 
 	// Length greater then 126 less then 2^16
-	data2__16 := strings.Random(int(math.Pow(2, 16) + 100))
+	data2__16 := strings.Random(int(math.Pow(2, 16)))
 
 	res.WriteText([]byte(data2__16))
 
