@@ -2,7 +2,6 @@ package testing
 
 import (
 	"encoding/json"
-	"math"
 	"math/rand"
 	"testing"
 
@@ -11,7 +10,7 @@ import (
 )
 
 func TestTestingWs(t *testing.T) {
-	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0).SetMaxWebsocketPayload(int(math.Pow(2, 17))), true))
+	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0), true))
 
 	type coordinate struct {
 		Longitude float32 `json:"longitude"`
@@ -32,8 +31,6 @@ func TestTestingWs(t *testing.T) {
 			})
 		})
 	})
-
-	go func() { ws.testcase.http.Listen() }()
 
 	res := ws.Connect("position")
 

@@ -38,7 +38,7 @@ func (ctx *TestCase) Request() *Request {
 
 // Comment
 func (ctx *TestCase) Ws() *Ws {
-	return nil
+	return NewWs(ctx)
 }
 
 // Comment

@@ -56,6 +56,8 @@ func (ctx *Ws) handshake(uri string, conn *connection.Connection) error {
 
 // Comment
 func (ctx *Ws) Connect(uri string) *WsResponse {
+	go ctx.testcase.http.Listen()
+
 	conn, err := net.Dial("tcp", ctx.testcase.http.Host())
 
 	if err != nil {
@@ -99,7 +101,7 @@ func (ctx *WsResponse) mask(data []byte) (mask []byte, masked []byte) {
 }
 
 // Comment
-func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) error {
+func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) *WsResponse {
 	opc := frame.OPCODE_START + opcode
 	mask, data := ctx.mask(data)
 	size := len(data)
@@ -133,25 +135,32 @@ func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) error {
 
 	payload = append(payload, data...)
 
-	return ctx.conn.Write(payload)
+	err := ctx.conn.Write(payload)
+
+	if err != nil {
+		ctx.testing.Fatalf("Something went wrong when trying to write to connection: %v", err)
+	}
+
+	return ctx
 }
 
 // Comment
-func (ctx *WsResponse) WriteText(data []byte) error {
+func (ctx *WsResponse) WriteText(data []byte) *WsResponse {
 	return ctx.write(frame.OPCODE_TEXT, data)
 }
 
 // Comment
-func (ctx *WsResponse) WriteBinary(data []byte) error {
+func (ctx *WsResponse) WriteBinary(data []byte) *WsResponse {
 	return ctx.write(frame.OPCODE_BINARY, data)
+
 }
 
 // Comment
-func (ctx *WsResponse) WriteJson(v any) error {
+func (ctx *WsResponse) WriteJson(v any) *WsResponse {
 	data, err := json.Marshal(v)
 
 	if err != nil {
-		return err
+		ctx.testing.Fatalf("Something went wrong when trying to marshal value: %v", err)
 	}
 
 	return ctx.write(frame.OPCODE_TEXT, data)
@@ -187,4 +196,15 @@ func (ctx *WsResponse) AssertRead(payload []byte) *WsResponse {
 	}
 
 	return ctx
+}
+
+// Comment
+func (ctx *WsResponse) AssertJson(v any) *WsResponse {
+	data, err := json.Marshal(v)
+
+	if err != nil {
+		ctx.testing.Fatalf("Something went wrong when trying to marshal value: %v", err)
+	}
+
+	return ctx.AssertRead(data)
 }
