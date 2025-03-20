@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/lucas11776-golang/http/utils/reader"
@@ -55,6 +56,11 @@ func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
 }
 
 // Comment
+func (ctx *defaultViewReader) Write(name string, data []byte) error {
+	return nil
+}
+
+// Comment
 func DefaultViewReader(views string) *defaultViewReader {
 	wd, err := os.Getwd()
 
@@ -80,10 +86,8 @@ func InitView(fs reader.CacheReader, extension string) *View {
 func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 	globals := native.Declarations{}
 
-	if data != nil {
-		for key, value := range data {
-			globals[key] = value
-		}
+	for key, value := range data {
+		globals[key] = value
 	}
 
 	vw := strings.Join([]string{strings.ReplaceAll(view, ".", "/"), ctx.extension}, ".")
@@ -110,12 +114,9 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 }
 
 type ViewReaderTest struct {
+	mutex sync.Mutex
 	Files scriggo.Files
 	cache scriggo.Files
-}
-
-func (ctx *ViewReaderTest) open(name string) (fs.File, error) {
-	return ctx.Files.Open(name)
 }
 
 // Comment
@@ -126,4 +127,15 @@ func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
 // Comment
 func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
 	return reader.ReadCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func (ctx *ViewReaderTest) Write(name string, data []byte) error {
+	ctx.mutex.Lock()
+
+	ctx.cache[name] = data
+
+	ctx.mutex.Unlock()
+
+	return nil
 }

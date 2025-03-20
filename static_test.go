@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/fs"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
@@ -41,7 +42,7 @@ func TestStatic(t *testing.T) {
 			t.Fatalf("Something went wrong when getting static: %s", err.Error())
 		}
 
-		if "text/css" != response.GetHeader("content-type") {
+		if response.GetHeader("content-type") != "text/css" {
 			t.Fatalf("Expected content type to be but (%s) but go (%s)", "text/css", response.GetHeader("content-type"))
 		}
 
@@ -68,6 +69,7 @@ var staticReaderTestFS = scriggo.Files{
 }
 
 type staticReaderTest struct {
+	mutex sync.Mutex
 	cache scriggo.Files
 }
 
@@ -79,4 +81,15 @@ func (ctx *staticReaderTest) Open(name string) (fs.File, error) {
 // Comment
 func (ctx *staticReaderTest) Cache(name string) (scriggo.Files, error) {
 	return reader.ReadCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func (ctx *staticReaderTest) Write(name string, data []byte) error {
+	ctx.mutex.Lock()
+
+	ctx.cache[name] = data
+
+	ctx.mutex.Unlock()
+
+	return nil
 }

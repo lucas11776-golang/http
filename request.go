@@ -127,10 +127,8 @@ func (ctx *Request) parseBody() {
 	switch strings.ToLower(ctx.contentType()) {
 	case "application/x-www-form-urlencoded":
 		ctx.parseBodyX_WWW_FORM_URLENCODED()
-		break
 	case "multipart/form-data":
 		ctx.ParseMultipartForm(ctx.ContentLength)
-		break
 	}
 }
 
@@ -139,7 +137,7 @@ func httpHeader(http []string) (*HttpRequestHeader, error) {
 	header := strings.Split(http[0], " ")
 
 	if len(header) != 3 {
-		return nil, fmt.Errorf("Invalid http header: %s", http[0])
+		return nil, fmt.Errorf("invalid http header: %s", http[0])
 	}
 
 	return &HttpRequestHeader{
@@ -165,7 +163,7 @@ func httpContent(http []string) (*HttpRequestContent, error) {
 		header := strings.Split(line, ":")
 
 		if len(header) < 2 {
-			return nil, fmt.Errorf("Invalid header %s", header[0])
+			return nil, fmt.Errorf("invalid header %s", header[0])
 		}
 
 		key := cases.Title(language.English).String(header[0])

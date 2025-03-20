@@ -8,11 +8,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	serve, err := Serve("127.0.0.1", 0)
-
-	if err != nil {
-		t.Fatalf("Failed to start the server: %s", err.Error())
-	}
+	serve := Serve("127.0.0.1", 0)
 
 	t.Run("TestServe", func(t *testing.T) {
 		if serve.Address() != "127.0.0.1" {
@@ -53,7 +49,7 @@ func TestServer(t *testing.T) {
 		}
 	})
 
-	err = serve.Close()
+	err := serve.Close()
 
 	if err != nil {
 		t.Fatalf("Failed to close server %s", err.Error())

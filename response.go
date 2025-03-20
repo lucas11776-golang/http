@@ -86,7 +86,7 @@ const (
 )
 
 var (
-	INVALID_HTTP_RESPONSE = errors.New("Invalid http response")
+	ErrHttpResponse = errors.New("invalid http response")
 )
 
 type RedirectBag struct {
@@ -305,19 +305,19 @@ func HttpToResponse(http string) (*Response, error) {
 	hp := strings.Split(http, "\r\n")
 
 	if len(hp) < 2 {
-		return nil, INVALID_HTTP_RESPONSE
+		return nil, ErrHttpResponse
 	}
 
 	h := strings.Split(hp[0], " ")
 
 	if len(h) < 3 {
-		return nil, INVALID_HTTP_RESPONSE
+		return nil, ErrHttpResponse
 	}
 
 	status, err := strconv.Atoi(h[1])
 
 	if err != nil {
-		return nil, INVALID_HTTP_RESPONSE
+		return nil, ErrHttpResponse
 	}
 
 	headers := make(types.Headers)

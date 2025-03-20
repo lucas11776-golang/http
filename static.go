@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/lucas11776-golang/http/utils/extensions"
 	"github.com/lucas11776-golang/http/utils/path"
@@ -18,11 +19,8 @@ type Static struct {
 	fs reader.CacheReader
 }
 
-type StaticReader struct {
-	dir string
-}
-
 type defaultStaticReader struct {
+	mutex sync.Mutex
 	dir   string
 	cache scriggo.Files
 }
@@ -36,6 +34,17 @@ func (ctx *defaultStaticReader) Open(name string) (fs.File, error) {
 func (ctx *defaultStaticReader) Cache(name string) (scriggo.Files, error) {
 	// TODO Should I set max cache size.
 	return reader.ReadCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func (ctx *defaultStaticReader) Write(name string, data []byte) error {
+	ctx.mutex.Lock()
+
+	ctx.cache[name] = data
+
+	ctx.mutex.Unlock()
+
+	return nil
 }
 
 // Comment
@@ -93,7 +102,7 @@ func (ctx *Static) HandleRequest(req *Request) (*Response, error) {
 	u, err := url.Parse(req.Path())
 
 	if err != nil {
-		return nil, fmt.Errorf("File does not exists in statics (%s)", req.Path())
+		return nil, fmt.Errorf("file does not exists in statics (%s)", req.Path())
 	}
 
 	body, err := ctx.Read(u.Path)

@@ -9,17 +9,18 @@ import (
 type CacheReader interface {
 	Open(name string) (fs.File, error)
 	Cache(name string) (scriggo.Files, error)
+	Write(name string, data []byte) error
 }
 
 // Comment
-func ReadCache(reader CacheReader, cache scriggo.Files, view string) (scriggo.Files, error) {
-	_, ok := cache[view]
+func ReadCache(reader CacheReader, cache scriggo.Files, name string) (scriggo.Files, error) {
+	_, ok := cache[name]
 
 	if ok {
 		return cache, nil
 	}
 
-	file, err := reader.Open(view)
+	file, err := reader.Open(name)
 
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func ReadCache(reader CacheReader, cache scriggo.Files, view string) (scriggo.Fi
 		return nil, err
 	}
 
-	cache[view] = data
+	cache[name] = data
 
 	return cache, nil
 }

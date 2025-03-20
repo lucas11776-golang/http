@@ -117,6 +117,10 @@ func TestSession(t *testing.T) {
 
 		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
 
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		session = sessions.Session(req)
 
 		if session.Get("user_id") != userId {
@@ -132,11 +136,19 @@ func TestSession(t *testing.T) {
 		// Third Request
 		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
 
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		headers = types.Headers{
 			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
 		}
 
 		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		session = sessions.Session(req)
 
@@ -152,6 +164,10 @@ func TestSession(t *testing.T) {
 
 		// Fourth Request
 		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		headers = types.Headers{
 			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),

@@ -84,7 +84,7 @@ func (ctx *Ws) Emit(event Event, data []byte) {
 				callback(ctx)
 			}()
 		}
-		break
+
 	default:
 		for _, callback := range ctx.event[event] {
 			callback(data)
@@ -117,20 +117,18 @@ func (ctx *Ws) WriteJson(v any) error {
 func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 	switch opcode {
 	case frame.OPCODE_CONTINUATION:
-		break
+
 	case frame.OPCODE_BINARY, frame.OPCODE_TEXT:
 		ctx.Emit(EVENT_MESSAGE, data)
-		break
+
 	case frame.OPCODE_CONNECTION_CLOSE:
 		ctx.Emit(EVENT_CLOSE, data)
-		break
+
 	case frame.OPCODE_PING:
 		ctx.Emit(EVENT_PING, data)
-		break
+
 	case frame.OPCODE_PONG:
 		ctx.Emit(EVENT_PONG, data)
-		break
-	default:
 	}
 }
 

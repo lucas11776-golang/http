@@ -5,13 +5,13 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/server"
+
 	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
@@ -30,7 +30,8 @@ const (
 )
 
 var (
-	INVALID_WEBSOCKET_REQUEST = errors.New("Invalid http request")
+	ErrWebsocketRequest = errors.New("invalid websocket request")
+	ErrHttpRequest      = errors.New("invalid websocket request")
 )
 
 // Comment
@@ -50,7 +51,7 @@ func websocketHandshake(req *Request) error {
 	secWebsocketKey := req.GetHeader("sec-websocket-key")
 
 	if secWebsocketKey == "" {
-		return INVALID_WEBSOCKET_REQUEST
+		return ErrWebsocketRequest
 	}
 
 	alg := sha1.New()
@@ -194,8 +195,17 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 }
 
 // Comment
+func (ctx *HTTP) negotiations(conn *connection.Connection, req *http.Request) (*Request, error) {
+	return ctx.NewRequest(req, conn), nil
+}
+
+// Comment
 func (ctx *HTTP) newConnection(conn *connection.Connection) {
-	req, err := http.ReadRequest(bufio.NewReader(bufio.NewReaderSize(conn.Conn(), int(ctx.MaxRequestSize))))
+	r, err := http.ReadRequest(
+		bufio.NewReader(
+			bufio.NewReaderSize(conn.Conn(), int(ctx.MaxRequestSize)),
+		),
+	)
 
 	if err != nil {
 		conn.Close()
@@ -203,7 +213,15 @@ func (ctx *HTTP) newConnection(conn *connection.Connection) {
 		return
 	}
 
-	res := ctx.HandleRequest(ctx.NewRequest(req, conn))
+	req, err := ctx.negotiations(conn, r)
+
+	if err != nil {
+		conn.Close()
+
+		return
+	}
+
+	res := ctx.HandleRequest(req)
 
 	if res != nil {
 		conn.Write([]byte(ParseHttpResponse(res)))
@@ -250,16 +268,13 @@ func (ctx *HTTP) Session(key []byte) SessionsManager {
 	return ctx.Get("session").(SessionsManager)
 }
 
-// Comment
-func Server(address string, port int32) *HTTP {
-	server, err := server.Serve(address, port)
+var (
+	ErrInvalidCertificates = errors.New("invalid certificates")
+)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func Init(tcp *server.Server) *HTTP {
 	http := &HTTP{
-		Server:                  server,
+		Server:                  tcp,
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 	}
 
@@ -269,6 +284,22 @@ func Server(address string, port int32) *HTTP {
 	http.Session([]byte(str.Random(10)))
 
 	return http
+}
+
+// Comment
+func ServerTLS(host string, port int, certFile string, keyFile string) *HTTP {
+	// TODO: must bind address to QUIC/UDP server here
+	return Init(
+		server.ServerTLS(host, port, certFile, keyFile),
+	)
+}
+
+// Comment
+func Server(address string, port int) *HTTP {
+	// TODO: must bind address to QUIC/UDP server here
+	return Init(
+		server.Serve(address, port),
+	)
 }
 
 type message struct {

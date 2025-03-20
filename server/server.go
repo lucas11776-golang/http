@@ -1,6 +1,9 @@
 package server
 
 import (
+	"crypto/tls"
+	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -11,6 +14,11 @@ import (
 
 const MAX_REQUEST_SIZE int64 = 1024 * 1000
 
+var (
+	ErrInvalidCertificates = errors.New("invalid certificates")
+	ErrInvalidPort         = errors.New("invalid port")
+)
+
 type ConnectionCallback func(server *Server, conn *connection.Connection)
 
 type Dependency interface{}
@@ -19,7 +27,7 @@ type Dependencies map[string]Dependency
 
 type Server struct {
 	address        string
-	port           int32
+	port           int
 	listener       net.Listener
 	connection     ConnectionCallback
 	MaxRequestSize int64
@@ -27,7 +35,7 @@ type Server struct {
 }
 
 // Comment
-func Init(address string, port int32, listener net.Listener) *Server {
+func Init(address string, port int, listener net.Listener) *Server {
 	return &Server{
 		address:        address,
 		port:           port,
@@ -40,17 +48,46 @@ func Init(address string, port int32, listener net.Listener) *Server {
 }
 
 // Comment
-func Serve(host string, port int32) (*Server, error) {
-	listener, err := net.Listen("tcp", strings.Join([]string{host, strconv.Itoa(int(port))}, ":"))
-
-	if err != nil {
-		return nil, err
+func ServerTLS(host string, port int, certFile string, keyFile string) *Server {
+	if certFile != "" || keyFile != "" {
+		panic(ErrInvalidCertificates)
 	}
 
-	arr := strings.Split(listener.Addr().String(), ":")
-	prt, _ := strconv.Atoi(arr[1])
+	var err error
 
-	return Init(arr[0], int32(prt), listener), nil
+	config := &tls.Config{}
+
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+
+	if err != nil {
+		panic(err)
+	}
+
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
+
+	if err != nil {
+		panic(err)
+	}
+
+	return Init(host, port, listener)
+}
+
+// Comment
+func Serve(host string, port int) *Server {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
+
+	if err != nil {
+		panic(err)
+	}
+
+	prt, err := strconv.Atoi(strings.Split(listener.Addr().String(), ":")[1])
+
+	if err != nil {
+		panic(ErrInvalidPort)
+	}
+
+	return Init(host, prt, listener)
 }
 
 // Comment
@@ -59,7 +96,7 @@ func (ctx *Server) Address() string {
 }
 
 // Comment
-func (ctx *Server) Port() int32 {
+func (ctx *Server) Port() int {
 	return ctx.port
 }
 

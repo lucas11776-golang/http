@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
@@ -235,6 +236,7 @@ var webServerReaderTestFS = scriggo.Files{
 }
 
 type webServerReaderTest struct {
+	mutex sync.Mutex
 	cache scriggo.Files
 }
 
@@ -246,6 +248,17 @@ func (ctx *webServerReaderTest) Open(name string) (fs.File, error) {
 // Comment
 func (ctx *webServerReaderTest) Cache(name string) (scriggo.Files, error) {
 	return reader.ReadCache(ctx, ctx.cache, name)
+}
+
+// Comment
+func (ctx *webServerReaderTest) Write(name string, data []byte) error {
+	ctx.mutex.Lock()
+
+	ctx.cache[name] = data
+
+	ctx.mutex.Unlock()
+
+	return nil
 }
 
 // Comment
