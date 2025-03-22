@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/lucas11776-golang/http/config"
 	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/server"
 
@@ -17,10 +18,18 @@ import (
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
+type Dependency interface{}
+
+type Dependencies map[string]Dependency
+
 type HTTP struct {
-	*server.Server
+	// *server.Server
+
+	TCP                     *server.Server
 	Debug                   bool
 	MaxWebSocketPayloadSize int
+	dependency              Dependencies
+	MaxRequestSize          int64
 }
 
 const (
@@ -32,6 +41,49 @@ var (
 	ErrWebsocketRequest = errors.New("invalid websocket request")
 	ErrHttpRequest      = errors.New("invalid websocket request")
 )
+
+// Comment
+func (ctx *HTTP) Set(name string, dependency Dependency) *HTTP {
+	ctx.dependency[name] = dependency
+
+	return ctx
+}
+
+// Comment
+func (ctx *HTTP) Get(name string) Dependency {
+	dependency, ok := ctx.dependency[name]
+
+	if !ok {
+		return nil
+	}
+
+	return dependency
+}
+
+// Comm
+func (ctx *HTTP) Host() string {
+	return ctx.TCP.Host()
+}
+
+// Comment
+func (ctx *HTTP) Address() string {
+	return ctx.TCP.Address()
+}
+
+// Comment
+func (ctx *HTTP) Port() int {
+	return ctx.TCP.Port()
+}
+
+// Comment
+func (ctx *HTTP) Listen() {
+	ctx.TCP.Listen()
+}
+
+// Comment
+func (ctx *HTTP) Close() (tcp error, udp error) {
+	return ctx.TCP.Close(), nil
+}
 
 // Comment
 func (ctx *HTTP) handleStatic(req *Request) *Response {
@@ -111,7 +163,7 @@ func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) routeNotFound(req *Request) *Response {
-	if ctx.Server.Get("static") != nil {
+	if ctx.Get("static") != nil {
 		res := ctx.handleStatic(req)
 
 		if res != nil {
@@ -281,13 +333,16 @@ var (
 
 func Init(tcp *server.Server) *HTTP {
 	http := &HTTP{
-		Server:                  tcp,
+		TCP:                     tcp,
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
+		dependency: Dependencies{
+			"config": config.Init(),
+		},
 	}
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
-	http.Connection(func(server *server.Server, conn *connection.Connection) { http.newConnection(conn) })
+	http.TCP.Connection(func(server *server.Server, conn *connection.Connection) { http.newConnection(conn) })
 	http.Session([]byte(str.Random(10)))
 
 	return http

@@ -103,7 +103,7 @@ func TestServerWeb(t *testing.T) {
 		}
 
 		// With key
-		r = req.CreateRequest().SetHeader("content-type", "application/json").SetHeader("authorization", AuthKey)
+		r = req.CreateRequest().SetHeader("content-type", "application/json").SetHeader("authorization", authKey)
 
 		http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
 
@@ -189,14 +189,10 @@ func TestServerWeb(t *testing.T) {
 		}
 	})
 
-	err := server.Close()
-
-	if err != nil {
-		t.Fatalf("Something went wrong when trying to close server: %s", err.Error())
-	}
+	server.Close()
 }
 
-var AuthKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
+var authKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
 
 type Message struct {
 	Message string `json:"message"`
@@ -218,7 +214,7 @@ var userCreatedMessage = Message{
 
 // Comment
 func AuthorizationGuard(req *Request, res *Response, next Next) *Response {
-	if req.GetHeader("authorization") != AuthKey {
+	if req.GetHeader("authorization") != authKey {
 		return res.SetStatus(HTTP_RESPONSE_UNAUTHORIZED).Json(unauthorizedAccessMessage)
 	}
 

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lucas11776-golang/http/config"
 	"github.com/lucas11776-golang/http/server/connection"
 )
 
@@ -31,7 +30,6 @@ type Server struct {
 	listener       net.Listener
 	connection     ConnectionCallback
 	MaxRequestSize int64
-	dependency     Dependencies
 }
 
 // Comment
@@ -41,9 +39,6 @@ func Init(address string, port int, listener net.Listener) *Server {
 		port:           port,
 		MaxRequestSize: MAX_REQUEST_SIZE,
 		listener:       listener,
-		dependency: Dependencies{
-			"config": config.Init(),
-		},
 	}
 }
 
@@ -117,24 +112,6 @@ func (ctx *Server) SetMaxRequestSize(size int64) *Server {
 	ctx.MaxRequestSize = size
 
 	return ctx
-}
-
-// Comment
-func (ctx *Server) Set(name string, dependency Dependency) *Server {
-	ctx.dependency[name] = dependency
-
-	return ctx
-}
-
-// Comment
-func (ctx *Server) Get(name string) Dependency {
-	dependency, ok := ctx.dependency[name]
-
-	if !ok {
-		return nil
-	}
-
-	return dependency
 }
 
 // Comment
