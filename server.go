@@ -12,14 +12,13 @@ import (
 	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/server"
 
-	serve "github.com/lucas11776-golang/http/server"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
 type HTTP struct {
-	*serve.Server
+	*server.Server
 	Debug                   bool
 	MaxWebSocketPayloadSize int
 }
@@ -91,6 +90,8 @@ func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 
 	ws := InitWs(req.Conn)
 
+	req.Ws = ws
+	req.Response.Ws = ws
 	ws.Request = req
 
 	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
@@ -280,7 +281,7 @@ func Init(tcp *server.Server) *HTTP {
 
 	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 
-	http.Connection(func(server *serve.Server, conn *connection.Connection) { http.newConnection(conn) })
+	http.Connection(func(server *server.Server, conn *connection.Connection) { http.newConnection(conn) })
 	http.Session([]byte(str.Random(10)))
 
 	return http

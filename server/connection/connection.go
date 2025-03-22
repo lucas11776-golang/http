@@ -31,12 +31,12 @@ func (ctx *Connection) Conn() net.Conn {
 
 // Comment
 func (ctx *Connection) IP() string {
-	return strings.Split(ctx.Conn().RemoteAddr().String(), ":")[0]
+	return strings.Split((*ctx.conn).RemoteAddr().String(), ":")[0]
 }
 
 // Comment
 func (ctx *Connection) Write(data []byte) error {
-	_, err := ctx.Conn().Write(data)
+	_, err := (*ctx.conn).Write(data)
 
 	return err
 }
@@ -50,5 +50,5 @@ func (ctx *Connection) Message(callback RequestCallback) *Connection {
 
 // Comment
 func (ctx *Connection) Close() error {
-	return ctx.Conn().Close()
+	return (*ctx.conn).Close()
 }

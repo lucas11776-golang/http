@@ -15,24 +15,32 @@ import (
 func TestServerWebSocket(t *testing.T) {
 	server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
-	const wsResponse = "Hello World from :name !!!"
+	const (
+		wsResponse = "Hello World from :name !!!"
+		token      = "test@123"
+	)
 
-	server.Route().Ws("/", func(req *Request, ws *Ws) {
-		ws.OnReady(func(ws *Ws) {
-			ws.OnMessage(func(data []byte) {
-				err := ws.Write([]byte(strings.ReplaceAll(wsResponse, ":name", string(data))))
+	server.Route().Group("", func(route *Router) {
+		route.Ws("/", func(req *Request, ws *Ws) {
+			ws.OnReady(func(ws *Ws) {
+				ws.OnMessage(func(data []byte) {
+					err := ws.Write([]byte(strings.ReplaceAll(wsResponse, ":name", string(data))))
 
-				if err != nil {
-					t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
-				}
+					if err != nil {
+						t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
+					}
+
+				})
 			})
 		})
+
 	})
 
 	go func() {
 		server.Listen()
 	}()
 
+	// TODO: test hangs in verbose must fix
 	t.Run("TestHandshakeReplay", func(t *testing.T) {
 		conn, err := net.Dial("tcp", server.Host())
 

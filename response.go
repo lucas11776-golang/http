@@ -110,6 +110,7 @@ type Response struct {
 	Request *Request
 	Session SessionManager
 	Bag     *Bag
+	Ws      *Ws
 }
 
 type Writer struct {

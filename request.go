@@ -33,6 +33,7 @@ type Request struct {
 	Server   *HTTP
 	Response *Response
 	Session  SessionManager
+	Ws       *Ws
 }
 
 type HttpRequestHeader struct {
