@@ -94,6 +94,12 @@ func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 	req.Response.Ws = ws
 	ws.Request = req
 
+	res := htp.handleWebRouteMiddleware(route, req)
+
+	if res != nil {
+		return nil
+	}
+
 	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
 
 	ws.Emit(EVENT_READY, []byte{})

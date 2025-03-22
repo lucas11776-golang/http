@@ -3,45 +3,68 @@ package http
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/ws"
 )
 
 func TestServerWebSocket(t *testing.T) {
-	server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
 	const (
-		wsResponse = "Hello World from :name !!!"
-		token      = "test@123"
+		wsResponse          = "Hello World from :name !!!"
+		authorization       = "test@123"
+		unauthorizedMessage = "unauthorized access"
+		authorizedMessage   = "Welcome to route"
 	)
 
-	server.Route().Group("", func(route *Router) {
-		route.Ws("/", func(req *Request, ws *Ws) {
-			ws.OnReady(func(ws *Ws) {
-				ws.OnMessage(func(data []byte) {
-					err := ws.Write([]byte(strings.ReplaceAll(wsResponse, ":name", string(data))))
+	serve := func() *HTTP {
+		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
-					if err != nil {
-						t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
-					}
+		auth := func(req *Request, res *Response, next Next) *Response {
+			if req.GetHeader("Authorization") != authorization {
+				return res
+			}
 
+			return next()
+		}
+
+		server.Route().Group("", func(route *Router) {
+			route.Ws("/", func(req *Request, ws *Ws) {
+				ws.OnReady(func(ws *Ws) {
+					ws.OnMessage(func(data []byte) {
+						err := ws.Write([]byte(strings.ReplaceAll(wsResponse, ":name", string(data))))
+
+						if err != nil {
+							t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
+						}
+
+					})
 				})
 			})
+			route.Ws("auth", func(req *Request, ws *Ws) {
+				time.Sleep(time.Microsecond * 10)
+				ws.WriteJson(map[string]string{"message": authorizedMessage})
+			}).Middleware(auth)
 		})
 
-	})
+		go func() {
+			server.Listen()
+		}()
 
-	go func() {
-		server.Listen()
-	}()
+		return server
+	}
 
-	// TODO: test hangs in verbose must fix
 	t.Run("TestHandshakeReplay", func(t *testing.T) {
+		server := serve()
 		conn, err := net.Dial("tcp", server.Host())
 
 		if err != nil {
@@ -124,16 +147,57 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
 		}
 
-		err = conn.Close()
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to close connection: %s", err.Error())
-		}
+		conn.Close()
+		server.Close()
 	})
 
-	err := server.Close()
+	t.Run("TestWebsocketMiddlewareUnauthorized", func(t *testing.T) {
+		server := serve()
+		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{})
 
-	if err != nil {
-		t.Fatalf("Something went wrong when trying to close server: %s", err.Error())
-	}
+		if err != nil {
+			t.Fatalf("Something went wrong when connecting: %v", err)
+		}
+
+		_, err = w.Read()
+
+		if err != io.EOF {
+			t.Fatalf("Error must be type of %v", io.EOF)
+		}
+
+		w.Close()
+		server.Close()
+	})
+
+	t.Run("TestWebsocketMiddlewareAuthorized", func(t *testing.T) {
+		server := serve()
+		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{
+			"Authorization": authorization,
+		})
+
+		if err != nil {
+			t.Fatalf("Something went wrong when connecting: %v", err)
+		}
+
+		data, err := w.Read()
+
+		if err != nil {
+			t.Fatalf("Something went wrong when reading response: %v", err)
+		}
+
+		message := make(map[string]string)
+
+		err = json.Unmarshal(data, &message)
+
+		if err != nil {
+			t.Fatalf("Something went wrong when Unmarshal response data: %v", err)
+		}
+
+		if message["message"] != authorizedMessage {
+			t.Fatalf("Expected response message to be (%s) but got (%s)", authorizedMessage, message["message"])
+		}
+
+		w.Close()
+		server.Close()
+	})
 }

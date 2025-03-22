@@ -3,7 +3,6 @@ package frame
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -22,17 +21,14 @@ const (
 )
 
 var (
-	InvalidPayloadError = errors.New("Invalid payload")
+	ErrInvalidPayload = errors.New("invalid payload")
 )
 
 type Frame struct {
-	fin        byte
-	opcode     Opcode
-	mask       byte
-	size       uint64
-	maskingKey byte
-	data       []byte
-	payload    []byte
+	opcode  Opcode
+	size    uint64
+	data    []byte
+	payload []byte
 }
 
 // Comment
@@ -47,7 +43,7 @@ func unmask(mask []byte, data []byte) []byte {
 // Comment
 func Decode(payload []byte) (*Frame, error) {
 	if len(payload) < 2 {
-		return nil, InvalidPayloadError
+		return nil, ErrInvalidPayload
 	}
 
 	head := payload[:2]
@@ -56,7 +52,7 @@ func Decode(payload []byte) (*Frame, error) {
 
 	if size < 126 {
 		if len(payload) < int(size)+6 {
-			return nil, InvalidPayloadError
+			return nil, ErrInvalidPayload
 		}
 
 		frame.size = uint64(size)
@@ -67,13 +63,13 @@ func Decode(payload []byte) (*Frame, error) {
 
 	if size == 126 {
 		if len(payload) < 8 {
-			return nil, InvalidPayloadError
+			return nil, ErrInvalidPayload
 		}
 
 		frame.size = uint64(binary.BigEndian.Uint16(payload[2:4]))
 
 		if len(payload) < int(frame.size)+8 {
-			return nil, InvalidPayloadError
+			return nil, ErrInvalidPayload
 		}
 
 		frame.data = unmask(payload[4:8], payload[8:frame.size+8])
@@ -82,13 +78,13 @@ func Decode(payload []byte) (*Frame, error) {
 	}
 
 	if len(payload) < 10 {
-		return nil, InvalidPayloadError
+		return nil, ErrInvalidPayload
 	}
 
 	frame.size = uint64(binary.BigEndian.Uint64(payload[2:10]))
 
 	if len(payload) < int(frame.size+14) {
-		return nil, InvalidPayloadError
+		return nil, ErrInvalidPayload
 	}
 
 	frame.data = unmask(payload[10:14], payload[14:frame.size+14])
@@ -124,7 +120,6 @@ func Encode(opcode Opcode, data []byte) *Frame {
 
 		binary.BigEndian.PutUint64(length, uint64(frame.size))
 
-		fmt.Println("DSASDASFAF")
 		frame.payload = append(frame.payload, 127)
 		frame.payload = append(frame.payload, length...)
 	}
