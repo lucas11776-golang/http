@@ -1,6 +1,7 @@
 package request
 
 import (
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -15,18 +16,32 @@ import (
 const MAX_RESPONSE_SIZE = 1024 * 1000
 
 type Request struct {
-	method          string
+	conn            net.Conn
+	protocal        string
 	headers         types.Headers
-	data            []byte
 	maxResponseSize int
 }
 
 // Comment
 func CreateRequest() *Request {
 	return &Request{
+		protocal:        "HTTP/1.1",
 		headers:         make(types.Headers),
 		maxResponseSize: MAX_RESPONSE_SIZE,
 	}
+}
+
+// Comment
+func (ctx *Request) SetProtocal(protocal string) *Request {
+	switch strings.ToUpper(protocal) {
+	case "HTTP/1.1", "HTTP/2":
+		ctx.protocal = strings.ToUpper(protocal)
+
+	default:
+		log.Fatalf("Request does not support protocal: %v", strings.ToUpper(protocal))
+	}
+
+	return ctx
 }
 
 // Comment
@@ -58,37 +73,51 @@ func (ctx *Request) GetHeader(key string) string {
 
 // Comment
 func (ctx *Request) Get(url string) (string, error) {
-	return ctx.Request("GET", url, []byte{})
+	http, _, err := ctx.Request("GET", url, []byte{})
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) Post(url string, data []byte) (string, error) {
-	return ctx.Request("POST", url, data)
+	http, _, err := ctx.Request("POST", url, data)
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) PUT(url string, data []byte) (string, error) {
-	return ctx.Request("PUT", url, data)
+	http, _, err := ctx.Request("PUT", url, data)
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) Patch(url string, data []byte) (string, error) {
-	return ctx.Request("PATCH", url, data)
+	http, _, err := ctx.Request("PATCH", url, data)
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) Delete(url string) (string, error) {
-	return ctx.Request("DELETE", url, []byte{})
+	http, _, err := ctx.Request("DELETE", url, []byte{})
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) Options(url string) (string, error) {
-	return ctx.Request("Options", url, []byte{})
+	http, _, err := ctx.Request("Options", url, []byte{})
+
+	return http, err
 }
 
 // Comment
 func (ctx *Request) Connect(url string, data []byte) (string, error) {
-	return ctx.Request("Connect", url, data)
+	http, _, err := ctx.Request("Connect", url, data)
+
+	return http, err
 }
 
 // Comment
@@ -110,41 +139,48 @@ func (ctx *Request) parse(method string, path string, data []byte) string {
 	return strings.Join(append(arr, strings.Join([]string{"\r\n", string(data), "\r\n"}, "")), "\r\n")
 }
 
+type Stream struct {
+	// conn *net.Conn
+}
+
 // Comment
-func (ctx *Request) Request(method string, address string, data []byte) (string, error) {
+func (ctx *Request) Http2Request(method string, address string, data []byte) (http string, stream *Stream, err error) {
+	return "", nil, nil
+}
+
+// Comment
+func (ctx *Request) Request(method string, address string, data []byte) (string, *Stream, error) {
 	url, err := url.Parse(address)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	listener, err := net.Dial("tcp", url.Host)
+	ctx.conn, err = net.Dial("tcp", url.Host)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	_, err = listener.Write([]byte(ctx.parse(method, url.Path, data)))
+	_, err = ctx.conn.Write([]byte(ctx.parse(method, url.Path, data)))
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	err = listener.SetDeadline(time.Now().Add(time.Second * 3))
+	err = ctx.conn.SetDeadline(time.Now().Add(time.Second * 3))
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	http := make([]byte, ctx.maxResponseSize)
 
-	n, err := listener.Read(http)
+	n, err := ctx.conn.Read(http)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	listener.Close()
-
-	return string(http[:n]), nil
+	return string(http[:n]), nil, nil
 }
