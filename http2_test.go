@@ -57,9 +57,6 @@ func TestHtt2(t *testing.T) {
 			t.Fatalf("Expected upgrade header to be (%s) but got (%s)", "HTTP/2.0", res.GetHeader("Upgrade"))
 		}
 
-		// Connection: Upgrade
-		// Upgrade: HTTP/2.0
-
 		server.Close()
 	})
 
@@ -70,3 +67,6 @@ func TestHtt2(t *testing.T) {
 // > Connection: Upgrade, HTTP2-Settings
 // > Upgrade: h2c
 // > HTTP2-Settings: ZZZZZZZZZZZZZZZZZ
+
+// Connection: Upgrade
+// Upgrade: HTTP/2.0

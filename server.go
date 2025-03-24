@@ -258,6 +258,7 @@ func (ctx *HTTP) readRequest(conn *connection.Connection) (*http.Request, error)
 
 // Comment
 func (ctx *HTTP) newConnection(conn *connection.Connection) {
+	// TODO: must check if connection is direct APLN/H2C or just HTTP/1.1
 	req, err := ctx.readRequest(conn)
 
 	if err == nil {
