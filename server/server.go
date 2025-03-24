@@ -44,7 +44,7 @@ func Init(address string, port int, listener net.Listener) *Server {
 
 // Comment
 func ServerTLS(host string, port int, certFile string, keyFile string) *Server {
-	if certFile != "" || keyFile != "" {
+	if certFile == "" || keyFile == "" {
 		panic(ErrInvalidCertificates)
 	}
 
@@ -65,7 +65,7 @@ func ServerTLS(host string, port int, certFile string, keyFile string) *Server {
 		panic(err)
 	}
 
-	return Init(host, port, listener)
+	return Init(host, port, tls.NewListener(listener, config))
 }
 
 // Comment

@@ -17,23 +17,6 @@ func Redirect(to string) string {
 }
 
 // Comment
-func NotFound(path string) string {
-	return strings.Join([]string{
-		`<!DOCTYPE html>`,
-		`<html lang="en">`,
-		`<head>`,
-		`  <meta charset="UTF-8">`,
-		`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
-		`  <title>Route Not Found</title>`,
-		`</head>`,
-		`<body>`,
-		`  <h1>Route ` + path + ` not found</h1>`,
-		`</body>`,
-		`</html>`,
-	}, "\r\n")
-}
-
-// Comment
 func ServerError() string {
 	return ""
 }

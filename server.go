@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/lucas11776-golang/http/config"
-	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/server"
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/slices"
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
@@ -22,7 +22,18 @@ type Dependency interface{}
 
 type Dependencies map[string]Dependency
 
+type HttpServer interface {
+	Host() string
+	Address() string
+	Port() int
+	Listen()
+	OnRequest(func(w any, req any)) // Needs more plainnig
+	Close() error
+}
+
 type HTTP struct {
+	// TCP                     HttpServer
+	// UDP                     HttpServer
 	TCP                     *server.Server
 	UDP                     interface{}
 	Debug                   bool
@@ -63,37 +74,16 @@ func (ctx *HTTP) Get(name string) Dependency {
 	return dependency
 }
 
-// Comm
-func (ctx *HTTP) Host() string {
-	return ctx.TCP.Host()
-}
-
-// Comment
-func (ctx *HTTP) Address() string {
-	return ctx.TCP.Address()
-}
-
-// Comment
-func (ctx *HTTP) Port() int {
-	return ctx.TCP.Port()
-}
-
-// Comment
-func (ctx *HTTP) Listen() {
-	ctx.TCP.Listen()
-}
-
-// Comment
-func (ctx *HTTP) Close() (tcp error, udp error) {
-	return ctx.TCP.Close(), nil
-}
-
 // Comment
 func (ctx *HTTP) handleStatic(req *Request) *Response {
 	res, err := ctx.Get("static").(*Static).HandleRequest(req)
 
 	if err != nil {
-		// TODO Check request is asset e.g (.js,.css and etc.) and return 404 not found request with empty body
+		// TODO: must improve the checking is temp
+		if len(strings.Split(slices.End(strings.Split(req.Path(), "/")), ".")) > 1 {
+			return req.Response.SetStatus(HTTP_RESPONSE_NOT_FOUND)
+		}
+
 		return nil
 	}
 
@@ -319,6 +309,11 @@ var (
 	ErrInvalidCertificates = errors.New("invalid certificates")
 )
 
+// Comment
+func defaultRouteFallback(req *Request, res *Response) *Response {
+	return res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
+}
+
 func Init(tcp *server.Server) *HTTP {
 	http := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
@@ -354,17 +349,27 @@ func Server(address string, port int) *HTTP {
 	)
 }
 
-type message struct {
-	Message string `json:"message"`
+// Comm
+func (ctx *HTTP) Host() string {
+	return ctx.TCP.Host()
 }
 
 // Comment
-func defaultRouteFallback(req *Request, res *Response) *Response {
-	res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
+func (ctx *HTTP) Address() string {
+	return ctx.TCP.Address()
+}
 
-	if req.contentType() == "application/json" {
-		return res.Json(message{Message: "Route " + req.Path() + " is not found"})
-	}
+// Comment
+func (ctx *HTTP) Port() int {
+	return ctx.TCP.Port()
+}
 
-	return res.Html(pages.NotFound(req.Path()))
+// Comment
+func (ctx *HTTP) Listen() {
+	ctx.TCP.Listen()
+}
+
+// Comment
+func (ctx *HTTP) Close() (tcp error, udp error) {
+	return ctx.TCP.Close(), nil
 }

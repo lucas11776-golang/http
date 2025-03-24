@@ -31,8 +31,7 @@ func TestHtt2(t *testing.T) {
 			SetHeaders(types.Headers{
 				"Connection":     "Upgrade, HTTP2-Settings",
 				"Upgrade":        "h2c",
-				"HTTP2-Settings": "AAAACCCCAAAAZZZZZ",
-			})
+				"HTTP2-Settings": "AAAACCCCAAAAZZZZZ"})
 
 		http, err := req.Get(fmt.Sprintf("http://%s:%d", server.Address(), server.Port()))
 
@@ -40,16 +39,26 @@ func TestHtt2(t *testing.T) {
 			t.Fatalf("Failed to send request: %v", err)
 		}
 
-		// res, err := HttpToResponse(http)
-		_, err = HttpToResponse(http)
+		res, err := HttpToResponse(http)
 
 		if err != nil {
 			t.Fatalf("Failed to parse http response: %v", err)
 		}
 
-		// if Status(res.StatusCode) != HTTP_RESPONSE_SWITCHING_PROTOCOLS {
-		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_SWITCHING_PROTOCOLS, res.StatusCode)
-		// }
+		if Status(res.StatusCode) != HTTP_RESPONSE_SWITCHING_PROTOCOLS {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_SWITCHING_PROTOCOLS, res.StatusCode)
+		}
+
+		if res.GetHeader("Connection") != "Upgrade" {
+			t.Fatalf("Expected connection header to be (%s) but got (%s)", "Upgrade", res.GetHeader("Connection"))
+		}
+
+		if res.GetHeader("Upgrade") != "HTTP/2.0" {
+			t.Fatalf("Expected upgrade header to be (%s) but got (%s)", "HTTP/2.0", res.GetHeader("Upgrade"))
+		}
+
+		// Connection: Upgrade
+		// Upgrade: HTTP/2.0
 
 		server.Close()
 	})

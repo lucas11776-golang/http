@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	server := http.Server("127.0.0.1", 6666)
+	server := http.ServerTLS("127.0.0.1", 2222, "main/host.cert", "main/host.key").SetStatic("assets")
 
 	server.Route().Group("/", func(route *http.Router) {
 		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
