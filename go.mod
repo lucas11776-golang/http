@@ -1,12 +1,14 @@
 module github.com/lucas11776-golang/http
 
-go 1.23
+go 1.23.0
+
 toolchain go1.24.1
 
 require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/open2b/scriggo v0.59.1
 	github.com/quic-go/quic-go v0.50.0
+	golang.org/x/net v0.36.0
 	golang.org/x/text v0.22.0
 )
 
@@ -20,7 +22,6 @@ require (
 	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
