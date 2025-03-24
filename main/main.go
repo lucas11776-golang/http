@@ -6,8 +6,6 @@ import (
 	"github.com/lucas11776-golang/http"
 )
 
-// http://127.0.0.1:6666
-
 func main() {
 	server := http.Server("127.0.0.1", 6666)
 
