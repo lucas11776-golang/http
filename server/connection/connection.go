@@ -42,6 +42,17 @@ func (ctx *Connection) Write(data []byte) error {
 }
 
 // Comment
+func (ctx *Connection) Read(b []byte) ([]byte, error) {
+	n, err := (*ctx.conn).Read(b)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return b[:n], nil
+}
+
+// Comment
 func (ctx *Connection) Message(callback RequestCallback) *Connection {
 	ctx.message = append(ctx.message, callback)
 

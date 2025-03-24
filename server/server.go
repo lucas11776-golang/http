@@ -18,7 +18,7 @@ var (
 	ErrInvalidPort         = errors.New("invalid port")
 )
 
-type ConnectionCallback func(server *Server, conn *connection.Connection)
+type ConnectionCallback func(conn *connection.Connection)
 
 type Dependency interface{}
 
@@ -117,15 +117,9 @@ func (ctx *Server) SetMaxRequestSize(size int64) *Server {
 // Comment
 func (ctx *Server) Listen() {
 	for {
-		conn, err := ctx.listener.Accept()
-
-		if err != nil {
-			continue
+		if conn, err := ctx.listener.Accept(); err == nil {
+			go ctx.connection(connection.Init(&conn, ctx.MaxRequestSize))
 		}
-
-		go func() {
-			ctx.connection(ctx, connection.Init(&conn, ctx.MaxRequestSize))
-		}()
 	}
 }
 

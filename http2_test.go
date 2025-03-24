@@ -1,6 +1,12 @@
 package http
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/request"
+)
 
 func TestHtt2(t *testing.T) {
 	serve := func() *HTTP {
@@ -12,11 +18,38 @@ func TestHtt2(t *testing.T) {
 			})
 		})
 
+		go server.Listen()
+
 		return server
 	}
 
 	t.Run("HTTP2NegotiationRequest", func(t *testing.T) {
 		server := serve()
+
+		req := request.CreateRequest().
+			SetProtocal("HTTP/1.1").
+			SetHeaders(types.Headers{
+				"Connection":     "Upgrade, HTTP2-Settings",
+				"Upgrade":        "h2c",
+				"HTTP2-Settings": "AAAACCCCAAAAZZZZZ",
+			})
+
+		http, err := req.Get(fmt.Sprintf("http://%s:%d", server.Address(), server.Port()))
+
+		if err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+
+		// res, err := HttpToResponse(http)
+		_, err = HttpToResponse(http)
+
+		if err != nil {
+			t.Fatalf("Failed to parse http response: %v", err)
+		}
+
+		// if Status(res.StatusCode) != HTTP_RESPONSE_SWITCHING_PROTOCOLS {
+		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_SWITCHING_PROTOCOLS, res.StatusCode)
+		// }
 
 		server.Close()
 	})

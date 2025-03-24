@@ -23,13 +23,16 @@ type Dependency interface{}
 type Dependencies map[string]Dependency
 
 type HTTP struct {
-	// *server.Server
-
 	TCP                     *server.Server
+	UDP                     interface{}
 	Debug                   bool
 	MaxWebSocketPayloadSize int
 	dependency              Dependencies
 	MaxRequestSize          int64
+}
+
+type HttpHandler interface {
+	Init(conn *connection.Connection, req *http.Request)
 }
 
 const (
@@ -146,7 +149,7 @@ func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
 	req.Response.Ws = ws
 	ws.Request = req
 
-	res := htp.handleWebRouteMiddleware(route, req)
+	res := htp.handleRouteMiddleware(route, req)
 
 	if res != nil {
 		return nil
@@ -175,7 +178,7 @@ func (ctx *HTTP) routeNotFound(req *Request) *Response {
 }
 
 // Comment
-func (ctx *HTTP) handleWebRouteMiddleware(route *Route, req *Request) *Response {
+func (ctx *HTTP) handleRouteMiddleware(route *Route, req *Request) *Response {
 	for _, middleware := range route.middleware {
 		next := false
 
@@ -196,7 +199,18 @@ func (ctx *HTTP) handleWebRouteMiddleware(route *Route, req *Request) *Response 
 }
 
 // Comment
-func (ctx *HTTP) handleHTTP1_1(req *Request) *Response {
+func (ctx *HTTP) initRequestSession(req *Request) *Request {
+	req.Response.Request = req
+	req.Session = ctx.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
+
+	return req
+}
+
+// Comment
+func (ctx *HTTP) HandleRequest(req *Request) *Response {
+	req = ctx.initRequestSession(req)
+
 	if req.FormValue("__METHOD__") != "" {
 		req.Method = strings.ToUpper(req.FormValue("__METHOD__"))
 	}
@@ -211,36 +225,17 @@ func (ctx *HTTP) handleHTTP1_1(req *Request) *Response {
 		return ctx.routeNotFound(req)
 	}
 
-	res := ctx.handleWebRouteMiddleware(route, req)
+	res := ctx.handleRouteMiddleware(route, req)
 
 	if res != nil {
 		return res
 	}
 
-	return route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
-}
+	res = route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
 
-// Comment
-func (ctx *HTTP) initRequestSession(req *Request) *HTTP {
-	req.Response.Request = req
-	req.Session = ctx.Get("session").(SessionsManager).Session(req)
-	req.Response.Session = req.Session
+	req.Session.Save()
 
-	return ctx
-}
-
-// Comment
-func (ctx *HTTP) HandleRequest(req *Request) *Response {
-	switch req.Protocol() {
-	case "HTTP/1.1":
-		res := ctx.initRequestSession(req).handleHTTP1_1(req)
-
-		req.Session.Save()
-
-		return res
-	default:
-		return nil
-	}
+	return res
 }
 
 // Comment
@@ -254,36 +249,29 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 }
 
 // Comment
-func (ctx *HTTP) negotiations(conn *connection.Connection, req *http.Request) (*Request, error) {
-	return ctx.NewRequest(req, conn), nil
+func (ctx *HTTP) negotiation(req *http.Request) HttpHandler {
+	if strings.ToLower(req.Header.Get("upgrade")) == "h2c" {
+		return InitHttp2(ctx)
+	}
+
+	return InitHttp1(ctx)
 }
 
-// Comment
-func (ctx *HTTP) newConnection(conn *connection.Connection) {
-	r, err := http.ReadRequest(
+// comment
+func (ctx *HTTP) readRequest(conn *connection.Connection) (*http.Request, error) {
+	return http.ReadRequest(
 		bufio.NewReader(
 			bufio.NewReaderSize(conn.Conn(), int(ctx.MaxRequestSize)),
 		),
 	)
+}
 
-	if err != nil {
-		conn.Close()
+// Comment
+func (ctx *HTTP) newConnection(conn *connection.Connection) {
+	req, err := ctx.readRequest(conn)
 
-		return
-	}
-
-	req, err := ctx.negotiations(conn, r)
-
-	if err != nil {
-		conn.Close()
-
-		return
-	}
-
-	res := ctx.HandleRequest(req)
-
-	if res != nil {
-		conn.Write([]byte(ParseHttpResponse(res)))
+	if err == nil {
+		ctx.negotiation(req).Init(conn, req)
 	}
 
 	conn.Close()
@@ -333,17 +321,19 @@ var (
 
 func Init(tcp *server.Server) *HTTP {
 	http := &HTTP{
-		TCP:                     tcp,
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 		dependency: Dependencies{
 			"config": config.Init(),
 		},
 	}
 
-	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
+	http.TCP = tcp
+	http.UDP = nil
 
-	http.TCP.Connection(func(server *server.Server, conn *connection.Connection) { http.newConnection(conn) })
+	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 	http.Session([]byte(str.Random(10)))
+
+	http.TCP.Connection(func(conn *connection.Connection) { http.newConnection(conn) })
 
 	return http
 }

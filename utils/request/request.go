@@ -16,7 +16,7 @@ import (
 const MAX_RESPONSE_SIZE = 1024 * 1000
 
 type Request struct {
-	conn            net.Conn
+	Conn            net.Conn
 	protocal        string
 	headers         types.Headers
 	maxResponseSize int
@@ -122,6 +122,10 @@ func (ctx *Request) Connect(url string, data []byte) (string, error) {
 
 // Comment
 func (ctx *Request) parse(method string, path string, data []byte) string {
+	if path == "" {
+		path = "/"
+	}
+
 	arr := []string{
 		strings.Join([]string{strings.ToUpper(method), path, "HTTP/1.1"}, " "),
 	}
@@ -140,7 +144,7 @@ func (ctx *Request) parse(method string, path string, data []byte) string {
 }
 
 type Stream struct {
-	// conn *net.Conn
+	Conn *net.Conn
 }
 
 // Comment
@@ -156,19 +160,19 @@ func (ctx *Request) Request(method string, address string, data []byte) (string,
 		return "", nil, err
 	}
 
-	ctx.conn, err = net.Dial("tcp", url.Host)
+	ctx.Conn, err = net.Dial("tcp", url.Host)
 
 	if err != nil {
 		return "", nil, err
 	}
 
-	_, err = ctx.conn.Write([]byte(ctx.parse(method, url.Path, data)))
+	_, err = ctx.Conn.Write([]byte(ctx.parse(method, url.Path, data)))
 
 	if err != nil {
 		return "", nil, err
 	}
 
-	err = ctx.conn.SetDeadline(time.Now().Add(time.Second * 3))
+	err = ctx.Conn.SetDeadline(time.Now().Add(time.Second * 3))
 
 	if err != nil {
 		return "", nil, err
@@ -176,7 +180,7 @@ func (ctx *Request) Request(method string, address string, data []byte) (string,
 
 	http := make([]byte, ctx.maxResponseSize)
 
-	n, err := ctx.conn.Read(http)
+	n, err := ctx.Conn.Read(http)
 
 	if err != nil {
 		return "", nil, err
