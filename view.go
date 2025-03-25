@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -131,6 +132,9 @@ func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
 
 // Comment
 func (ctx *ViewReaderTest) Write(name string, data []byte) error {
+
+	fmt.Println("Name")
+
 	ctx.mutex.Lock()
 
 	ctx.cache[name] = data

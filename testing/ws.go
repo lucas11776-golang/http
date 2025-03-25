@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/ws/frame"
 )
@@ -64,7 +63,7 @@ func (ctx *Ws) Connect(uri string) *WsResponse {
 		ctx.testing.Fatalf("Something went wrong when trying to establish connection: %v", err)
 	}
 
-	connection := connection.Init(&conn, http.MAX_WEBSOCKET_PAYLOAD)
+	connection := connection.Init(&conn)
 
 	err = ctx.handshake(uri, connection)
 

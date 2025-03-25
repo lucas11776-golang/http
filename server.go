@@ -24,17 +24,16 @@ type Dependencies map[string]Dependency
 
 type HttpServer interface {
 	Host() string
-	Address() string
+	// Address() string
 	Port() int
+	OnRequest(callback func(conn *connection.Connection, w http.ResponseWriter, r *http.Request))
+	GetConnection(r *http.Request) *connection.Connection
 	Listen()
-	OnRequest(func(w any, req any)) // Needs more plainnig
 	Close() error
 }
 
 type HTTP struct {
-	// TCP                     HttpServer
-	// UDP                     HttpServer
-	TCP                     *server.Server
+	TCP                     HttpServer
 	UDP                     interface{}
 	Debug                   bool
 	MaxWebSocketPayloadSize int
@@ -315,30 +314,48 @@ func defaultRouteFallback(req *Request, res *Response) *Response {
 	return res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
 }
 
-func Init(tcp *server.Server) *HTTP {
-	http := &HTTP{
+func Init(tcp HttpServer) *HTTP {
+	server := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 		dependency: Dependencies{
 			"config": config.Init(),
 		},
 	}
 
-	http.TCP = tcp
-	http.UDP = nil
+	server.TCP = tcp
+	server.UDP = nil
 
-	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
-	http.Session([]byte(str.Random(10)))
+	server.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
+	server.Session([]byte(str.Random(10)))
 
-	http.TCP.Connection(func(conn *connection.Connection) { http.newConnection(conn) })
+	// http.TCP.Connection(func(conn *connection.Connection) { http.newConnection(conn) })
 
-	return http
+	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
+		// fmt.Println("YES.....", r.Proto, conn, r.RemoteAddr)
+
+		// r.Header.Set("Content-Type", "text/html")
+
+		w.Write([]byte("<h1>Hello World</h1>"))
+
+		// req := server.NewRequest(r, conn)
+
+		// res := server.HandleRequest(req)
+
+		// if
+
+		// res.
+
+		// w.WriteHeader(200)
+	})
+
+	return server
 }
 
 // Comment
-func ServerTLS(host string, port int, certFile string, keyFile string) *HTTP {
+func ServerTLS(host string, port int, cert string, key string) *HTTP {
 	// TODO: must bind address to QUIC/UDP server here
 	return Init(
-		server.ServerTLS(host, port, certFile, keyFile),
+		server.ServeTLS(host, port, cert, key),
 	)
 }
 
@@ -356,9 +373,9 @@ func (ctx *HTTP) Host() string {
 }
 
 // Comment
-func (ctx *HTTP) Address() string {
-	return ctx.TCP.Address()
-}
+// func (ctx *HTTP) Address() string {
+// 	return ctx.TCP.Address()
+// }
 
 // Comment
 func (ctx *HTTP) Port() int {

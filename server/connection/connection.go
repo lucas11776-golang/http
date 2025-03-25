@@ -9,19 +9,12 @@ import (
 type RequestCallback func(req *http.Request)
 
 type Connection struct {
-	Alive   bool
-	conn    *net.Conn
-	message []RequestCallback
-	max     int
+	conn *net.Conn
 }
 
 // Comment
-func Init(conn *net.Conn, max int64) *Connection {
-	return &Connection{
-		Alive: true,
-		conn:  conn,
-		max:   int(max),
-	}
+func Init(conn *net.Conn) *Connection {
+	return &Connection{conn: conn}
 }
 
 // Comment
@@ -50,13 +43,6 @@ func (ctx *Connection) Read(b []byte) ([]byte, error) {
 	}
 
 	return b[:n], nil
-}
-
-// Comment
-func (ctx *Connection) Message(callback RequestCallback) *Connection {
-	ctx.message = append(ctx.message, callback)
-
-	return ctx
 }
 
 // Comment

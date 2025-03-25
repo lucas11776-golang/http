@@ -35,7 +35,7 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 				break
 			}
 
-			ws := InitWs(connection.Init(&conn, MAX_WEBSOCKET_PAYLOAD))
+			ws := InitWs(connection.Init(&conn))
 
 			ws.Request = req
 

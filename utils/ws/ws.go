@@ -97,7 +97,7 @@ func Connect(url string, headers types.Headers) (*Ws, error) {
 	}
 
 	ws := &Ws{
-		Conn:        connection.Init(&conn, int64(MaxWebSocketPayloadSize)),
+		Conn:        connection.Init(&conn),
 		PayloadSize: MaxWebSocketPayloadSize,
 	}
 
