@@ -109,7 +109,9 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 
 	writer := viewWriter{}
 
-	template.Run(&writer, nil, nil)
+	if err := template.Run(&writer, nil, nil); err != nil {
+		return nil, err
+	}
 
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
@@ -127,19 +129,16 @@ func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
 
 // Comment
 func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
+
+	fmt.Println("CACHE NAME", name)
+
 	return reader.ReadCache(ctx, ctx.cache, name)
 }
 
 // Comment
 func (ctx *ViewReaderTest) Write(name string, data []byte) error {
-
-	fmt.Println("Name")
-
 	ctx.mutex.Lock()
-
 	ctx.cache[name] = data
-
 	ctx.mutex.Unlock()
-
 	return nil
 }

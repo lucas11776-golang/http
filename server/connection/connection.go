@@ -12,6 +12,14 @@ type Connection struct {
 	conn *net.Conn
 }
 
+type Conn interface {
+	Conn() interface{}
+	IP() string
+	Write(data []byte) error
+	Read(data []byte) error
+	Close() error
+}
+
 // Comment
 func Init(conn *net.Conn) *Connection {
 	return &Connection{conn: conn}

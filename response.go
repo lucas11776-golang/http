@@ -183,7 +183,7 @@ func (ctx *Response) SetStatus(status Status) *Response {
 
 // Comment
 func (ctx *Response) SetHeader(key string, value string) *Response {
-	ctx.Header[cases.Title(language.English).String(key)] = strings.Split(value, ",")
+	ctx.Header.Set(cases.Title(language.English).String(key), value)
 
 	return ctx
 }
@@ -201,9 +201,7 @@ func (ctx *Response) GetHeader(key string) string {
 
 // Comment
 func (ctx *Response) SetBody(body []byte) *Response {
-	ctx.Body = &responseBodyReader{
-		Reader: bytes.NewReader(body),
-	}
+	ctx.Body = &responseBodyReader{Reader: bytes.NewReader(body)}
 
 	return ctx
 }
@@ -242,8 +240,8 @@ func (ctx *Response) Redirect(path string) *Response {
 
 // Comment
 func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
-	ctx.SetHeader("Content-Disposition", "attachment; filename=\""+filename+"\"")
-	ctx.SetHeader("content-type", contentType)
+	ctx.SetHeader("Content-Disposition", "attachment; filename=\""+filename+"\"").
+		SetHeader("Content-Type", contentType)
 
 	return ctx.SetBody(binary)
 }
@@ -258,8 +256,7 @@ func (ctx *Response) View(view string, data ViewData) *Response {
 	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.Bag.View.Name, ctx.Bag.View.Data)
 
 	if err != nil {
-		// TODO Error response 500
-		return ctx
+		return ctx.SetStatus(HTTP_RESPONSE_INTERNAL_SERVER_ERROR).Html(err.Error())
 	}
 
 	return ctx.Html(string(html))
@@ -273,6 +270,14 @@ func ParseHttpResponse(res *Response) string {
 
 	keys := make([]string, 0, len(res.Header))
 
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		body = []byte{}
+	}
+
+	res.Header.Set("Content-Length", strconv.Itoa(len(body)))
+
 	for k := range res.Header {
 		keys = append(keys, k)
 	}
@@ -285,14 +290,6 @@ func ParseHttpResponse(res *Response) string {
 
 		http = append(http, strings.Join([]string{k, v}, ": "))
 	}
-
-	body, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		body = []byte{}
-	}
-
-	http = append(http, strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": "))
 
 	if len(body) == 0 {
 		return strings.Join(append(http, "\r\n"), "\r\n")
@@ -334,7 +331,7 @@ func HttpToResponse(http string) (*Response, error) {
 		header := strings.Split(line, ":")
 
 		key := cases.Title(language.English).String(header[0])
-		value := strings.Trim(strings.Join(header[1:], ","), " ")
+		value := strings.Trim(strings.Join(header[1:], ":"), " ")
 
 		headers[key] = value
 	}

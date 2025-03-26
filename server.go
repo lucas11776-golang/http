@@ -5,14 +5,15 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/lucas11776-golang/http/config"
-	"github.com/lucas11776-golang/http/server"
 
 	"github.com/lucas11776-golang/http/server/connection"
+	"github.com/lucas11776-golang/http/server/tcp"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/slices"
 	str "github.com/lucas11776-golang/http/utils/strings"
@@ -24,11 +25,10 @@ type Dependencies map[string]Dependency
 
 type HttpServer interface {
 	Host() string
-	// Address() string
 	Port() int
 	OnRequest(callback func(conn *connection.Connection, w http.ResponseWriter, r *http.Request))
 	GetConnection(r *http.Request) *connection.Connection
-	Listen()
+	Listen() error
 	Close() error
 }
 
@@ -228,22 +228,31 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 }
 
 // Comment
-func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Request {
-	return &Request{
-		Request:  rq,
-		Server:   ctx,
-		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
+func (ctx *HTTP) NewRequest(r *http.Request, conn *connection.Connection) *Request {
+	req := &Request{
+		Request: r,
+		Server:  ctx,
+		// Response: &Response{Response: r.Response},
 		Conn:     conn,
+		Response: NewResponse(r.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 	}
+
+	req.Response.Request = req
+
+	return req
 }
 
 // Comment
 func (ctx *HTTP) negotiation(req *http.Request) HttpHandler {
-	if strings.ToLower(req.Header.Get("upgrade")) == "h2c" {
-		return InitHttp2(ctx)
-	}
+	// if strings.ToLower(req.Header.Get("upgrade")) == "h2c" {
+	// 	return InitHttp2(ctx)
+	// }
 
-	return InitHttp1(ctx)
+	// return InitHttp1(ctx)
+
+	// if strings.ToLower(req.Proto) == "HTTP/1"
+
+	return nil
 }
 
 // comment
@@ -328,24 +337,18 @@ func Init(tcp HttpServer) *HTTP {
 	server.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 	server.Session([]byte(str.Random(10)))
 
-	// http.TCP.Connection(func(conn *connection.Connection) { http.newConnection(conn) })
-
 	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
-		// fmt.Println("YES.....", r.Proto, conn, r.RemoteAddr)
+		res := server.HandleRequest(server.NewRequest(r, conn))
 
-		// r.Header.Set("Content-Type", "text/html")
+		for k, v := range res.Header {
+			w.Header().Set(k, v[0])
+		}
 
-		w.Write([]byte("<h1>Hello World</h1>"))
+		w.WriteHeader(res.StatusCode)
 
-		// req := server.NewRequest(r, conn)
+		body, _ := io.ReadAll(res.Body)
 
-		// res := server.HandleRequest(req)
-
-		// if
-
-		// res.
-
-		// w.WriteHeader(200)
+		w.Write(body)
 	})
 
 	return server
@@ -354,17 +357,13 @@ func Init(tcp HttpServer) *HTTP {
 // Comment
 func ServerTLS(host string, port int, cert string, key string) *HTTP {
 	// TODO: must bind address to QUIC/UDP server here
-	return Init(
-		server.ServeTLS(host, port, cert, key),
-	)
+	return Init(tcp.ServeTLS(host, port, cert, key))
 }
 
 // Comment
 func Server(address string, port int) *HTTP {
 	// TODO: must bind address to QUIC/UDP server here
-	return Init(
-		server.Serve(address, port),
-	)
+	return Init(tcp.Serve(address, port))
 }
 
 // Comm
@@ -383,8 +382,8 @@ func (ctx *HTTP) Port() int {
 }
 
 // Comment
-func (ctx *HTTP) Listen() {
-	ctx.TCP.Listen()
+func (ctx *HTTP) Listen() error {
+	return ctx.TCP.Listen()
 }
 
 // Comment

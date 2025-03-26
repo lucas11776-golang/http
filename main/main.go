@@ -29,14 +29,16 @@ import "github.com/lucas11776-golang/http"
 // }
 
 func main() {
-	server := http.ServerTLS("127.0.0.1", 2222, "main/host.cert", "main/host.key")
+	server := http.ServerTLS("127.0.0.1", 2222, "main/host.cert", "main/host.key").SetView("main/views", "html")
 	// server := http.Server("127.0.0.1", 2222)
 
 	server.Route().Group("/", func(route *http.Router) {
 		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
-			return res.Json(map[string]string{
-				"message": "Hello World",
-			})
+			// return res.Json(map[string]string{
+			// 	"message": "Hello World",
+			// })
+
+			return res //.View("home", http.ViewData{})
 		})
 	})
 
