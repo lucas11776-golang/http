@@ -1,6 +1,9 @@
 package http
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -56,94 +59,105 @@ func TestServerWebSocket(t *testing.T) {
 
 	s.Close()
 
-	// t.Run("TestHandshakeReplay", func(t *testing.T) {
-	// 	server := serve()
-	// 	conn, err := net.Dial("tcp", server.Host())
+	t.Run("TestHandshakeReplay", func(t *testing.T) {
+		server := serve()
+		conn, err := net.Dial("tcp", server.Host())
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying to connect to server: %s", err.Error())
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to connect to server: %s", err.Error())
+		}
 
-	// 	htp := strings.Join([]string{
-	// 		"GET / HTTP/1.1",
-	// 		"Connection: Upgrade",
-	// 		"Sec-Websocket-Key: TnjNK5ivR7MUvlou4Ilj9g==",
-	// 		"Sec-Websocket-Version: 13",
-	// 		"Pragma: no-cache",
-	// 		"Upgrade: websocket",
-	// 		"Host: 127.0.0.1:4567",
-	// 		"\r\n",
-	// 	}, "\r\n")
+		htp := strings.Join([]string{
+			"GET / HTTP/1.1",
+			"Connection: Upgrade",
+			"Sec-Websocket-Key: TnjNK5ivR7MUvlou4Ilj9g==",
+			"Sec-Websocket-Version: 13",
+			"Pragma: no-cache",
+			"Upgrade: websocket",
+			"Host: 127.0.0.1:4567",
+			"\r\n",
+		}, "\r\n")
 
-	// 	_, err = conn.Write([]byte(htp))
+		_, err = conn.Write([]byte(htp))
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying send request: %s", err.Error())
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when trying send request: %s", err.Error())
+		}
 
-	// 	buf := make([]byte, server.MaxWebSocketPayloadSize)
+		buf := make([]byte, server.MaxWebSocketPayloadSize)
 
-	// 	n, err := conn.Read(buf)
+		n, err := conn.Read(buf)
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
+		}
 
-	// 	alg := sha1.New()
+		res, err := HttpToResponse(string(buf[:n]))
 
-	// 	alg.Write([]byte(strings.Join([]string{"TnjNK5ivR7MUvlou4Ilj9g==", SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
+		if err != nil {
+			t.Fatalf("Invalid handshake response: %v", err)
+		}
 
-	// 	res := NewResponse("HTTP/1.1", HTTP_RESPONSE_SWITCHING_PROTOCOLS, types.Headers{
-	// 		"Connection":           "Upgrade",
-	// 		"Sec-Websocket-Accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
-	// 		"Upgrade":              "websocket",
-	// 	}, []byte{})
+		alg := sha1.New()
 
-	// 	http := string(buf[:n])
-	// 	expectedHttp := ParseHttpResponse(res)
+		alg.Write([]byte(strings.Join([]string{"TnjNK5ivR7MUvlou4Ilj9g==", SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
 
-	// 	if http != expectedHttp {
-	// 		t.Fatalf("Expected handshake response to be (%s) but got (%s)", expectedHttp, http)
-	// 	}
+		if res.GetHeader("Upgrade") != "websocket" {
+			t.Fatalf("Expected Upgrage header to be (%s) but got (%s)", "websocket", res.GetHeader("Upgrade"))
+		}
 
-	// 	name := strings.Join([]string{"user", strconv.Itoa(int(rand.Float32() * 1000))}, "")
-	// 	mask := []byte{34, 43, 56, 32}
-	// 	payload := []byte{129, byte(len(name))}
-	// 	payload = append(payload, mask...)
+		if res.GetHeader("Connection") != "Upgrade" {
+			t.Fatalf("Expected Connection header to be (%s) but got (%s)", "Upgrade", res.GetHeader("Connection"))
+		}
 
-	// 	for i, b := range []byte(name) {
-	// 		payload = append(payload, b^mask[i%4])
-	// 	}
+		secWebsocketAccept := base64.StdEncoding.EncodeToString(alg.Sum(nil))
 
-	// 	_, err = conn.Write(payload)
+		if res.GetHeader("Sec-Websocket-Accept") != secWebsocketAccept {
+			t.Fatalf(
+				"Expected Sec-Websocket-Accept header to be (%s) but got (%s)",
+				secWebsocketAccept,
+				res.GetHeader("Sec-Websocket-Accept"),
+			)
+		}
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying send payload: %s", err.Error())
-	// 	}
+		// name := strings.Join([]string{"user", strconv.Itoa(int(rand.Float32() * 1000))}, "")
+		// mask := []byte{34, 43, 56, 32}
+		// payload := []byte{129, byte(len(name))}
+		// payload = append(payload, mask...)
 
-	// 	buffNew := make([]byte, server.MaxWebSocketPayloadSize)
+		// for i, b := range []byte(name) {
+		// 	payload = append(payload, b^mask[i%4])
+		// }
 
-	// 	n, err = conn.Read(buffNew)
+		// _, err = conn.Write(payload)
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
-	// 	}
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying send payload: %s", err.Error())
+		// }
 
-	// 	expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
+		// buffNew := make([]byte, server.MaxWebSocketPayloadSize)
 
-	// 	response := string(buffNew[2:n])
+		// n, err = conn.Read(buffNew)
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
-	// 	}
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
+		// }
 
-	// 	if expectedResponse != response {
-	// 		t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
-	// 	}
+		// expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
 
-	// 	conn.Close()
-	// 	server.Close()
-	// })
+		// response := string(buffNew[2:n])
+
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
+		// }
+
+		// if expectedResponse != response {
+		// 	t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
+		// }
+
+		conn.Close()
+		server.Close()
+	})
 
 	// t.Run("TestWebsocketMiddlewareUnauthorized", func(t *testing.T) {
 	// 	server := serve()
