@@ -13,6 +13,13 @@ import (
 	"golang.org/x/net/http2"
 )
 
+type Server struct {
+	server      *http.Server
+	listener    net.Listener
+	connections *connections
+	callback    func(conn *connection.Connection, w http.ResponseWriter, r *http.Request)
+}
+
 type connections struct {
 	connections map[string]*connection.Connection
 	mutex       sync.Mutex
@@ -20,9 +27,11 @@ type connections struct {
 
 // Comment
 func (ctx *connections) add(conn net.Conn) {
-	ctx.mutex.Lock()
-	ctx.connections[conn.RemoteAddr().String()] = connection.Init(&conn)
-	ctx.mutex.Unlock()
+	if _, ok := ctx.connections[conn.RemoteAddr().String()]; !ok {
+		ctx.mutex.Lock()
+		ctx.connections[conn.RemoteAddr().String()] = connection.Init(&conn)
+		ctx.mutex.Unlock()
+	}
 }
 
 // Comment
@@ -34,10 +43,14 @@ func (ctx *connections) remove(conn net.Conn) {
 
 // Comment
 func (ctx *connections) ConnStateEvent(conn net.Conn, event http.ConnState) {
-	if event == http.StateActive {
+	switch event {
+
+	case http.StateActive:
 		ctx.add(conn)
-	} else if event == http.StateHijacked || event == http.StateClosed {
+
+	case http.StateHijacked, http.StateClosed:
 		ctx.remove(conn)
+
 	}
 }
 
@@ -47,13 +60,6 @@ func (ctx *connections) GetConnection(req *http.Request) *connection.Connection 
 		return conn
 	}
 	return nil
-}
-
-type Server struct {
-	server      *http.Server
-	listener    net.Listener
-	connections *connections
-	callback    func(conn *connection.Connection, w http.ResponseWriter, r *http.Request)
 }
 
 // Comment

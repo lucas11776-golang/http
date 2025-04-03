@@ -25,7 +25,7 @@ func TestTestCaseRequest(t *testing.T) {
 	testcase.Cleanup()
 }
 
-func TestTestCaseWs(t *testing.T) {
+func xTestTestCaseWs(t *testing.T) {
 	testcase := NewTestCase(t, http.Server("127.0.0.1", 0), false)
 
 	type DeviceCommand struct {

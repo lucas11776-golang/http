@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -23,6 +22,7 @@ type viewWriter struct {
 type defaultViewReader struct {
 	dir   string
 	cache scriggo.Files
+	mutex sync.Mutex
 }
 
 type View struct {
@@ -48,7 +48,7 @@ func (ctx *viewWriter) Parsed() []byte {
 
 // Comment
 func (ctx *defaultViewReader) Open(name string) (fs.File, error) {
-	return os.Open(path.Path(ctx.dir, name))
+	return os.Open(strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
 }
 
 // Comment
@@ -58,6 +58,9 @@ func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
 
 // Comment
 func (ctx *defaultViewReader) Write(name string, data []byte) error {
+	ctx.mutex.Lock()
+	ctx.cache[name] = data
+	ctx.mutex.Unlock()
 	return nil
 }
 
@@ -116,6 +119,8 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
 
+// --------------------------------------------------------------------------------------------------------- //
+
 type ViewReaderTest struct {
 	mutex sync.Mutex
 	Files scriggo.Files
@@ -129,9 +134,6 @@ func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
 
 // Comment
 func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
-
-	fmt.Println("CACHE NAME", name)
-
 	return reader.ReadCache(ctx, ctx.cache, name)
 }
 

@@ -37,11 +37,12 @@ type Ws struct {
 }
 
 // Comment
-func InitWs(conn *connection.Connection) *Ws {
+func InitWs(conn *connection.Connection, req *Request) *Ws {
 	return &Ws{
-		Alive:  true,
-		conn:   conn,
-		events: make(Events),
+		Alive:   true,
+		conn:    conn,
+		events:  make(Events),
+		Request: req,
 	}
 }
 
@@ -80,17 +81,17 @@ func (ctx *Ws) OnClose(callback EventCallback) {
 	ctx.appendEvent(EVENT_CLOSE, callback)
 }
 
+func (ctx *Ws) isReady() {
+	for _, callback := range ctx.ready {
+		callback(ctx)
+	}
+}
+
 // Comment
 func (ctx *Ws) Emit(event Event, data []byte) {
-	switch event {
-	case EVENT_READY:
-		for _, callback := range ctx.ready {
-			callback(ctx)
-		}
-
-	default:
-		for _, callback := range ctx.events[event] {
-			callback(data)
+	if callbacks, ok := ctx.events[event]; ok {
+		for i := range callbacks {
+			callbacks[i](data)
 		}
 	}
 }
@@ -119,6 +120,7 @@ func (ctx *Ws) WriteJson(v any) error {
 // Comment
 func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 	switch opcode {
+
 	case frame.OPCODE_CONTINUATION:
 
 	case frame.OPCODE_BINARY, frame.OPCODE_TEXT:
@@ -132,25 +134,36 @@ func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 
 	case frame.OPCODE_PONG:
 		ctx.Emit(EVENT_PONG, data)
+
 	}
 }
 
 // Comment
 func (ctx *Ws) Listen() {
+	// TODO temp fix must find out why in first request OPCODE is not there 1 == spc -> http2 reading fix byte of payload
+	var requests int64 = 0
+
 	for {
+		requests++
+
 		payload := make([]byte, ctx.Request.Server.MaxWebSocketPayloadSize)
 
 		n, err := ctx.conn.Conn().Read(payload)
 
 		if err != nil {
-			ctx.Alive = false
-
 			ctx.Emit(EVENT_ERROR, []byte(err.Error()))
 
 			break
 		}
 
+		// TODO :() NO!!!!!
+		if requests == 1 {
+			payload = append([]byte{129}, payload[:n]...)
+		}
+
 		frm, err := frame.Decode(payload[:n])
+
+		// fmt.Println("---> ----->", payload[:n], err)
 
 		if err != nil {
 			continue

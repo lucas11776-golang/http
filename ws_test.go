@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
@@ -35,7 +34,15 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 				break
 			}
 
-			ws := InitWs(connection.Init(&conn))
+			req, err := NewRequest("GET", "/", "HTTP/1.1", types.Headers{}, bytes.NewReader([]byte{}))
+
+			if err != nil {
+				panic(err)
+			}
+
+			req.Server = server
+
+			ws := InitWs(connection.Init(&conn), req)
 
 			ws.Request = req
 
@@ -49,7 +56,7 @@ func replyServerWsTest(concat []byte) (net.Listener, error) {
 				})
 			})
 
-			ws.Emit(EVENT_READY, []byte{})
+			ws.isReady()
 
 			ws.Listen()
 
@@ -77,6 +84,7 @@ func closeConnection(t *testing.T, conn net.Conn) {
 	}
 }
 
+// TODO must disable test because first byte being read by request maybe
 func TestWs(t *testing.T) {
 	t.Run("TestSendMessage", func(t *testing.T) {
 		data := []byte("Hello Number: ")
@@ -109,8 +117,6 @@ func TestWs(t *testing.T) {
 			closeServer(t, listener)
 			t.Fatalf("Something went wrong when connecting to server: %s", err.Error())
 		}
-
-		time.Sleep(time.Millisecond * 50)
 
 		_, err = conn.Write(payload)
 

@@ -177,6 +177,7 @@ func InitResponse() *Response {
 // Comment
 func (ctx *Response) SetStatus(status Status) *Response {
 	ctx.Status = strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " ")
+	ctx.StatusCode = int(status)
 
 	return ctx
 }

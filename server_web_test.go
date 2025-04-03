@@ -33,6 +33,10 @@ import (
 )
 
 func TestServerWeb(t *testing.T) {
+	type Message struct {
+		Message string `json:"message"`
+	}
+
 	users := []User{
 		(User{ID: 1, Role: 1, Email: "jane@doe.com"}),
 		(User{ID: 2, Role: 0, Email: "jeo@doe.com"}),
@@ -135,83 +139,181 @@ func TestServerWeb(t *testing.T) {
 		server.Close()
 	})
 
-	// t.Run("TestMiddlewareUserPost", func(t *testing.T) {
-	// 	server := serve()
+	t.Run("TestMiddlewareUserPost", func(t *testing.T) {
+		var unauthorizedMessage = Message{
+			Message: "Authorization key is invalid",
+		}
 
-	// 	r := req.CreateRequest().
-	// 		SetHeaders(types.Headers{
-	// 			"content-type": "application/json",
-	// 			"host":         "127.0.0.1:4567",
-	// 		})
+		var createdMessage = Message{
+			Message: "Authorization key is invalid",
+		}
 
-	// 	http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+		auth := func(req *Request, res *Response, next Next) *Response {
+			if req.GetHeader("authorization") != authKey {
+				return res.SetStatus(HTTP_RESPONSE_UNAUTHORIZED).Json(unauthorizedMessage)
+			}
+			return next()
+		}
 
-	// 	if err != nil {
-	// 		t.Fatalf("Failed to send request: %s", err.Error())
-	// 	}
+		server := Server("127.0.0.1", 0)
 
-	// 	res := NewResponse("HTTP/1.1", HTTP_RESPONSE_UNAUTHORIZED, make(types.Headers), []byte{}).Json(unauthorizedAccessMessage)
-	// 	expectedHttp := ParseHttpResponse(res)
+		server.Route().Group("api", func(route *Router) {
+			route.Group("users", func(route *Router) {
+				route.Post("/", func(req *Request, res *Response) *Response {
+					return res.SetStatus(HTTP_RESPONSE_OK).Json(createdMessage)
+				}).Middleware(auth)
+			})
+		})
 
-	// 	if expectedHttp != http {
-	// 		t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
-	// 	}
+		go server.Listen()
 
-	// 	// With key
-	// 	r = req.CreateRequest().
-	// 		SetHeaders(types.Headers{
-	// 			"content-type":  "application/json",
-	// 			"authorization": authKey,
-	// 			"host":          "127.0.0.1:4567",
-	// 		})
+		// ------------------------------ WITHOUT KEY ------------------------------ //
 
-	// 	http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+		r := req.CreateRequest().
+			SetHeaders(types.Headers{
+				"content-type": "application/json",
+				"host":         "127.0.0.1:4567",
+			})
 
-	// 	if err != nil {
-	// 		t.Fatalf("Failed to send request: %s", err.Error())
-	// 	}
+		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
 
-	// 	res = NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, make(types.Headers), []byte{}).Json(userCreatedMessage)
-	// 	expectedHttp = ParseHttpResponse(res)
+		if err != nil {
+			t.Fatalf("Failed to send request: %s", err.Error())
+		}
 
-	// 	if expectedHttp != http {
-	// 		t.Fatalf("Expected response to be (%s) but got (%s), (%d,%d)", expectedHttp, http, len(expectedHttp), len(http))
-	// 	}
+		res, err := HttpToResponse(http)
 
-	// 	server.Close()
-	// })
+		if err != nil {
+			t.Fatalf("Failed to parse http: %v", err)
+		}
 
-	// t.Run("TestStatic", func(t *testing.T) {
-	// 	server := serve()
+		if res.StatusCode != int(HTTP_RESPONSE_UNAUTHORIZED) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_UNAUTHORIZED, res.StatusCode)
+		}
 
-	// 	server.Set("static", InitStatic(&webServerReaderTest{
-	// 		cache: make(scriggo.Files),
-	// 	}))
+		tBody, _ := json.Marshal(unauthorizedMessage)
+		body, _ := io.ReadAll(res.Body)
 
-	// 	r := req.CreateRequest().
-	// 		SetHeaders(types.Headers{
-	// 			"accept": "text/css",
-	// 			"host":   "127.0.0.1:4567",
-	// 		})
+		if string(tBody) != string(body) {
+			t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
+		}
 
-	// 	http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", cssNameWebServer}, ""))
+		// ----------------------------------- WITHOUT KEY ----------------------------------- //
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying get static asset: %s", err.Error())
-	// 	}
+		r = req.CreateRequest().
+			SetHeaders(types.Headers{
+				"content-type":  "application/json",
+				"host":          "127.0.0.1:4567",
+				"authorization": authKey,
+			})
 
-	// 	headers := types.Headers{"content-type": "text/css"}
-	// 	body := []byte(cssContentWebServer)
+		http, err = r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
 
-	// 	res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, headers, []byte{}).SetBody(body)
-	// 	expectedHttp := ParseHttpResponse(res)
+		if err != nil {
+			t.Fatalf("Failed to send request: %s", err.Error())
+		}
 
-	// 	if expectedHttp != http {
-	// 		t.Fatalf("Expected response to be (%s) but got (%s)", expectedHttp, http)
-	// 	}
+		res, err = HttpToResponse(http)
 
-	// 	server.Close()
-	// })
+		if err != nil {
+			t.Fatalf("Failed to parse http: %v", err)
+		}
+
+		if res.StatusCode != int(HTTP_RESPONSE_OK) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
+		}
+
+		if res.StatusCode != int(HTTP_RESPONSE_OK) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
+		}
+
+		tBody, _ = json.Marshal(createdMessage)
+		body, _ = io.ReadAll(res.Body)
+
+		if string(tBody) != string(body) {
+			t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
+		}
+
+		server.Close()
+	})
+
+	t.Run("TestStatic", func(t *testing.T) {
+		// var (
+		// 	fileName = "assets/css/main.css"
+		// 	tBody    = strings.Join([]string{
+		// 		"body { margin: 0px !important; padding: 0px !important; background-color: green; }",
+		// 	}, "\r\n")
+		// )
+
+		server := Server("127.0.0.1", 0)
+
+		// server.Set("static", InitStatic(reader.NewTestingReader(scriggo.Files{
+		// 	fileName: []byte(tBody),
+		// })))
+
+		// r := req.CreateRequest().
+		// 	SetHeaders(types.Headers{
+		// 		"content-type": "application/json",
+		// 		"host":         "127.0.0.1:4567",
+		// 	})
+
+		// 	fmt.Println("Yes... -----> ::: ")
+
+		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", fileName}, ""))
+
+		// if err != nil {
+		// 	t.Fatalf("Failed to send request: %s", err.Error())
+		// }
+
+		// res, err := HttpToResponse(http)
+
+		// if err != nil {
+		// 	t.Fatalf("Failed to parse http: %v", err)
+		// }
+
+		// if res.StatusCode != int(HTTP_RESPONSE_UNAUTHORIZED) {
+		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_UNAUTHORIZED, res.StatusCode)
+		// }
+
+		// body, _ := io.ReadAll(res.Body)
+
+		// if string(tBody) != string(body) {
+		// 	t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
+		// }
+
+		server.Close()
+
+		// tBody, _ := json.Marshal(unauthorizedMessage)
+		// body, _ := io.ReadAll(res.Body)
+
+		// if string(tBody) != string(body) {
+		// 	t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
+		// }
+
+		// r := req.CreateRequest().
+		// 	SetHeaders(types.Headers{
+		// 		"accept": "text/css",
+		// 		"host":   "127.0.0.1:4567",
+		// 	})
+
+		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", cssNameWebServer}, ""))
+
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying get static asset: %s", err.Error())
+		// }
+
+		// headers := types.Headers{"content-type": "text/css"}
+		// body := []byte(cssContentWebServer)
+
+		// res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, headers, []byte{}).SetBody(body)
+		// expectedHttp := ParseHttpResponse(res)
+
+		// if expectedHttp != http {
+		// 	t.Fatalf("Expected response to be (%s) but got (%s)", expectedHttp, http)
+		// }
+
+		server.Close()
+	})
 
 	// t.Run("TestSession", func(t *testing.T) {
 	// 	server := serve()
@@ -264,11 +366,11 @@ func TestServerWeb(t *testing.T) {
 	// })
 }
 
-var authKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
-
 type Message struct {
 	Message string `json:"message"`
 }
+
+var authKey = "KEY-" + strconv.Itoa(int(rand.Float32()*10000))
 
 type User struct {
 	ID    int64  `json:"id"`
@@ -352,6 +454,5 @@ func IsAdmin(req *Request, res *Response, next Next) *Response {
 	if req.Session.Get("role") != "1" {
 		return res.Redirect("/")
 	}
-
 	return next()
 }

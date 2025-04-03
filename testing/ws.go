@@ -32,6 +32,7 @@ func NewWs(testcase *TestCase) *Ws {
 func (ctx *Ws) handshake(uri string, conn *connection.Connection) error {
 	req := strings.Join([]string{
 		strings.Join([]string{"GET", fmt.Sprintf("/%s", strings.Trim(uri, "/")), "HTTP/1.1"}, " "),
+		"Host: 127.0.0.1:8098",
 		"Connection: Upgrade",
 		"Sec-Websocket-Key: TnjNK5ivR7MUvlou4Ilj9g==",
 		"Sec-Websocket-Version: 13",
@@ -100,7 +101,7 @@ func (ctx *WsResponse) mask(data []byte) (mask []byte, masked []byte) {
 }
 
 // Comment
-func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) *WsResponse {
+func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) error {
 	opc := frame.OPCODE_START + opcode
 	mask, data := ctx.mask(data)
 	size := len(data)
@@ -133,29 +134,26 @@ func (ctx *WsResponse) write(opcode frame.Opcode, data []byte) *WsResponse {
 	}
 
 	payload = append(payload, data...)
+	// payload = append([]byte{129, 0, 0, 0, 0}, []byte("test@123")...)
 
-	err := ctx.conn.Write(payload)
+	// fmt.Println("SIZE ---> Wirte ", payload)
 
-	if err != nil {
-		ctx.testing.Fatalf("Something went wrong when trying to write to connection: %v", err)
-	}
-
-	return ctx
+	return ctx.conn.Write(payload)
 }
 
 // Comment
-func (ctx *WsResponse) WriteText(data []byte) *WsResponse {
+func (ctx *WsResponse) WriteText(data []byte) error {
 	return ctx.write(frame.OPCODE_TEXT, data)
 }
 
 // Comment
-func (ctx *WsResponse) WriteBinary(data []byte) *WsResponse {
+func (ctx *WsResponse) WriteBinary(data []byte) error {
 	return ctx.write(frame.OPCODE_BINARY, data)
 
 }
 
 // Comment
-func (ctx *WsResponse) WriteJson(v any) *WsResponse {
+func (ctx *WsResponse) WriteJson(v any) error {
 	data, err := json.Marshal(v)
 
 	if err != nil {
