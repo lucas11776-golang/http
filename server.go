@@ -89,33 +89,6 @@ func (ctx *HTTP) handleStatic(req *Request) *Response {
 }
 
 // Comment
-func websocketHandshake(req *Request) error {
-	secWebsocketKey := req.GetHeader("sec-websocket-key")
-
-	if secWebsocketKey == "" {
-		return ErrWebsocketRequest
-	}
-
-	alg := sha1.New()
-
-	_, err := alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
-
-	if err != nil {
-		return err
-	}
-
-	headers := types.Headers{
-		"upgrade":              "websocket",
-		"connection":           "Upgrade",
-		"sec-webSocket-accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
-	}
-
-	res := NewResponse(req.Protocol(), HTTP_RESPONSE_SWITCHING_PROTOCOLS, headers, []byte{})
-
-	return req.Conn.Write([]byte(ParseHttpResponse(res)))
-}
-
-// Comment
 func (ctx *HTTP) routeNotFound(req *Request) *Response {
 	if ctx.Get("static") != nil {
 		res := ctx.handleStatic(req)
@@ -147,12 +120,6 @@ func (ctx *HTTP) handleRouteMiddleware(route *Route, req *Request) *Response {
 	}
 
 	return nil
-}
-
-// Comment
-func (ctx *HTTP) initRequestSession(req *Request) *Request {
-
-	return req
 }
 
 // Comment
@@ -230,43 +197,6 @@ func (ctx *HTTP) setupRequest(req *Request) *Request {
 	req.Response.Request = req
 
 	return req
-}
-
-// Comment
-func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
-	route := htp.Router().MatchWsRoute(req)
-
-	if route == nil {
-		req.Conn.Close()
-
-		return nil
-	}
-
-	if websocketHandshake(req) != nil {
-		req.Conn.Close()
-
-		return nil
-	}
-
-	ws := InitWs(req.Conn, req)
-
-	req.Ws = ws
-	req.Response.Ws = ws
-	ws.Request = req
-
-	res := htp.handleRouteMiddleware(route, req)
-
-	if res != nil {
-		return nil
-	}
-
-	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
-
-	ws.isReady()
-
-	ws.Listen()
-
-	return nil
 }
 
 // Comment
@@ -355,51 +285,25 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 		return ctx.requestHandler(req)
 
 	}
-
-	// req = ctx.setupRequest(req)
-
-	// if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
-	// 	return webSocketRequestHandler(ctx, req)
-	// }
-
-	// route := ctx.Router().MatchWebRoute(req)
-
-	// if route == nil {
-	// 	return ctx.routeNotFound(req)
-	// }
-
-	// res := ctx.handleRouteMiddleware(route, req)
-
-	// if res != nil {
-	// 	return res
-	// }
-
-	// res = route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
-
-	// req.Session.Save()
-
-	// return res
-
-	// return nil
 }
 
 // Comment
-func (ctx *HTTP) Handler(conn *connection.Connection, w http.ResponseWriter, req *Request) {
+func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
 	if res := ctx.HandleRequest(req); res != nil {
 		for key, value := range res.Header {
-			w.Header().Set(key, value[0])
+			req.Response.Writer.Header().Set(key, value[0])
 		}
 
 		body, err := io.ReadAll(res.Body)
 
 		if err != nil {
-			w.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
+			req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
 
 			return
 		}
 
-		w.WriteHeader(res.StatusCode)
-		w.Write(body)
+		req.Response.Writer.WriteHeader(res.StatusCode)
+		req.Response.Writer.Write(body)
 	}
 }
 
@@ -418,7 +322,11 @@ func Init(tcp HttpServer) *HTTP {
 	server.Session([]byte(str.Random(10)))
 
 	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
-		server.Handler(conn, w, server.NewRequest(r, conn))
+		req := server.NewRequest(r, conn)
+
+		req.Response.Writer = w
+
+		server.Handler(conn, req)
 	})
 
 	return server
