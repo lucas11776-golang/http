@@ -106,7 +106,8 @@ type Bag struct {
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	Writer  *Writer
+	// TODO add response write from
+	Writer  http.ResponseWriter
 	Request *Request
 	Session SessionManager
 	Bag     *Bag
