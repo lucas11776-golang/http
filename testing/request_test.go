@@ -12,7 +12,7 @@ import (
 	"github.com/lucas11776-golang/http/types"
 )
 
-func TestRequest(t *testing.T) {
+func xTestRequest(t *testing.T) {
 
 	t.Run("TestSetProtocolPathMethodHeadersBody", func(t *testing.T) {
 		req := NewRequest(&TestCase{

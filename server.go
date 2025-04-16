@@ -1,18 +1,18 @@
 package http
 
 import (
-	"bufio"
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/lucas11776-golang/http/config"
-	"github.com/lucas11776-golang/http/server"
 
 	"github.com/lucas11776-golang/http/server/connection"
+	"github.com/lucas11776-golang/http/server/tcp"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/slices"
 	str "github.com/lucas11776-golang/http/utils/strings"
@@ -24,17 +24,15 @@ type Dependencies map[string]Dependency
 
 type HttpServer interface {
 	Host() string
-	Address() string
 	Port() int
-	Listen()
-	OnRequest(func(w any, req any)) // Needs more plainnig
+	OnRequest(callback func(conn *connection.Connection, w http.ResponseWriter, r *http.Request))
+	GetConnection(r *http.Request) *connection.Connection
+	Listen() error
 	Close() error
 }
 
 type HTTP struct {
-	// TCP                     HttpServer
-	// UDP                     HttpServer
-	TCP                     *server.Server
+	TCP                     HttpServer
 	UDP                     interface{}
 	Debug                   bool
 	MaxWebSocketPayloadSize int
@@ -118,43 +116,6 @@ func websocketHandshake(req *Request) error {
 }
 
 // Comment
-func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
-	route := htp.Router().MatchWsRoute(req)
-
-	if route == nil {
-		req.Conn.Close()
-
-		return nil
-	}
-
-	if websocketHandshake(req) != nil {
-		req.Conn.Close()
-
-		return nil
-	}
-
-	ws := InitWs(req.Conn)
-
-	req.Ws = ws
-	req.Response.Ws = ws
-	ws.Request = req
-
-	res := htp.handleRouteMiddleware(route, req)
-
-	if res != nil {
-		return nil
-	}
-
-	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
-
-	ws.Emit(EVENT_READY, []byte{})
-
-	ws.Listen()
-
-	return nil
-}
-
-// Comment
 func (ctx *HTTP) routeNotFound(req *Request) *Response {
 	if ctx.Get("static") != nil {
 		res := ctx.handleStatic(req)
@@ -190,42 +151,8 @@ func (ctx *HTTP) handleRouteMiddleware(route *Route, req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) initRequestSession(req *Request) *Request {
-	req.Response.Request = req
-	req.Session = ctx.Get("session").(SessionsManager).Session(req)
-	req.Response.Session = req.Session
 
 	return req
-}
-
-// Comment
-func (ctx *HTTP) HandleRequest(req *Request) *Response {
-	req = ctx.initRequestSession(req)
-
-	if req.FormValue("__METHOD__") != "" {
-		req.Method = strings.ToUpper(req.FormValue("__METHOD__"))
-	}
-
-	if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
-		return webSocketRequestHandler(ctx, req)
-	}
-
-	route := ctx.Router().MatchWebRoute(req)
-
-	if route == nil {
-		return ctx.routeNotFound(req)
-	}
-
-	res := ctx.handleRouteMiddleware(route, req)
-
-	if res != nil {
-		return res
-	}
-
-	res = route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
-
-	req.Session.Save()
-
-	return res
 }
 
 // Comment
@@ -236,36 +163,6 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
-}
-
-// Comment
-func (ctx *HTTP) negotiation(req *http.Request) HttpHandler {
-	if strings.ToLower(req.Header.Get("upgrade")) == "h2c" {
-		return InitHttp2(ctx)
-	}
-
-	return InitHttp1(ctx)
-}
-
-// comment
-func (ctx *HTTP) readRequest(conn *connection.Connection) (*http.Request, error) {
-	return http.ReadRequest(
-		bufio.NewReader(
-			bufio.NewReaderSize(conn.Conn(), int(ctx.MaxRequestSize)),
-		),
-	)
-}
-
-// Comment
-func (ctx *HTTP) newConnection(conn *connection.Connection) {
-	// TODO: must check if connection is direct APLN/H2C or just HTTP/1.1
-	req, err := ctx.readRequest(conn)
-
-	if err == nil {
-		ctx.negotiation(req).Init(conn, req)
-	}
-
-	conn.Close()
 }
 
 // Comment
@@ -315,30 +212,223 @@ func defaultRouteFallback(req *Request, res *Response) *Response {
 	return res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
 }
 
-func Init(tcp *server.Server) *HTTP {
-	http := &HTTP{
+type RequestHandler interface {
+	Handle(connection *connection.Connection, w http.ResponseWriter, r *Request)
+}
+
+// Comment
+func (ctx *HTTP) setupRequest(req *Request) *Request {
+	req.Server = ctx
+
+	req.Session = ctx.Get("session").(SessionsManager).Session(req)
+	req.Response.Session = req.Session
+
+	if method := req.FormValue("__METHOD__"); method != "" {
+		req.Method = strings.ToUpper(method)
+	}
+
+	req.Response.Request = req
+
+	return req
+}
+
+// Comment
+func webSocketRequestHandler(htp *HTTP, req *Request) *Response {
+	route := htp.Router().MatchWsRoute(req)
+
+	if route == nil {
+		req.Conn.Close()
+
+		return nil
+	}
+
+	if websocketHandshake(req) != nil {
+		req.Conn.Close()
+
+		return nil
+	}
+
+	ws := InitWs(req.Conn, req)
+
+	req.Ws = ws
+	req.Response.Ws = ws
+	ws.Request = req
+
+	res := htp.handleRouteMiddleware(route, req)
+
+	if res != nil {
+		return nil
+	}
+
+	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
+
+	ws.isReady()
+
+	ws.Listen()
+
+	return nil
+}
+
+// Comment
+func (ctx *HTTP) requestHandler(req *Request) *Response {
+	route := ctx.Router().MatchWebRoute(req)
+
+	if route == nil {
+		return ctx.routeNotFound(req)
+	}
+
+	if res := ctx.handleRouteMiddleware(route, req); res != nil {
+		return res
+	}
+
+	return route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
+}
+
+// Comment
+func (ctx *HTTP) websocketHandshake(req *Request) error {
+	secWebsocketKey := req.GetHeader("sec-websocket-key")
+
+	if secWebsocketKey == "" {
+		return ErrWebsocketRequest
+	}
+
+	alg := sha1.New()
+
+	_, err := alg.Write([]byte(strings.Join([]string{secWebsocketKey, SEC_WEB_SOCKET_ACCEPT_STATIC}, "")))
+
+	if err != nil {
+		return err
+	}
+
+	res := NewResponse(req.Protocol(), HTTP_RESPONSE_SWITCHING_PROTOCOLS, types.Headers{
+		"upgrade":              "websocket",
+		"connection":           "Upgrade",
+		"sec-webSocket-accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
+	}, []byte{})
+
+	return req.Conn.Write([]byte(ParseHttpResponse(res)))
+}
+
+// Comment
+func (ctx *HTTP) websocketHandler(req *Request) {
+	route := ctx.Router().MatchWsRoute(req)
+
+	if route == nil {
+		req.Conn.Close()
+
+		return
+	}
+
+	if err := ctx.websocketHandshake(req); err != nil {
+		req.Conn.Close()
+
+		return
+	}
+
+	ws := InitWs(req.Conn, req)
+
+	req.Ws = ws
+	req.Response.Ws = ws
+	ws.Request = req
+
+	if res := ctx.handleRouteMiddleware(route, req); res != nil {
+		return
+	}
+
+	route.Call(reflect.ValueOf(req), reflect.ValueOf(ws))
+
+	ws.isReady()
+
+	ws.Listen()
+}
+
+// Comment
+func (ctx *HTTP) HandleRequest(req *Request) *Response {
+	switch strings.ToLower(ctx.setupRequest(req).GetHeader("upgrade")) {
+
+	case "websocket":
+		ctx.websocketHandler(req)
+
+		return nil
+
+	default:
+		return ctx.requestHandler(req)
+
+	}
+
+	// req = ctx.setupRequest(req)
+
+	// if strings.ToLower(req.GetHeader("upgrade")) == "websocket" {
+	// 	return webSocketRequestHandler(ctx, req)
+	// }
+
+	// route := ctx.Router().MatchWebRoute(req)
+
+	// if route == nil {
+	// 	return ctx.routeNotFound(req)
+	// }
+
+	// res := ctx.handleRouteMiddleware(route, req)
+
+	// if res != nil {
+	// 	return res
+	// }
+
+	// res = route.Call(reflect.ValueOf(req), reflect.ValueOf(req.Response))
+
+	// req.Session.Save()
+
+	// return res
+
+	// return nil
+}
+
+// Comment
+func (ctx *HTTP) Handler(conn *connection.Connection, w http.ResponseWriter, req *Request) {
+	if res := ctx.HandleRequest(req); res != nil {
+		for key, value := range res.Header {
+			w.Header().Set(key, value[0])
+		}
+
+		body, err := io.ReadAll(res.Body)
+
+		if err != nil {
+			w.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
+
+			return
+		}
+
+		w.WriteHeader(res.StatusCode)
+		w.Write(body)
+	}
+}
+
+func Init(tcp HttpServer) *HTTP {
+	server := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 		dependency: Dependencies{
 			"config": config.Init(),
 		},
 	}
 
-	http.TCP = tcp
-	http.UDP = nil
+	server.TCP = tcp
+	server.UDP = nil
 
-	http.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
-	http.Session([]byte(str.Random(10)))
+	server.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
+	server.Session([]byte(str.Random(10)))
 
-	http.TCP.Connection(func(conn *connection.Connection) { http.newConnection(conn) })
+	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
+		server.Handler(conn, w, server.NewRequest(r, conn))
+	})
 
-	return http
+	return server
 }
 
 // Comment
 func ServerTLS(host string, port int, certFile string, keyFile string) *HTTP {
 	// TODO: must bind address to QUIC/UDP server here
 	return Init(
-		server.ServerTLS(host, port, certFile, keyFile),
+		tcp.ServeTLS(host, port, certFile, keyFile),
 	)
 }
 
@@ -346,18 +436,13 @@ func ServerTLS(host string, port int, certFile string, keyFile string) *HTTP {
 func Server(address string, port int) *HTTP {
 	// TODO: must bind address to QUIC/UDP server here
 	return Init(
-		server.Serve(address, port),
+		tcp.Serve(address, port),
 	)
 }
 
 // Comm
 func (ctx *HTTP) Host() string {
 	return ctx.TCP.Host()
-}
-
-// Comment
-func (ctx *HTTP) Address() string {
-	return ctx.TCP.Address()
 }
 
 // Comment

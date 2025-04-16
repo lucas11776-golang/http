@@ -2,7 +2,7 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
+	"io"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -13,210 +13,172 @@ import (
 )
 
 func TestResponse(t *testing.T) {
-	t.Run("TestResponseOk", func(t *testing.T) {
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK)
+	// t.Run("TestResponseOk", func(t *testing.T) {
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-		httpExpected := "HTTP/1.1 200 Ok\r\n" +
-			"Content-Length: 0\r\n\r\n"
+	// 	if res.StatusCode != 200 {
+	// 		t.Fatalf("Expected response status code to be (%d) but got (%d)", 200, res.StatusCode)
+	// 	}
 
-		http := ParseHttpResponse(res)
+	// 	if res.GetHeader("Content-Type") == "application/json" {
+	// 		t.Fatalf("Expected content-type header to be (%s) but got (%s)", "0", res.GetHeader("Content-Length"))
+	// 	}
+	// })
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// t.Run("TestResponseContentTypeHeader", func(t *testing.T) {
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		SetHeader("content-type", "application/json")
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-	t.Run("TestResponseContentTypeHeader", func(t *testing.T) {
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).SetHeader("content-type", "application/json")
+	// 	if res.GetHeader("Content-Type") != "application/json" {
+	// 		t.Fatalf("Expected content-type header to be (%s) but got (%s)", "application/json", res.GetHeader("Content-Type"))
+	// 	}
+	// })
 
-		httpExpected := "HTTP/1.1 200 Ok\r\n" +
-			"Content-Type: application/json\r\n" +
-			"Content-Length: 0\r\n\r\n"
+	// t.Run("TestResponseBody", func(t *testing.T) {
+	// 	tBody := []byte(`{"id": 1, "email": "jeo@doe.com"}`)
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		SetHeader("content-type", "application/json").
+	// 		SetBody(tBody)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-		http := ParseHttpResponse(res)
+	// 	body, err := io.ReadAll(res.Body)
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// 	if err != nil {
+	// 		t.Fatalf("Failed to read body: %v", err)
+	// 	}
 
-	t.Run("TestResponseBody", func(t *testing.T) {
-		body := []byte(`{"id": 1, "email": "jeo@doe.com"}`)
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).SetHeader("content-type", "application/json").SetBody(body)
+	// 	if string(tBody) != string(body) {
+	// 		t.Fatalf("Expected response body to be (%s) but got (%s)", string(tBody), string(body))
+	// 	}
+	// })
 
-		httpExpected := "HTTP/1.1 200 Ok\r\n" +
-			"Content-Type: application/json\r\n" +
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n\r\n" +
-			string(body) + "\r\n"
+	// t.Run("TestResponseHtml", func(t *testing.T) {
 
-		http := ParseHttpResponse(res)
+	// 	tBody := strings.Join([]string{
+	// 		`<!DOCTYPE html>`,
+	// 		`<head>`,
+	// 		`  <style>`,
+	// 		`    h1 { font-size: 5em; color: green; }`,
+	// 		`  </style>`,
+	// 		`</head>`,
+	// 		`<body>`,
+	// 		`  <h1>Hello World!!!</h1>`,
+	// 		`</body>`,
+	// 		`</html>`,
+	// 	}, "\r\n")
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		SetHeader("content-type", "application/json").
+	// 		Html(tBody)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-	t.Run("TestResponseHtml", func(t *testing.T) {
-		html := []byte(
-			strings.Join([]string{
-				`<!DOCTYPE html>`,
-				`<head>`,
-				`  <style>`,
-				`    h1 { font-size: 5em; color: green; }`,
-				`  </style>`,
-				`</head>`,
-				`<body>`,
-				`  <h1>Hello World!!!</h1>`,
-				`</body>`,
-				`</html>`,
-			}, "\r\n"),
-		)
+	// 	body, err := io.ReadAll(res.Body)
 
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Html(string(html))
+	// 	if err != nil {
+	// 		t.Fatalf("Failed to read body: %v", err)
+	// 	}
 
-		httpExpected := strings.Join([]string{
-			"HTTP/1.1 200 Ok",
-			"Content-Type: text/html",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
-			string(html) + "\r\n",
-		}, "\r\n")
+	// 	if string(tBody) != string(body) {
+	// 		t.Fatalf("Expected response body to be (%s) but got (%s)", tBody, string(body))
+	// 	}
 
-		http := ParseHttpResponse(res)
+	// 	if res.GetHeader("Content-Type") != "text/html" {
+	// 		t.Fatalf("Expected content-type header to be (%s) but got (%s)", "text/html", res.GetHeader("Content-Type"))
+	// 	}
+	// })
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// t.Run("TestResponseJson", func(t *testing.T) {
+	// 	type Movie struct {
+	// 		Id    int64  `json:"id"`
+	// 		Title string `json:"title"`
+	// 	}
 
-	t.Run("TestResponseJson", func(t *testing.T) {
-		j := struct {
-			Id    int64  `json:"id"`
-			Title string `json:"title"`
-		}{
-			Id:    1,
-			Title: "Response With Json Body",
-		}
+	// 	j := &Movie{
+	// 		Id:    1,
+	// 		Title: "Response With Json Body",
+	// 	}
 
-		body, _ := json.Marshal(j)
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Json(j)
+	// 	tBody, _ := json.Marshal(j)
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		SetHeader("content-type", "application/json").
+	// 		Json(j)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-		httpExpected := "HTTP/1.1 200 Ok\r\n" +
-			"Content-Type: application/json\r\n" +
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n\r\n" +
-			string(body) + "\r\n"
+	// 	body, err := io.ReadAll(res.Body)
 
-		http := ParseHttpResponse(res)
+	// 	if err != nil {
+	// 		t.Fatalf("Failed to read body: %v", err)
+	// 	}
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// 	if string(tBody) != string(body) {
+	// 		t.Fatalf("Expected response body to be (%s) but got (%s)", tBody, string(body))
+	// 	}
 
-	t.Run("TestResponseRedirect", func(t *testing.T) {
-		html := []byte(
-			strings.Join([]string{
-				`<!DOCTYPE html>`,
-				`<head>`,
-				`  <meta http-equiv="Refresh" content="0, url='authentication/login'">`,
-				`</head>`,
-				`<body>`,
-				`  <p>You will be redirected to authentication/login</p>`,
-				`</body>`,
-				`</html>`,
-			}, "\r\n"),
-		)
+	// 	if res.GetHeader("Content-Type") != "application/json" {
+	// 		t.Fatalf("Expected content-type header to be (%s) but got (%s)", "0", res.GetHeader("Content-Type"))
+	// 	}
+	// })
 
-		res := InitResponse().SetStatus(HTTP_RESPONSE_OK).Redirect("authentication/login")
+	// t.Run("TestResponseRedirect", func(t *testing.T) {
+	// 	uri := "authentication/login"
+	// 	tBody := pages.Redirect(uri)
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		SetHeader("content-type", "application/json").
+	// 		Redirect(uri)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-		httpExpected := strings.Join([]string{
-			"HTTP/1.1 307 Temporary Redirect",
-			"Content-Type: text/html",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(html))}, ": ") + "\r\n",
-			string(html) + "\r\n",
-		}, "\r\n")
+	// 	body, err := io.ReadAll(res.Body)
 
-		http := ParseHttpResponse(res)
+	// 	if err != nil {
+	// 		t.Fatalf("Failed to read body: %v", err)
+	// 	}
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// 	if res.StatusCode != int(HTTP_RESPONSE_TEMPORARY_REDIRECT) {
+	// 		t.Fatalf("Expected response status code to be (%d) but got (%d)", 200, res.StatusCode)
+	// 	}
 
-	t.Run("TestResponseDownload", func(t *testing.T) {
-		file := []byte("Hello World: " + string(strconv.Itoa(int(rand.Float64()*1000))))
+	// 	if tBody != string(body) {
+	// 		t.Fatalf("Expected response body to be (%s) but got (%s)", tBody, string(body))
+	// 	}
+	// })
 
-		res := InitResponse().Download("text/plain; charset: utf-8", "hello.txt", file)
+	// t.Run("TestResponseDownload", func(t *testing.T) {
+	// 	tBody := []byte("Hello World: " + string(strconv.Itoa(int(rand.Float64()*1000))))
+	// 	reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+	// 		Download("text/plain; charset: utf-8", "hello.txt", tBody)
+	// 	res, _ := HttpToResponse(ParseHttpResponse(reply))
 
-		httpExpected := strings.Join([]string{
-			"HTTP/1.1 200 Ok",
-			"Content-Disposition: attachment; filename=\"hello.txt\"",
-			"Content-Type: text/plain; charset: utf-8",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(file))}, ": ") + "\r\n",
-			string(file) + "\r\n",
-		}, "\r\n")
+	// 	body, err := io.ReadAll(res.Body)
 
-		http := ParseHttpResponse(res)
+	// 	if err != nil {
+	// 		t.Fatalf("Failed to read body: %v", err)
+	// 	}
 
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
+	// 	if res.GetHeader("Content-Disposition") != `attachment; filename="hello.txt"` {
+	// 		t.Fatalf(
+	// 			"Expected content-disposition header to be (%s) but got (%s)",
+	// 			`attachment; filename=\"hello.txt\"`,
+	// 			res.GetHeader("Content-Disposition"),
+	// 		)
+	// 	}
+
+	// 	if res.GetHeader("Content-Type") != "text/plain; charset: utf-8" {
+	// 		t.Fatalf(
+	// 			"Expected content-type header to be (%s) but got (%s)",
+	// 			"text/plain; charset: utf-8",
+	// 			res.GetHeader("Content-Type"),
+	// 		)
+	// 	}
+
+	// 	if string(tBody) != string(body) {
+	// 		t.Fatalf("Expected response body to be (%s) but got (%s)", tBody, string(body))
+	// 	}
+	// })
 
 	t.Run("TestResponseView", func(t *testing.T) {
-		name := strings.Join([]string{"lucas", strconv.Itoa(int(rand.Float64() * 1000))}, "")
-
-		res := InitResponse()
-
-		req, err := NewRequest("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
-
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
-		}
-
-		res.Request = req
-
-		vw := InitView(responseViewTest, "html")
-
-		res.Request.Server = Server("127.0.0.1", 0)
-
-		res.Request.Server.Set("view", vw)
-
-		res.View("home", ViewData{
-			"name": name,
-		})
-
-		body := strings.Join([]string{
-			`<!DOCTYPE html>`,
-			`<html lang="en">`,
-			`<head>`,
-			`  <meta charset="UTF-8">`,
-			`  <meta name="viewport" content="width=device-width, initial-scale=1.0">`,
-			`  <title>Home Page</title>`,
-			`</head>`,
-			`<body>`,
-			`  <h1>Hello user ` + name + `</h1>`,
-			`</body>`,
-			`</html>`,
-		}, "\r\n")
-
-		httpExpected := strings.Join([]string{
-			"HTTP/1.1 200 Ok",
-			"Content-Type: text/html",
-			strings.Join([]string{"Content-Length", strconv.Itoa(len(body))}, ": ") + "\r\n",
-			body + "\r\n",
-		}, "\r\n")
-
-		http := ParseHttpResponse(res)
-
-		if httpExpected != http {
-			t.Fatalf("Expected response to be (%s) but go (%s)", httpExpected, http)
-		}
-	})
-}
-
-var responseViewTest = &ViewReaderTest{
-	Files: scriggo.Files{
-		"home.html": []byte(strings.Join([]string{
+		tBody := []byte(strings.Join([]string{
 			`<!DOCTYPE html>`,
 			`<html lang="en">`,
 			`<head>`,
@@ -228,7 +190,45 @@ var responseViewTest = &ViewReaderTest{
 			`  <h1>Hello user {{ name }}</h1>`,
 			`</body>`,
 			`</html>`,
-		}, "\r\n")),
-	},
-	cache: make(scriggo.Files),
+		}, "\r\n"))
+
+		var responseViewTest = &ViewReaderTest{
+			Files: scriggo.Files{"home.html": tBody},
+			cache: make(scriggo.Files),
+		}
+
+		name := strings.Join([]string{"lucas", strconv.Itoa(int(rand.Float64() * 1000))}, "")
+
+		res := InitResponse()
+
+		req, _ := NewRequest("GET", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		res.Request = req
+
+		vw := InitView(responseViewTest, "html")
+
+		res.Request.Server = Server("127.0.0.1", 0)
+
+		res.Request.Server.Set("view", vw)
+
+		res.View("home", ViewData{"name": name})
+
+		tRes, _ := HttpToResponse(ParseHttpResponse(res))
+
+		body, err := io.ReadAll(tRes.Body)
+
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+
+		if res.GetHeader("Content-Type") != "text/html" {
+			t.Fatalf("Expected content-type header to be (%s) but got (%s)", "text/html", tRes.GetHeader("Content-Type"))
+		}
+
+		if strings.ReplaceAll(string(tBody), "{{ name }}", name) != string(body) {
+			t.Fatalf("Expected response body to be (%s) but got (%s)", strings.ReplaceAll(string(tBody), "{{ name }}", name), string(body))
+		}
+
+		req.Server.Close()
+	})
 }

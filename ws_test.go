@@ -6,78 +6,83 @@ import (
 	"net"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 )
 
-// [opcode, len, mask, data]
-
-// Comment
-func replyServerWsTest(concat []byte) (net.Listener, error) {
-	// TODO Refactor ws test...
-	listener, err := net.Listen("tcp", ":0")
-	server := Server("127.0.0.1", 0)
-	req, _ := NewRequest(METHOD_GET, "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
-
-	req.Server = server
-
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		for {
-			conn, err := listener.Accept()
-
-			if err != nil {
-				break
-			}
-
-			ws := InitWs(connection.Init(&conn, MAX_WEBSOCKET_PAYLOAD))
-
-			ws.Request = req
-
-			ws.OnReady(func(ws *Ws) {
-				ws.OnMessage(func(data []byte) {
-					err := ws.Write(append(data, concat...))
-
-					if err != nil {
-						listener.Close()
-					}
-				})
-			})
-
-			ws.Emit(EVENT_READY, []byte{})
-
-			ws.Listen()
-
-			server.Close()
-		}
-	}()
-
-	return listener, nil
-}
-
-// Comment
-func closeServer(t *testing.T, listener net.Listener) {
-	err := listener.Close()
-
-	if err != nil {
-		t.Fatalf("Something went wrong when closing server: %s", err.Error())
-	}
-}
-
-func closeConnection(t *testing.T, conn net.Conn) {
-	err := conn.Close()
-
-	if err != nil {
-		t.Fatalf("Something went wrong when closing connection: %s", err.Error())
-	}
-}
-
+// TODO must disable test because first byte being read by request maybe
 func TestWs(t *testing.T) {
+	replyServerWsTest := func(concat []byte) (net.Listener, error) {
+		// TODO Refactor ws test...
+		listener, err := net.Listen("tcp", ":0")
+		server := Server("127.0.0.1", 0)
+		req, _ := NewRequest(METHOD_GET, "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		req.Server = server
+
+		if err != nil {
+			return nil, err
+		}
+
+		go func() {
+			for {
+				conn, err := listener.Accept()
+
+				if err != nil {
+					break
+				}
+
+				req, err := NewRequest("GET", "/", "HTTP/1.1", types.Headers{}, bytes.NewReader([]byte{}))
+
+				if err != nil {
+					panic(err)
+				}
+
+				req.Server = server
+
+				ws := InitWs(connection.Init(&conn), req)
+
+				ws.Request = req
+
+				ws.OnReady(func(ws *Ws) {
+					ws.OnMessage(func(data []byte) {
+						err := ws.Write(append(data, concat...))
+
+						if err != nil {
+							listener.Close()
+						}
+					})
+				})
+
+				ws.isReady()
+
+				ws.Listen()
+
+				server.Close()
+			}
+		}()
+
+		return listener, nil
+	}
+
+	// Comment
+	closeServer := func(t *testing.T, listener net.Listener) {
+		err := listener.Close()
+
+		if err != nil {
+			t.Fatalf("Something went wrong when closing server: %s", err.Error())
+		}
+	}
+
+	closeConnection := func(t *testing.T, conn net.Conn) {
+		err := conn.Close()
+
+		if err != nil {
+			t.Fatalf("Something went wrong when closing connection: %s", err.Error())
+		}
+	}
+
 	t.Run("TestSendMessage", func(t *testing.T) {
 		data := []byte("Hello Number: ")
 		concat := []byte(strconv.Itoa(int(rand.Float32() * 10000)))
@@ -109,8 +114,6 @@ func TestWs(t *testing.T) {
 			closeServer(t, listener)
 			t.Fatalf("Something went wrong when connecting to server: %s", err.Error())
 		}
-
-		time.Sleep(time.Millisecond * 50)
 
 		_, err = conn.Write(payload)
 

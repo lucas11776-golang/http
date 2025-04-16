@@ -36,4 +36,5 @@ func TestServer(t *testing.T) {
 		}
 	})
 
+	serve.Close()
 }

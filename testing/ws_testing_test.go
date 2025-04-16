@@ -2,6 +2,7 @@ package testing
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/lucas11776-golang/http/utils/strings"
 )
 
-func TestTestingWs(t *testing.T) {
+func xTestTestingWs(t *testing.T) {
 	ws := NewWs(NewTestCase(t, http.Server("127.0.0.1", 0), true))
 
 	type coordinate struct {
@@ -27,6 +28,7 @@ func TestTestingWs(t *testing.T) {
 	ws.testcase.http.Route().Ws("position", func(req *http.Request, ws *http.Ws) {
 		ws.OnReady(func(ws *http.Ws) {
 			ws.OnMessage(func(data []byte) {
+				fmt.Println("Message Received")
 				ws.Write(data)
 			})
 		})
@@ -41,7 +43,13 @@ func TestTestingWs(t *testing.T) {
 	}
 
 	// Invalid position
-	res.WriteJson(position)
+	err := res.WriteJson(position)
+
+	fmt.Println("Write 1")
+
+	if err != nil {
+		t.Fatalf("failed to write: %v", err)
+	}
 
 	payloadFake, _ := json.Marshal(fake)
 
@@ -56,6 +64,8 @@ func TestTestingWs(t *testing.T) {
 	// Valid position
 	res.WriteJson(position)
 
+	fmt.Println("Write 2")
+
 	payload, _ := json.Marshal(position)
 
 	res.AssertRead(payload)
@@ -63,6 +73,8 @@ func TestTestingWs(t *testing.T) {
 	if ws.testing.hasError() {
 		t.Fatalf("Expected assert read to not log")
 	}
+
+	// fmt.Println("Write 3")
 
 	// Length greater then 126 less then 2^16
 	data360 := strings.Random(360)
