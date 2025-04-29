@@ -18,6 +18,17 @@ import (
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
+const (
+	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	SESSION_NAME                 = "session"
+)
+
+var (
+	ErrWebsocketRequest    = errors.New("invalid websocket request")
+	ErrHttpRequest         = errors.New("invalid websocket request")
+	ErrInvalidCertificates = errors.New("invalid certificates")
+)
+
 type Dependency interface{}
 
 type Dependencies map[string]Dependency
@@ -43,16 +54,6 @@ type HTTP struct {
 type HttpHandler interface {
 	Init(conn *connection.Connection, req *http.Request)
 }
-
-const (
-	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-	SESSION_NAME                 = "session"
-)
-
-var (
-	ErrWebsocketRequest = errors.New("invalid websocket request")
-	ErrHttpRequest      = errors.New("invalid websocket request")
-)
 
 // Comment
 func (ctx *HTTP) Set(name string, dependency Dependency) *HTTP {
@@ -169,10 +170,6 @@ func (ctx *HTTP) Session(key []byte) SessionsManager {
 
 	return ctx.Get("session").(SessionsManager)
 }
-
-var (
-	ErrInvalidCertificates = errors.New("invalid certificates")
-)
 
 // Comment
 func defaultRouteFallback(req *Request, res *Response) *Response {
@@ -307,6 +304,7 @@ func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
 	}
 }
 
+// Comment
 func Init(tcp HttpServer) *HTTP {
 	server := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
