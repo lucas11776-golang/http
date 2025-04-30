@@ -29,6 +29,7 @@ import (
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/reader"
 	req "github.com/lucas11776-golang/http/utils/request"
+	str "github.com/lucas11776-golang/http/utils/strings"
 	"github.com/open2b/scriggo"
 )
 
@@ -106,13 +107,13 @@ func TestServerWeb(t *testing.T) {
 		r := req.CreateRequest().
 			SetHeaders(types.Headers{
 				"content-type": "application/json",
-				"host":         "127.0.0.1:4567",
+				"host":         server.Host(),
 			})
 
 		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""))
 
 		if err != nil {
-			t.Fatalf("Failed to send request: %s", err.Error())
+			t.Fatalf("Failed to send request: %v", err)
 		}
 
 		res, err := HttpToResponse(http)
@@ -238,132 +239,119 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestStatic", func(t *testing.T) {
-		// var (
-		// 	fileName = "assets/css/main.css"
-		// 	tBody    = strings.Join([]string{
-		// 		"body { margin: 0px !important; padding: 0px !important; background-color: green; }",
-		// 	}, "\r\n")
-		// )
+		var (
+			fileName = "assets/css/main.css"
+			tBody    = strings.Join([]string{
+				"body { margin: 0px !important; padding: 0px !important; background-color: green; }",
+			}, "\r\n")
+		)
 
 		server := Server("127.0.0.1", 0)
 
-		// server.Set("static", InitStatic(reader.NewTestingReader(scriggo.Files{
-		// 	fileName: []byte(tBody),
-		// })))
+		server.Set("static", InitStatic(reader.NewTestingReader(scriggo.Files{
+			fileName: []byte(tBody),
+		})))
 
-		// r := req.CreateRequest().
-		// 	SetHeaders(types.Headers{
-		// 		"content-type": "application/json",
-		// 		"host":         "127.0.0.1:4567",
-		// 	})
+		go server.Listen()
 
-		// 	fmt.Println("Yes... -----> ::: ")
+		r := req.CreateRequest().
+			SetHeaders(types.Headers{
+				"content-type": "application/json",
+				"host":         "127.0.0.1:4567",
+			})
 
-		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", fileName}, ""))
+		http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", fileName}, ""))
 
-		// if err != nil {
-		// 	t.Fatalf("Failed to send request: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Failed to send request: %s", err.Error())
+		}
 
-		// res, err := HttpToResponse(http)
+		res, err := HttpToResponse(http)
 
-		// if err != nil {
-		// 	t.Fatalf("Failed to parse http: %v", err)
-		// }
+		if err != nil {
+			t.Fatalf("Failed to parse http: %v", err)
+		}
 
-		// if res.StatusCode != int(HTTP_RESPONSE_UNAUTHORIZED) {
-		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_UNAUTHORIZED, res.StatusCode)
-		// }
+		if res.StatusCode != int(HTTP_RESPONSE_OK) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_UNAUTHORIZED, res.StatusCode)
+		}
 
-		// body, _ := io.ReadAll(res.Body)
+		body, _ := io.ReadAll(res.Body)
 
-		// if string(tBody) != string(body) {
-		// 	t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
-		// }
-
-		server.Close()
-
-		// tBody, _ := json.Marshal(unauthorizedMessage)
-		// body, _ := io.ReadAll(res.Body)
-
-		// if string(tBody) != string(body) {
-		// 	t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
-		// }
-
-		// r := req.CreateRequest().
-		// 	SetHeaders(types.Headers{
-		// 		"accept": "text/css",
-		// 		"host":   "127.0.0.1:4567",
-		// 	})
-
-		// http, err := r.Get(strings.Join([]string{"http://", server.Host(), "/", cssNameWebServer}, ""))
-
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying get static asset: %s", err.Error())
-		// }
-
-		// headers := types.Headers{"content-type": "text/css"}
-		// body := []byte(cssContentWebServer)
-
-		// res := NewResponse("HTTP/1.1", HTTP_RESPONSE_OK, headers, []byte{}).SetBody(body)
-		// expectedHttp := ParseHttpResponse(res)
-
-		// if expectedHttp != http {
-		// 	t.Fatalf("Expected response to be (%s) but got (%s)", expectedHttp, http)
-		// }
+		if string(tBody) != string(body) {
+			t.Fatalf("Expected body to be (%s) but got (%s)", string(tBody), string(body))
+		}
 
 		server.Close()
 	})
 
-	// t.Run("TestSession", func(t *testing.T) {
-	// 	server := serve()
+	t.Run("TestSession", func(t *testing.T) {
+		server := Server("127.0.0.1", 0)
 
-	// 	server.Session([]byte(str.Random(10)))
+		server.Session([]byte(str.Random(10)))
 
-	// 	r := req.CreateRequest().SetHeader("host", "127.0.0.1:4567")
+		server.Route().Group("authentication", func(route *Router) {
+			route.Middleware(IsGuest).Group("login", func(route *Router) {
+				route.Get("/", func(req *Request, res *Response) *Response {
+					return res.Html("<h1>Login page</h1>")
+				})
+				route.Post("/", func(req *Request, res *Response) *Response {
+					user := users[0]
 
-	// 	http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
+					res.Session.Set("user_id", strconv.Itoa(int(user.ID)))
+					res.Session.Set("role", strconv.Itoa(int(user.Role)))
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying to login: %s", err.Error())
-	// 	}
+					return res.Redirect("dashboard")
+				})
+			})
+		})
 
-	// 	res, err := HttpToResponse(http)
+		go server.Listen()
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
-	// 	}
+		r := req.CreateRequest().SetHeader("host", "127.0.0.1:4567")
 
-	// 	if res.StatusCode != int(HTTP_RESPONSE_TEMPORARY_REDIRECT) {
-	// 		t.Fatalf("Expected status code to be (%d) but got (%d)", 307, res.StatusCode)
-	// 	}
+		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
 
-	// 	cookie, err := url.ParseQuery(strings.ReplaceAll(res.GetHeader("Set-Cookie"), "; ", "&"))
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to login: %s", err.Error())
+		}
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
-	// 	}
+		res, err := HttpToResponse(http)
 
-	// 	r = req.CreateRequest().SetHeader("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
+		if err != nil {
+			t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
+		}
 
-	// 	http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
+		if res.StatusCode != int(HTTP_RESPONSE_TEMPORARY_REDIRECT) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", 307, res.StatusCode)
+		}
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when trying to get dashboard view: %s", err.Error())
-	// 	}
+		// cookie, err := url.ParseQuery(strings.ReplaceAll(res.GetHeader("Set-Cookie"), "; ", "&"))
 
-	// 	res, err = HttpToResponse(http)
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
+		// }
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
-	// 	}
+		// r = req.CreateRequest().SetHeader("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
 
-	// 	if res.StatusCode != int(HTTP_RESPONSE_OK) {
-	// 		t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
-	// 	}
+		// http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
 
-	// 	server.Close()
-	// })
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong when trying to get dashboard view: %s", err.Error())
+		// }
+
+		// res, err = HttpToResponse(http)
+
+		// if err != nil {
+		// 	t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
+		// }
+
+		// if res.StatusCode != int(HTTP_RESPONSE_OK) {
+		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
+		// }
+
+		server.Close()
+	})
 }
 
 type Message struct {

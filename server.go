@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -97,6 +98,7 @@ func (ctx *HTTP) routeNotFound(req *Request) *Response {
 		if res != nil {
 			return res
 		}
+
 	}
 
 	return ctx.Router().fallback(req, req.Response)
@@ -201,6 +203,9 @@ func (ctx *HTTP) requestHandler(req *Request) *Response {
 	route := ctx.Router().MatchWebRoute(req)
 
 	if route == nil {
+
+		fmt.Println("Dasdasfasfasfasfasfsfd")
+
 		return ctx.routeNotFound(req)
 	}
 
@@ -241,14 +246,10 @@ func (ctx *HTTP) websocketHandler(req *Request) {
 	route := ctx.Router().MatchWsRoute(req)
 
 	if route == nil {
-		req.Conn.Close()
-
 		return
 	}
 
 	if err := ctx.websocketHandshake(req); err != nil {
-		req.Conn.Close()
-
 		return
 	}
 
@@ -259,6 +260,8 @@ func (ctx *HTTP) websocketHandler(req *Request) {
 	ws.Request = req
 
 	if res := ctx.handleRouteMiddleware(route, req); res != nil {
+		req.Conn.Close()
+
 		return
 	}
 
@@ -286,22 +289,27 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
-	if res := ctx.HandleRequest(req); res != nil {
-		for key, value := range res.Header {
-			req.Response.Writer.Header().Set(key, value[0])
-		}
+	res := ctx.HandleRequest(req)
 
-		body, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
-
-			return
-		}
-
-		req.Response.Writer.WriteHeader(res.StatusCode)
-		req.Response.Writer.Write(body)
+	if res == nil {
+		return
 	}
+
+	for key, value := range res.Header {
+		req.Response.Writer.Header().Set(key, value[0])
+	}
+
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
+		req.Response.Writer.Write([]byte{})
+
+		return
+	}
+
+	req.Response.Writer.WriteHeader(res.StatusCode)
+	req.Response.Writer.Write(body)
 }
 
 // Comment
@@ -325,6 +333,10 @@ func Init(tcp HttpServer) *HTTP {
 		req.Response.Writer = w
 
 		server.Handler(conn, req)
+
+		// if req.Proto == "HTTP/1.1" {
+		// 	conn.Close()
+		// }
 	})
 
 	return server

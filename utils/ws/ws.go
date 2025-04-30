@@ -21,7 +21,6 @@ const (
 type Ws struct {
 	Conn        *connection.Connection
 	PayloadSize int
-	message     chan []byte
 }
 
 // Comment
@@ -34,15 +33,17 @@ func (ctx *Ws) Read() ([]byte, error) {
 		return nil, err
 	}
 
-	if payload[1] < 126 {
-		return payload[2:n], nil
-	} else if payload[1] == 126 {
-		return payload[4:n], nil
-	} else if payload[1] == 127 {
-		return payload[10:n], nil
-	} else {
-		return nil, errors.New("invalid payload size")
-	}
+	return ctx.decode(payload[:n])
+
+	// if payload[1] < 126 {
+	// 	return payload[2:n], nil
+	// } else if payload[1] == 126 {
+	// 	return payload[4:n], nil
+	// } else if payload[1] == 127 {
+	// 	return payload[10:n], nil
+	// } else {
+	// 	return nil, errors.New("invalid payload size")
+	// }
 }
 
 // Comment
@@ -84,6 +85,7 @@ func Connect(url string, headers types.Headers) (*Ws, error) {
 		"Sec-Websocket-Version: 13",
 		"Pragma: no-cache",
 		"Upgrade: websocket",
+		fmt.Sprintf("Host: %s", conn.LocalAddr().String()),
 	}
 
 	for k, v := range headers {
