@@ -3,10 +3,18 @@ package http
 import (
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math/rand"
 	"net"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/ws"
 )
 
 func TestServerWebSocket(t *testing.T) {
@@ -120,92 +128,92 @@ func TestServerWebSocket(t *testing.T) {
 			)
 		}
 
-		// name := strings.Join([]string{"user", strconv.Itoa(int(rand.Float32() * 1000))}, "")
-		// mask := []byte{34, 43, 56, 32}
-		// payload := []byte{129, byte(len(name))}
-		// payload = append(payload, mask...)
+		name := strings.Join([]string{"user", strconv.Itoa(int(rand.Float32() * 1000))}, "")
+		mask := []byte{34, 43, 56, 32}
+		payload := []byte{129, byte(len(name))}
+		payload = append(payload, mask...)
 
-		// for i, b := range []byte(name) {
-		// 	payload = append(payload, b^mask[i%4])
-		// }
+		for i, b := range []byte(name) {
+			payload = append(payload, b^mask[i%4])
+		}
 
-		// _, err = conn.Write(payload)
+		_, err = conn.Write(payload)
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying send payload: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying send payload: %s", err.Error())
+		}
 
-		// buffNew := make([]byte, server.MaxWebSocketPayloadSize)
+		buffNew := make([]byte, server.MaxWebSocketPayloadSize)
 
-		// n, err = conn.Read(buffNew)
+		n, err = conn.Read(buffNew)
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
+		}
 
-		// expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
+		expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
 
-		// response := string(buffNew[2:n])
+		response := string(buffNew[2:n])
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
+		}
 
-		// if expectedResponse != response {
-		// 	t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
-		// }
+		if expectedResponse != response {
+			t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
+		}
 
 		conn.Close()
 		server.Close()
 	})
 
-	// t.Run("TestWebsocketMiddlewareUnauthorized", func(t *testing.T) {
-	// 	server := serve()
-	// 	w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{})
+	t.Run("TestWebsocketMiddlewareUnauthorized", func(t *testing.T) {
+		server := serve()
+		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{})
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when connecting: %v", err)
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when connecting: %v", err)
+		}
 
-	// 	_, err = w.Read()
+		_, err = w.Read()
 
-	// 	if err != io.EOF {
-	// 		t.Fatalf("Error must be type of %v", io.EOF)
-	// 	}
+		if err != io.EOF {
+			t.Fatalf("Error must be type of %v", io.EOF)
+		}
 
-	// 	w.Close()
-	// 	server.Close()
-	// })
+		w.Close()
+		server.Close()
+	})
 
-	// t.Run("TestWebsocketMiddlewareAuthorized", func(t *testing.T) {
-	// 	server := serve()
-	// 	w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{
-	// 		"Authorization": authorization,
-	// 	})
+	t.Run("TestWebsocketMiddlewareAuthorized", func(t *testing.T) {
+		server := serve()
+		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{
+			"Authorization": authorization,
+		})
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when connecting: %v", err)
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when connecting: %v", err)
+		}
 
-	// 	data, err := w.Read()
+		data, err := w.Read()
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when reading response: %v", err)
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when reading response: %v", err)
+		}
 
-	// 	message := make(map[string]string)
+		message := make(map[string]string)
 
-	// 	err = json.Unmarshal(data, &message)
+		err = json.Unmarshal(data, &message)
 
-	// 	if err != nil {
-	// 		t.Fatalf("Something went wrong when Unmarshal response data: %v", err)
-	// 	}
+		if err != nil {
+			t.Fatalf("Something went wrong when Unmarshal response data: %v", err)
+		}
 
-	// 	if message["message"] != authorizedMessage {
-	// 		t.Fatalf("Expected response message to be (%s) but got (%s)", authorizedMessage, message["message"])
-	// 	}
+		if message["message"] != authorizedMessage {
+			t.Fatalf("Expected response message to be (%s) but got (%s)", authorizedMessage, message["message"])
+		}
 
-	// 	w.Close()
-	// 	server.Close()
-	// })
+		w.Close()
+		server.Close()
+	})
 }

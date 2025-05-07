@@ -18,6 +18,17 @@ type Middleware func(req *Request, res *Response, next Next) *Response
 
 type Parameters map[string]string
 
+// Comment
+func (ctx Parameters) Get(key string) string {
+	value, ok := ctx[key]
+
+	if !ok {
+		return ""
+	}
+
+	return value
+}
+
 type Route struct {
 	method     string
 	path       []string
@@ -68,8 +79,9 @@ func (ctx *Route) Middlewares() []Middleware {
 }
 
 // Comment
-func (ctx *Route) setParameters(parameters Parameters) *Route {
+func (ctx *Route) setParameters(req *Request, parameters Parameters) *Route {
 	ctx.parameters = parameters
+	req.Parameters = parameters
 
 	return ctx
 }
@@ -111,19 +123,6 @@ func (ctx *Route) Call(value ...reflect.Value) *Response {
 	default:
 		return nil
 	}
-
-	// switch rt[0].Interface().(type) {
-	// case *Response:
-	// 	res, _ := rt[0].Interface().(*Response)
-
-	// 	if res.Session != nil {
-	// 		res.Session.Save()
-	// 	}
-
-	// 	return []byte(ParseHttpResponse(res))
-	// default:
-	// 	return []byte{}
-	// }
 }
 
 // Comment
@@ -201,7 +200,7 @@ func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
 		return nil
 	}
 
-	return route.setParameters(parameters)
+	return route.setParameters(req, parameters)
 }
 
 // Comment
@@ -212,7 +211,7 @@ func (ctx *RouterGroup) MatchWsRoute(req *Request) *Route {
 		return nil
 	}
 
-	return route.setParameters(parameters)
+	return route.setParameters(req, parameters)
 
 }
 

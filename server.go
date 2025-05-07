@@ -18,6 +18,17 @@ import (
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
 
+const (
+	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+	SESSION_NAME                 = "session"
+)
+
+var (
+	ErrWebsocketRequest    = errors.New("invalid websocket request")
+	ErrHttpRequest         = errors.New("invalid websocket request")
+	ErrInvalidCertificates = errors.New("invalid certificates")
+)
+
 type Dependency interface{}
 
 type Dependencies map[string]Dependency
@@ -43,16 +54,6 @@ type HTTP struct {
 type HttpHandler interface {
 	Init(conn *connection.Connection, req *http.Request)
 }
-
-const (
-	SEC_WEB_SOCKET_ACCEPT_STATIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-	SESSION_NAME                 = "session"
-)
-
-var (
-	ErrWebsocketRequest = errors.New("invalid websocket request")
-	ErrHttpRequest      = errors.New("invalid websocket request")
-)
 
 // Comment
 func (ctx *HTTP) Set(name string, dependency Dependency) *HTTP {
@@ -96,6 +97,7 @@ func (ctx *HTTP) routeNotFound(req *Request) *Response {
 		if res != nil {
 			return res
 		}
+
 	}
 
 	return ctx.Router().fallback(req, req.Response)
@@ -170,10 +172,6 @@ func (ctx *HTTP) Session(key []byte) SessionsManager {
 	return ctx.Get("session").(SessionsManager)
 }
 
-var (
-	ErrInvalidCertificates = errors.New("invalid certificates")
-)
-
 // Comment
 func defaultRouteFallback(req *Request, res *Response) *Response {
 	return res.SetStatus(HTTP_RESPONSE_NOT_FOUND)
@@ -244,14 +242,10 @@ func (ctx *HTTP) websocketHandler(req *Request) {
 	route := ctx.Router().MatchWsRoute(req)
 
 	if route == nil {
-		req.Conn.Close()
-
 		return
 	}
 
 	if err := ctx.websocketHandshake(req); err != nil {
-		req.Conn.Close()
-
 		return
 	}
 
@@ -262,6 +256,8 @@ func (ctx *HTTP) websocketHandler(req *Request) {
 	ws.Request = req
 
 	if res := ctx.handleRouteMiddleware(route, req); res != nil {
+		req.Conn.Close()
+
 		return
 	}
 
@@ -289,24 +285,30 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
-	if res := ctx.HandleRequest(req); res != nil {
-		for key, value := range res.Header {
-			req.Response.Writer.Header().Set(key, value[0])
-		}
+	res := ctx.HandleRequest(req)
 
-		body, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
-
-			return
-		}
-
-		req.Response.Writer.WriteHeader(res.StatusCode)
-		req.Response.Writer.Write(body)
+	if res == nil {
+		return
 	}
+
+	for key, value := range res.Header {
+		req.Response.Writer.Header().Set(key, value[0])
+	}
+
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
+		req.Response.Writer.Write([]byte{})
+
+		return
+	}
+
+	req.Response.Writer.WriteHeader(res.StatusCode)
+	req.Response.Writer.Write(body)
 }
 
+// Comment
 func Init(tcp HttpServer) *HTTP {
 	server := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
@@ -327,6 +329,10 @@ func Init(tcp HttpServer) *HTTP {
 		req.Response.Writer = w
 
 		server.Handler(conn, req)
+
+		// if req.Proto == "HTTP/1.1" {
+		// 	conn.Close()
+		// }
 	})
 
 	return server

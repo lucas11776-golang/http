@@ -1,12 +1,14 @@
 package request
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net"
-	"net/url"
+	"net/http"
+	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lucas11776-golang/http/types"
 	"golang.org/x/text/cases"
@@ -73,74 +75,37 @@ func (ctx *Request) GetHeader(key string) string {
 
 // Comment
 func (ctx *Request) Get(url string) (string, error) {
-	http, _, err := ctx.Request("GET", url, []byte{})
-
-	return http, err
+	return ctx.Request("GET", url, []byte{})
 }
 
 // Comment
 func (ctx *Request) Post(url string, data []byte) (string, error) {
-	http, _, err := ctx.Request("POST", url, data)
-
-	return http, err
+	return ctx.Request("POST", url, data)
 }
 
 // Comment
 func (ctx *Request) PUT(url string, data []byte) (string, error) {
-	http, _, err := ctx.Request("PUT", url, data)
-
-	return http, err
+	return ctx.Request("PUT", url, data)
 }
 
 // Comment
 func (ctx *Request) Patch(url string, data []byte) (string, error) {
-	http, _, err := ctx.Request("PATCH", url, data)
-
-	return http, err
+	return ctx.Request("PATCH", url, data)
 }
 
 // Comment
 func (ctx *Request) Delete(url string) (string, error) {
-	http, _, err := ctx.Request("DELETE", url, []byte{})
-
-	return http, err
+	return ctx.Request("DELETE", url, []byte{})
 }
 
 // Comment
 func (ctx *Request) Options(url string) (string, error) {
-	http, _, err := ctx.Request("Options", url, []byte{})
-
-	return http, err
+	return ctx.Request("Options", url, []byte{})
 }
 
 // Comment
 func (ctx *Request) Connect(url string, data []byte) (string, error) {
-	http, _, err := ctx.Request("Connect", url, data)
-
-	return http, err
-}
-
-// Comment
-func (ctx *Request) parse(method string, path string, data []byte) string {
-	if path == "" {
-		path = "/"
-	}
-
-	arr := []string{
-		strings.Join([]string{strings.ToUpper(method), path, "HTTP/1.1"}, " "),
-	}
-
-	for key, value := range ctx.headers {
-		arr = append(arr, strings.Join([]string{cases.Title(language.English).String(key), value}, ": "))
-	}
-
-	if len(data) == 0 {
-		return strings.Join(append(arr, "\r\n"), "\r\n")
-	}
-
-	arr = append(arr, strings.Join([]string{"Content-Length", strconv.Itoa(len(data))}, ": "))
-
-	return strings.Join(append(arr, strings.Join([]string{"\r\n", string(data), "\r\n"}, "")), "\r\n")
+	return ctx.Request("Connect", url, data)
 }
 
 type Stream struct {
@@ -153,38 +118,60 @@ func (ctx *Request) Http2Request(method string, address string, data []byte) (ht
 }
 
 // Comment
-func (ctx *Request) Request(method string, address string, data []byte) (string, *Stream, error) {
-	url, err := url.Parse(address)
+func (ctx *Request) Request(method string, address string, data []byte) (string, error) {
+	// TODO: Remove stream check if request is http2 or not...
+	// TODO: Need to return http.Response...
+	request, err := http.NewRequest(method, address, bytes.NewBuffer(data))
 
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	ctx.Conn, err = net.Dial("tcp", url.Host)
+	for k, v := range ctx.headers {
+		request.Header.Set(k, v)
+	}
+
+	response, err := http.DefaultClient.Do(request)
 
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	_, err = ctx.Conn.Write([]byte(ctx.parse(method, url.Path, data)))
+	return ParseHttpResponse(response), nil
+}
+
+// Comment
+func ParseHttpResponse(res *http.Response) string {
+	http := []string{}
+
+	http = append(http, strings.Join([]string{res.Proto, res.Status}, " "))
+
+	keys := make([]string, 0, len(res.Header))
+
+	body, err := io.ReadAll(res.Body)
 
 	if err != nil {
-		return "", nil, err
+		body = []byte{}
 	}
 
-	err = ctx.Conn.SetDeadline(time.Now().Add(time.Second * 3))
+	res.Header.Set("Content-Length", strconv.Itoa(len(body)))
 
-	if err != nil {
-		return "", nil, err
+	for k := range res.Header {
+		keys = append(keys, k)
 	}
 
-	http := make([]byte, ctx.maxResponseSize)
+	sort.Strings(keys)
 
-	n, err := ctx.Conn.Read(http)
+	for _, key := range keys {
+		k := cases.Title(language.English).String(key)
+		v := strings.Join(res.Header[key], ";")
 
-	if err != nil {
-		return "", nil, err
+		http = append(http, strings.Join([]string{k, v}, ": "))
 	}
 
-	return string(http[:n]), nil, nil
+	if len(body) == 0 {
+		return strings.Join(append(http, "\r\n"), "\r\n")
+	}
+
+	return strings.Join(append(http, strings.Join([]string{"\r\n", string(body), "\r\n"}, "")), "\r\n")
 }

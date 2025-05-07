@@ -140,12 +140,10 @@ func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 
 // Comment
 func (ctx *Ws) Listen() {
-	// TODO temp fix must find out why in first request OPCODE is not there 1 == spc -> http2 reading fix byte of payload
+	// TODO: temp fix must find out why in first request OPCODE is not there 1 == spc -> http2 reading fix byte of payload
 	var requests int64 = 0
 
 	for {
-		requests++
-
 		payload := make([]byte, ctx.Request.Server.MaxWebSocketPayloadSize)
 
 		n, err := ctx.conn.Conn().Read(payload)
@@ -157,18 +155,19 @@ func (ctx *Ws) Listen() {
 		}
 
 		// TODO :() NO!!!!!
-		if requests == 1 {
+		if requests == 0 {
 			payload = append([]byte{129}, payload[:n]...)
+			n += 1
 		}
 
 		frm, err := frame.Decode(payload[:n])
-
-		// fmt.Println("---> ----->", payload[:n], err)
 
 		if err != nil {
 			continue
 		}
 
 		ctx.emitter(frm.Opcode(), frm.Data())
+
+		requests++
 	}
 }
