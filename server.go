@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -203,9 +202,6 @@ func (ctx *HTTP) requestHandler(req *Request) *Response {
 	route := ctx.Router().MatchWebRoute(req)
 
 	if route == nil {
-
-		fmt.Println("Dasdasfasfasfasfasfsfd")
-
 		return ctx.routeNotFound(req)
 	}
 

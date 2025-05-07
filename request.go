@@ -29,11 +29,12 @@ const (
 
 type Request struct {
 	*http.Request
-	Conn     *connection.Connection
-	Server   *HTTP
-	Response *Response
-	Session  SessionManager
-	Ws       *Ws
+	Conn       *connection.Connection
+	Server     *HTTP
+	Response   *Response
+	Session    SessionManager
+	Ws         *Ws
+	Parameters Parameters
 }
 
 type HttpRequestHeader struct {
