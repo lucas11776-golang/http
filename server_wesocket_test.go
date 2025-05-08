@@ -18,7 +18,6 @@ import (
 )
 
 func TestServerWebSocket(t *testing.T) {
-
 	const (
 		wsResponse          = "Hello World from :name !!!"
 		authorization       = "test@123"
@@ -26,16 +25,15 @@ func TestServerWebSocket(t *testing.T) {
 		authorizedMessage   = "Welcome to route"
 	)
 
-	serve := func() *HTTP {
-		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
-
-		auth := func(req *Request, res *Response, next Next) *Response {
-			if req.GetHeader("Authorization") != authorization {
-				return res
-			}
-
-			return next()
+	AuthMiddleware := func(req *Request, res *Response, next Next) *Response {
+		if req.GetHeader("Authorization") != authorization {
+			return res
 		}
+		return next()
+	}
+
+	t.Run("TestHandshakeReplay", func(t *testing.T) {
+		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
 		server.Route().Group("", func(route *Router) {
 			route.Ws("/", func(req *Request, ws *Ws) {
@@ -46,29 +44,13 @@ func TestServerWebSocket(t *testing.T) {
 						if err != nil {
 							t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
 						}
-
 					})
 				})
 			})
-			route.Ws("auth", func(req *Request, ws *Ws) {
-				time.Sleep(time.Microsecond * 10)
-				ws.WriteJson(map[string]string{"message": authorizedMessage})
-			}).Middleware(auth)
 		})
 
-		go func() {
-			server.Listen()
-		}()
+		go server.Listen()
 
-		return server
-	}
-
-	s := serve()
-
-	s.Close()
-
-	t.Run("TestHandshakeReplay", func(t *testing.T) {
-		server := serve()
 		conn, err := net.Dial("tcp", server.Host())
 
 		if err != nil {
@@ -159,6 +141,7 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
 		}
 
+		// TODO: 1. Quatam State - (fails or pass) - Github workflow
 		if expectedResponse != response {
 			t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
 		}
@@ -168,7 +151,14 @@ func TestServerWebSocket(t *testing.T) {
 	})
 
 	t.Run("TestWebsocketMiddlewareUnauthorized", func(t *testing.T) {
-		server := serve()
+		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
+
+		server.Route().Ws("auth", func(req *Request, ws *Ws) {
+			ws.WriteJson(map[string]string{"message": authorizedMessage})
+		}).Middleware(AuthMiddleware)
+
+		go server.Listen()
+
 		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{})
 
 		if err != nil {
@@ -186,7 +176,15 @@ func TestServerWebSocket(t *testing.T) {
 	})
 
 	t.Run("TestWebsocketMiddlewareAuthorized", func(t *testing.T) {
-		server := serve()
+		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
+
+		server.Route().Ws("auth", func(req *Request, ws *Ws) {
+			time.Sleep(time.Microsecond * 10)
+			ws.WriteJson(map[string]string{"message": authorizedMessage})
+		}).Middleware(AuthMiddleware)
+
+		go server.Listen()
+
 		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{
 			"Authorization": authorization,
 		})
