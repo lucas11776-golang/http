@@ -112,8 +112,7 @@ func Serve(host string, port int) *Server {
 
 // Comment
 func ServeTLS(host string, port int, certFile string, keyFile string) *Server {
-	var config *tls.Config = nil
-
+	var config *tls.Config
 	var err error
 
 	config = &tls.Config{}
@@ -121,14 +120,16 @@ func ServeTLS(host string, port int, certFile string, keyFile string) *Server {
 	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
 
 	if err != nil {
-		certs, err := tls.X509KeyPair([]byte(certFile), []byte(keyFile))
-
-		if err != nil {
-			panic(err)
-		}
-
-		config.Certificates[0] = certs
+		panic(err)
 	}
+
+	certs, err := tls.X509KeyPair([]byte(certFile), []byte(keyFile))
+
+	if err != nil {
+		panic(err)
+	}
+
+	config.Certificates[0] = certs
 
 	return initialize(tls.NewListener(listener(host, port), config), config)
 }
