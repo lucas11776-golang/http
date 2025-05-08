@@ -37,7 +37,6 @@ type HttpServer interface {
 	Host() string
 	Port() int
 	OnRequest(callback func(conn *connection.Connection, w http.ResponseWriter, r *http.Request))
-	GetConnection(r *http.Request) *connection.Connection
 	Listen() error
 	Close() error
 }
@@ -97,7 +96,6 @@ func (ctx *HTTP) routeNotFound(req *Request) *Response {
 		if res != nil {
 			return res
 		}
-
 	}
 
 	return ctx.Router().fallback(req, req.Response)
@@ -115,8 +113,6 @@ func (ctx *HTTP) handleRouteMiddleware(route *Route, req *Request) *Response {
 		})
 
 		if !next {
-			req.Session.Save()
-
 			return res
 		}
 	}
@@ -330,9 +326,7 @@ func Init(tcp HttpServer) *HTTP {
 
 		server.Handler(conn, req)
 
-		// if req.Proto == "HTTP/1.1" {
-		// 	conn.Close()
-		// }
+		req.Session.Save()
 	})
 
 	return server
