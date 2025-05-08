@@ -144,16 +144,7 @@ func parametersRouteMatch(route *Route, path []string) (Parameters, bool) {
 		}
 
 		if regex.Match([]byte(route.path[i])) {
-			name := strings.Trim(strings.Trim(route.path[i], "{"), "}")
-			value := path[i]
-
-			// TODO Will add route parameter match regex in future
-			// if !regex_match {
-			// 	return nil, false
-			// }
-
-			parameters[name] = value
-
+			parameters[strings.Trim(strings.Trim(route.path[i], "{"), "}")] = path[i]
 			continue
 		}
 
