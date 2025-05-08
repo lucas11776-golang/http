@@ -1,65 +1,24 @@
 package tcp
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"golang.org/x/net/http2"
 )
 
+type ConnHolder struct{}
+
 type Server struct {
-	server      *http.Server
-	listener    net.Listener
-	connections *connections
-	callback    func(conn *connection.Connection, w http.ResponseWriter, r *http.Request)
-}
-
-type connections struct {
-	connections map[string]*connection.Connection
-	mutex       sync.Mutex
-}
-
-// Comment
-func (ctx *connections) add(conn net.Conn) {
-	if _, ok := ctx.connections[conn.RemoteAddr().String()]; !ok {
-		ctx.mutex.Lock()
-		ctx.connections[conn.RemoteAddr().String()] = connection.Init(&conn)
-		ctx.mutex.Unlock()
-	}
-}
-
-// Comment
-func (ctx *connections) remove(conn net.Conn) {
-	ctx.mutex.Lock()
-	delete(ctx.connections, conn.RemoteAddr().String())
-	ctx.mutex.Unlock()
-}
-
-// Comment
-func (ctx *connections) ConnStateEvent(conn net.Conn, event http.ConnState) {
-	switch event {
-
-	case http.StateActive:
-		ctx.add(conn)
-
-	case http.StateHijacked, http.StateClosed:
-		ctx.remove(conn)
-
-	}
-}
-
-// Comment
-func (ctx *connections) GetConnection(req *http.Request) *connection.Connection {
-	if conn, ok := ctx.connections[req.RemoteAddr]; ok {
-		return conn
-	}
-	return nil
+	server   *http.Server
+	listener net.Listener
+	callback func(conn *connection.Connection, w http.ResponseWriter, r *http.Request)
 }
 
 // Comment
@@ -84,11 +43,6 @@ func (ctx *Server) OnRequest(callback func(conn *connection.Connection, w http.R
 	ctx.callback = callback
 }
 
-// Comment
-func (ctx *Server) GetConnection(r *http.Request) *connection.Connection {
-	return ctx.connections.GetConnection(r)
-}
-
 type Handler struct {
 	Server *Server
 }
@@ -96,7 +50,9 @@ type Handler struct {
 // Comment
 func (ctx *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if ctx.Server.callback != nil {
-		ctx.Server.callback(ctx.Server.GetConnection(r), w, r)
+		c, _ := r.Context().Value(ConnHolder{}).(net.Conn)
+
+		ctx.Server.callback(connection.Init(&c), w, r)
 	}
 }
 
@@ -125,14 +81,13 @@ func listener(host string, port int) net.Listener {
 func initialize(listener net.Listener, tlsConfig *tls.Config) *Server {
 	server := &Server{
 		listener: listener,
-		connections: &connections{
-			connections: make(map[string]*connection.Connection),
-		},
 	}
 
 	httpServer := &http.Server{
 		TLSConfig: tlsConfig,
-		ConnState: server.connections.ConnStateEvent,
+		ConnContext: func(ctx context.Context, c net.Conn) context.Context {
+			return context.WithValue(ctx, ConnHolder{}, c)
+		},
 	}
 
 	httpServer.Handler = &Handler{Server: server}
