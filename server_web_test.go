@@ -303,4 +303,49 @@ func TestServerWeb(t *testing.T) {
 
 		server.Close()
 	})
+
+	t.Run("TestHTTP3", func(t *testing.T) {
+		server := Server("127.0.0.1", 0)
+
+		server.Route().Get("/", func(req *Request, res *Response) *Response {
+			return res.SetBody([]byte(req.Proto))
+		})
+
+		go server.Listen()
+
+		// url := "https://cloudflare-quic.com" // Make sure the server supports HTTP/3
+
+		// // Create HTTP/3 Transport
+		// transport := &http3.Transport{}
+
+		// // Create a custom client using the HTTP/3 transport
+		// client := &http.Client{
+		// 	Transport: transport,
+		// }
+
+		// // Create request (with context)
+		// req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+		// if err != nil {
+		// 	log.Fatalf("Failed to create request: %v", err)
+		// }
+
+		// // Execute request
+		// resp, err := client.Do(req)
+		// if err != nil {
+		// 	log.Fatalf("HTTP/3 request failed: %v", err)
+		// }
+		// defer resp.Body.Close()
+
+		// // Read and print the response
+		// body, err := io.ReadAll(resp.Body)
+		// if err != nil {
+		// 	log.Fatalf("Failed to read response: %v", err)
+		// }
+
+		// fmt.Println("Response Status:", resp.Status)
+		// fmt.Println("Response Body:")
+		// fmt.Println(string(body))
+
+		server.Close()
+	})
 }

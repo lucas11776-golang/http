@@ -14,6 +14,7 @@ import (
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/server/tcp"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/response"
 	"github.com/lucas11776-golang/http/utils/slices"
 	str "github.com/lucas11776-golang/http/utils/strings"
 )
@@ -230,7 +231,7 @@ func (ctx *HTTP) websocketHandshake(req *Request) error {
 		"sec-webSocket-accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
 	}, []byte{})
 
-	return req.Conn.Write([]byte(ParseHttpResponse(res)))
+	return req.Conn.Write([]byte(response.ParseHttpResponse(res.Response)))
 }
 
 // Comment
