@@ -231,7 +231,7 @@ func (ctx *HTTP) websocketHandshake(req *Request) error {
 		"sec-webSocket-accept": base64.StdEncoding.EncodeToString(alg.Sum(nil)),
 	}, []byte{})
 
-	return req.Conn.Write([]byte(response.ParseHttpResponse(res.Response)))
+	return req.Conn.Write([]byte(response.ResponseToHttp(res.Response)))
 }
 
 // Comment
@@ -322,11 +322,9 @@ func Init(tcp HttpServer) *HTTP {
 
 	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
 		req := server.NewRequest(r, conn)
-
 		req.Response.Writer = w
 
 		server.Handler(conn, req)
-
 		req.Session.Save()
 	})
 

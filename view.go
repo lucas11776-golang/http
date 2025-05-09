@@ -119,8 +119,6 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
 
-// --------------------------------------------------------------------------------------------------------- //
-
 type ViewReaderTest struct {
 	mutex sync.Mutex
 	Files scriggo.Files
