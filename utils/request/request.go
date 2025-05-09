@@ -124,7 +124,7 @@ func (ctx *Request) Request(method string, address string, data []byte) (string,
 		return "", err
 	}
 
-	return response.ParseHttpResponse(res), nil
+	return response.ResponseToHttp(res), nil
 }
 
 // Comment

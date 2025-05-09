@@ -12,6 +12,7 @@ import (
 	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
+	"github.com/lucas11776-golang/http/utils/response"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -105,12 +106,20 @@ type Bag struct {
 // TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
-	// TODO add response write from
 	Writer  http.ResponseWriter
 	Request *Request
 	Session SessionManager
 	Bag     *Bag
 	Ws      *Ws
+}
+
+type ResponseBodyReader struct {
+	io.Reader
+}
+
+// Comment
+func (ctx *ResponseBodyReader) Close() error {
+	return nil
 }
 
 type Writer struct {
@@ -137,23 +146,14 @@ func (ctx *Writer) WriteHeader(status int) {
 	ctx.response.Status = strings.Join([]string{strconv.Itoa(status), StatusText(Status(status))}, "")
 }
 
-type responseBodyReader struct {
-	io.Reader
-}
-
 // Comment
-func (ctx *responseBodyReader) Close() error {
-	return nil
-}
-
-// Comment
-func InitHttpResponse(protocol string, status Status, headers types.Headers, body []byte) *http.Response {
+func HttpResponse(protocol string, status Status, headers types.Headers, body []byte) *http.Response {
 	return &http.Response{
 		Proto:      protocol,
 		StatusCode: int(status),
 		Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
 		Header:     h.ToHeader(headers),
-		Body:       &responseBodyReader{Reader: bytes.NewReader(body)},
+		Body:       &ResponseBodyReader{Reader: bytes.NewReader(body)},
 	}
 }
 
@@ -161,7 +161,7 @@ func InitHttpResponse(protocol string, status Status, headers types.Headers, bod
 func NewResponse(protocol string, status Status, headers types.Headers, body []byte) *Response {
 	res := &Response{
 		Bag:      &Bag{},
-		Response: InitHttpResponse(protocol, status, headers, body),
+		Response: HttpResponse(protocol, status, headers, body),
 	}
 
 	res.Writer = &Writer{response: res}
@@ -202,7 +202,7 @@ func (ctx *Response) GetHeader(key string) string {
 
 // Comment
 func (ctx *Response) SetBody(body []byte) *Response {
-	ctx.Body = &responseBodyReader{Reader: bytes.NewReader(body)}
+	ctx.Body = &ResponseBodyReader{Reader: bytes.NewReader(body)}
 
 	return ctx
 }
@@ -268,44 +268,14 @@ func (ctx *Response) View(view string, data ViewData) *Response {
 }
 
 // Comment
-func HttpToResponse(http string) (*Response, error) {
-	hp := strings.Split(http, "\r\n")
-
-	if len(hp) < 2 {
-		return nil, ErrHttpResponse
-	}
-
-	h := strings.Split(hp[0], " ")
-
-	if len(h) < 3 {
-		return nil, ErrHttpResponse
-	}
-
-	status, err := strconv.Atoi(h[1])
+func HttpToResponse(text string) (*Response, error) {
+	protocol, status, headers, body, err := response.ParseHttpToResponse(text)
 
 	if err != nil {
-		return nil, ErrHttpResponse
+		return nil, err
 	}
 
-	headers := make(types.Headers)
-	body := []byte{}
-
-	for i, line := range hp[1:] {
-		if line == "" {
-			body = append(body, []byte(strings.TrimRight(strings.Join(hp[i+2:], "\r\n"), "\r\n"))...)
-
-			break
-		}
-
-		header := strings.Split(line, ":")
-
-		key := cases.Title(language.English).String(header[0])
-		value := strings.Trim(strings.Join(header[1:], ":"), " ")
-
-		headers[key] = value
-	}
-
-	return NewResponse(h[0], Status(status), headers, body), nil
+	return NewResponse(protocol, Status(status), headers, body), nil
 }
 
 // Comment
