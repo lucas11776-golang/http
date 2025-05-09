@@ -165,7 +165,7 @@ func main() {
 
 #### Response View
 
-HTTP `view` response uses [`Scriggo`](https://scrigoo.com/templates) in order to use `view` in HTTP we have to tell application where to look for `views`
+HTTP `view` response uses [`Scriggo`](https://scriggo.com/templates) in order to use `view` in HTTP we have to tell application where to look for `views`
 
 ```go
 package main

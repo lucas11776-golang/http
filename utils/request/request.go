@@ -2,17 +2,13 @@ package request
 
 import (
 	"bytes"
-	"io"
 	"log"
 	"net"
 	"net/http"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/lucas11776-golang/http/types"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/lucas11776-golang/http/utils/response"
 )
 
 const MAX_RESPONSE_SIZE = 1024 * 1000
@@ -108,15 +104,6 @@ func (ctx *Request) Connect(url string, data []byte) (string, error) {
 	return ctx.Request("Connect", url, data)
 }
 
-type Stream struct {
-	Conn *net.Conn
-}
-
-// Comment
-func (ctx *Request) Http2Request(method string, address string, data []byte) (http string, stream *Stream, err error) {
-	return "", nil, nil
-}
-
 // Comment
 func (ctx *Request) Request(method string, address string, data []byte) (string, error) {
 	// TODO: Remove stream check if request is http2 or not...
@@ -131,47 +118,26 @@ func (ctx *Request) Request(method string, address string, data []byte) (string,
 		request.Header.Set(k, v)
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	res, err := http.DefaultClient.Do(request)
 
 	if err != nil {
 		return "", err
 	}
 
-	return ParseHttpResponse(response), nil
+	return response.ParseHttpResponse(res), nil
 }
 
 // Comment
-func ParseHttpResponse(res *http.Response) string {
-	http := []string{}
+func (ctx *Request) Http1Request(method string, address string, data []byte) {
 
-	http = append(http, strings.Join([]string{res.Proto, res.Status}, " "))
+}
 
-	keys := make([]string, 0, len(res.Header))
+// Comment
+func (ctx *Request) Http2Request(method string, address string, data []byte) {
 
-	body, err := io.ReadAll(res.Body)
+}
 
-	if err != nil {
-		body = []byte{}
-	}
+// Comment
+func (ctx *Request) Http3Request(method string, address string, data []byte) {
 
-	res.Header.Set("Content-Length", strconv.Itoa(len(body)))
-
-	for k := range res.Header {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		k := cases.Title(language.English).String(key)
-		v := strings.Join(res.Header[key], ";")
-
-		http = append(http, strings.Join([]string{k, v}, ": "))
-	}
-
-	if len(body) == 0 {
-		return strings.Join(append(http, "\r\n"), "\r\n")
-	}
-
-	return strings.Join(append(http, strings.Join([]string{"\r\n", string(body), "\r\n"}, "")), "\r\n")
 }

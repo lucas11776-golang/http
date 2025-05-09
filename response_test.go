@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/response"
 	"github.com/open2b/scriggo"
 )
 
@@ -213,7 +214,7 @@ func TestResponse(t *testing.T) {
 
 		res.View("home", ViewData{"name": name})
 
-		tRes, _ := HttpToResponse(ParseHttpResponse(res))
+		tRes, _ := HttpToResponse(response.ParseHttpResponse(res.Response))
 
 		body, err := io.ReadAll(tRes.Body)
 

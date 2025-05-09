@@ -140,7 +140,7 @@ func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 
 // Comment
 func (ctx *Ws) Listen() {
-	// TODO: temp fix must find out why in first request OPCODE is not there 1 == spc -> http2 reading fix byte of payload
+	// TODO: temp fix must find out why in first request OPCODE is not there 1 == spc -> http2 reading fix byte of data
 	var requests int64 = 0
 
 	for {

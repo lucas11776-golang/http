@@ -13,35 +13,26 @@ func main() {
 
 	server.Route().Group("/", func(route *http.Router) {
 		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
-			// return res.Json(map[string]string{
-			// 	"message": "Hello World",
-			// })
-
 			return res.View("home", http.ViewData{})
+		})
+
+		route.Group("products", func(route *http.Router) {
+			route.Get("{slug}", func(req *http.Request, res *http.Response) *http.Response {
+				return res.Html(fmt.Sprintf("<h1>%s</h1>", req.Parameters.Get("slug")))
+			})
 		})
 	})
 
 	server.Route().Group("/", func(route *http.Router) {
 		route.Ws("", func(req *http.Request, ws *http.Ws) {
-
 			ws.OnReady(func(ws *http.Ws) {
-
 				ws.OnMessage(func(data []byte) {
-
 					message := make(map[string]string)
 
 					json.Unmarshal(data, &message)
 
-					// fmt.Printf("\r\n\r\n\r\n %s \r\n\r\n\r\n ", message)
-
 					ws.WriteJson(message)
 				})
-
-				go func() {
-					// time.Sleep(time.Second * 2)
-
-					// ws.Write([]byte("Hello World"))
-				}()
 			})
 		})
 	})

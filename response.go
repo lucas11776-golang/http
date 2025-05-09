@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -220,7 +219,11 @@ func (ctx *Response) Json(v any) *Response {
 	data, err := json.Marshal(v)
 
 	if err != nil {
-		return ctx.SetBody([]byte("{}"))
+		data, _ := json.Marshal(map[string]string{
+			"message": "parse error",
+		})
+
+		return ctx.SetBody(data)
 	}
 
 	return ctx.SetBody(data)
@@ -262,42 +265,6 @@ func (ctx *Response) View(view string, data ViewData) *Response {
 	}
 
 	return ctx.Html(string(html))
-}
-
-// Comment
-func ParseHttpResponse(res *Response) string {
-	http := []string{}
-
-	http = append(http, strings.Join([]string{res.Proto, res.Status}, " "))
-
-	keys := make([]string, 0, len(res.Header))
-
-	body, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		body = []byte{}
-	}
-
-	res.Header.Set("Content-Length", strconv.Itoa(len(body)))
-
-	for k := range res.Header {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		k := cases.Title(language.English).String(key)
-		v := strings.Join(res.Header[key], ";")
-
-		http = append(http, strings.Join([]string{k, v}, ": "))
-	}
-
-	if len(body) == 0 {
-		return strings.Join(append(http, "\r\n"), "\r\n")
-	}
-
-	return strings.Join(append(http, strings.Join([]string{"\r\n", string(body), "\r\n"}, "")), "\r\n")
 }
 
 // Comment
