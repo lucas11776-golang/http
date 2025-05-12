@@ -329,7 +329,8 @@ func Init(tcp HttpServer, udp HttpServer) *HTTP {
 
 // Comment
 func (ctx *HTTP) onRequest(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
-	if strings.ToLower(r.Header.Get("upgrade")) == "websocket" && strings.ToLower(r.Proto) == "HTTP/3.0" {
+	// TODO: Need to check http3 support websocket not sure.
+	if strings.ToLower(r.Header.Get("upgrade")) == "websocket" && strings.ToUpper(r.Proto) == "HTTP/3.0" {
 		return
 	}
 
