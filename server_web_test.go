@@ -1,9 +1,15 @@
 package http
 
 import (
+	"context"
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"math/rand"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -11,8 +17,10 @@ import (
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/reader"
 	req "github.com/lucas11776-golang/http/utils/request"
+	"github.com/lucas11776-golang/http/utils/rsa"
 	str "github.com/lucas11776-golang/http/utils/strings"
 	"github.com/open2b/scriggo"
+	"github.com/quic-go/quic-go/http3"
 )
 
 func TestServerWeb(t *testing.T) {
@@ -305,46 +313,78 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestHTTP3", func(t *testing.T) {
-		server := Server("127.0.0.1", 0)
+		certFile := "./temp/host.cert"
+		keyFile := "./temp/host.key"
+
+		cert, err := os.Create(certFile)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		key, err := os.Create(keyFile)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		certData, keyData, err := rsa.GenerateCertificate("127.0.0.1")
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := cert.Write([]byte(certData)); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := key.Write([]byte(keyData)); err != nil {
+			t.Fatal(err)
+		}
+
+		server := ServerTLS("127.0.0.1", 0, certFile, keyFile)
+
+		responseBody := fmt.Sprintf("Hello HTTP3: %f", rand.Float32()*10000000)
 
 		server.Route().Get("/", func(req *Request, res *Response) *Response {
-			return res.SetBody([]byte(req.Proto))
+			return res.SetBody([]byte(responseBody))
 		})
 
 		go server.Listen()
+		client := &http.Client{Transport: &http3.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}}
 
-		// url := "https://cloudflare-quic.com" // Make sure the server supports HTTP/3
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodGet,
+			fmt.Sprintf("https://%s", server.Host()),
+			nil,
+		)
 
-		// // Create HTTP/3 Transport
-		// transport := &http3.Transport{}
+		if err != nil {
+			log.Fatalf("Failed to create request: %v", err)
+		}
 
-		// // Create a custom client using the HTTP/3 transport
-		// client := &http.Client{
-		// 	Transport: transport,
-		// }
+		// Execute request
+		res, err := client.Do(req)
 
-		// // Create request (with context)
-		// req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
-		// if err != nil {
-		// 	log.Fatalf("Failed to create request: %v", err)
-		// }
+		if err != nil {
+			log.Fatalf("HTTP/3 request failed: %v", err)
+		}
 
-		// // Execute request
-		// resp, err := client.Do(req)
-		// if err != nil {
-		// 	log.Fatalf("HTTP/3 request failed: %v", err)
-		// }
-		// defer resp.Body.Close()
+		defer res.Body.Close()
 
-		// // Read and print the response
-		// body, err := io.ReadAll(resp.Body)
-		// if err != nil {
-		// 	log.Fatalf("Failed to read response: %v", err)
-		// }
+		// Read and print the response
+		body, err := io.ReadAll(res.Body)
 
-		// fmt.Println("Response Status:", resp.Status)
-		// fmt.Println("Response Body:")
-		// fmt.Println(string(body))
+		if err != nil {
+			log.Fatalf("Failed to read response: %v", err)
+		}
+
+		if string(body) != responseBody {
+			t.Fatalf("Expected response body to be (%s) but got (%s)", responseBody, string(body))
+		}
 
 		server.Close()
 	})

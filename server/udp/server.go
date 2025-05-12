@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/quic-go/quic-go"
@@ -11,11 +12,16 @@ import (
 )
 
 type Http3RequestHandler struct {
+	server *Server
 }
 
 // Comment
 func (ctx *Http3RequestHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	res.Write([]byte("<h1>Hello World</h1>"))
+	if ctx.server.callback == nil {
+		return
+	}
+
+	ctx.server.callback(nil, res, req)
 }
 
 type Server struct {
@@ -26,6 +32,11 @@ type Server struct {
 // Comment
 func (ctx *Server) Host() string {
 	return ctx.server.Addr
+}
+
+// Comment
+func (ctx *Server) Address() string {
+	return strings.Split(ctx.server.Addr, ":")[0]
 }
 
 // Comment
@@ -40,24 +51,54 @@ func (ctx *Server) OnRequest(callback func(conn *connection.Connection, w http.R
 
 // Comment
 func (ctx *Server) Listen() error {
-	return nil
+	return ctx.server.ListenAndServe()
 }
 
 // Comment
 func (ctx *Server) Close() error {
-	return nil
+	return ctx.server.Close()
 }
 
 // Comment
 func Serve(host string, port int) *Server {
-	return &Server{
+	server := &Server{
 		server: &http3.Server{
-			Handler:    &Http3RequestHandler{},
 			Addr:       fmt.Sprintf("%s:%d", host, port),
 			TLSConfig:  http3.ConfigureTLSConfig(&tls.Config{}), // use your tls.Config here
 			QUICConfig: &quic.Config{},
 		},
 	}
+
+	server.server.Handler = &Http3RequestHandler{server: server}
+
+	return server
+}
+
+// Comments
+func ServerTLS(host string, port int, certFile string, keyFile string) *Server {
+	var err error
+	config := &tls.Config{}
+
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+	config.InsecureSkipVerify = true
+
+	if err != nil {
+		panic(err)
+	}
+
+	server := &Server{
+		server: &http3.Server{
+			Handler:    &Http3RequestHandler{},
+			Addr:       fmt.Sprintf("%s:%d", host, port),
+			QUICConfig: &quic.Config{},
+			TLSConfig:  http3.ConfigureTLSConfig(config),
+		},
+	}
+
+	server.server.Handler = &Http3RequestHandler{server: server}
+
+	return server
 }
 
 // ------------------------------------------------------------------------------------------------------ //

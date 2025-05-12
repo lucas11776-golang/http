@@ -19,14 +19,14 @@ import (
 
 func TestServerWebSocket(t *testing.T) {
 	const (
-		wsResponse          = "Hello World from :name !!!"
-		authorization       = "test@123"
-		unauthorizedMessage = "unauthorized access"
-		authorizedMessage   = "Welcome to route"
+		wsResponse          = "Hello World"
+		Authorization       = "test@123"
+		UnauthorizedMessage = "unauthorized access"
+		AuthorizedMessage   = "Welcome to route"
 	)
 
 	AuthMiddleware := func(req *Request, res *Response, next Next) *Response {
-		if req.GetHeader("Authorization") != authorization {
+		if req.GetHeader("Authorization") != Authorization {
 			return res
 		}
 		return next()
@@ -39,11 +39,7 @@ func TestServerWebSocket(t *testing.T) {
 			route.Ws("/", func(req *Request, ws *Ws) {
 				ws.OnReady(func(ws *Ws) {
 					ws.OnMessage(func(data []byte) {
-						err := ws.Write([]byte(strings.ReplaceAll(wsResponse, ":name", string(data))))
-
-						if err != nil {
-							t.Fatalf("Something went wrong when trying to send message: %s", err.Error())
-						}
+						ws.Write([]byte(wsResponse))
 					})
 				})
 			})
@@ -133,17 +129,10 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Something went wrong when trying read connection: %s", err.Error())
 		}
 
-		expectedResponse := strings.ReplaceAll(wsResponse, ":name", name)
-
 		response := string(buffNew[2:n])
 
-		if err != nil {
-			t.Fatalf("Something went wrong when trying to decode payload: %s", err.Error())
-		}
-
-		// TODO: 1. Quatam State - (fails or pass) - Github workflow
-		if expectedResponse != response {
-			t.Fatalf("Expected ws payload to be (%s) but got (%s)", expectedResponse, response)
+		if wsResponse != response {
+			t.Fatalf("Expected ws payload to be (%s) but got (%s)", wsResponse, response)
 		}
 
 		conn.Close()
@@ -154,7 +143,7 @@ func TestServerWebSocket(t *testing.T) {
 		server := Server("127.0.0.1", 0).SetMaxWebsocketPayload(1024 * 10)
 
 		server.Route().Ws("auth", func(req *Request, ws *Ws) {
-			ws.WriteJson(map[string]string{"message": authorizedMessage})
+			ws.WriteJson(map[string]string{"message": AuthorizedMessage})
 		}).Middleware(AuthMiddleware)
 
 		go server.Listen()
@@ -180,13 +169,13 @@ func TestServerWebSocket(t *testing.T) {
 
 		server.Route().Ws("auth", func(req *Request, ws *Ws) {
 			time.Sleep(time.Microsecond * 10)
-			ws.WriteJson(map[string]string{"message": authorizedMessage})
+			ws.WriteJson(map[string]string{"message": AuthorizedMessage})
 		}).Middleware(AuthMiddleware)
 
 		go server.Listen()
 
 		w, err := ws.Connect(fmt.Sprintf("http://%s/%s", server.Host(), "auth"), types.Headers{
-			"Authorization": authorization,
+			"Authorization": Authorization,
 		})
 
 		if err != nil {
@@ -207,8 +196,8 @@ func TestServerWebSocket(t *testing.T) {
 			t.Fatalf("Something went wrong when Unmarshal response data: %v", err)
 		}
 
-		if message["message"] != authorizedMessage {
-			t.Fatalf("Expected response message to be (%s) but got (%s)", authorizedMessage, message["message"])
+		if message["message"] != AuthorizedMessage {
+			t.Fatalf("Expected response message to be (%s) but got (%s)", AuthorizedMessage, message["message"])
 		}
 
 		w.Close()

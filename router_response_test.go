@@ -10,11 +10,13 @@ import (
 )
 
 func TestRouterRouteResponse(t *testing.T) {
+	type User struct {
+		Id    int64  `id:"id"`
+		Email string `email:"email"`
+	}
+
 	t.Run("TestJsonResponse", func(t *testing.T) {
-		data := struct {
-			Id    int64  `id:"id"`
-			Email string `email:"email"`
-		}{
+		data := User{
 			Id:    1,
 			Email: "jeo@doe.com",
 		}

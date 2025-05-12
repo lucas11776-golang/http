@@ -8,8 +8,10 @@ import (
 )
 
 func main() {
-	// server := http.ServerTLS("127.0.0.1", 2222, "main/host.cert", "main/host.key").SetView("main/views", "html")
-	server := http.Server("127.0.0.1", 8080).SetView("main/views", "html")
+	server := http.ServerTLS("127.0.0.1", 8080, "./main/host.cert", "./main/host.key").SetView("main/views", "html")
+	// server := http.Server("127.0.0.1", 8080).SetView("main/views", "html")
+
+	// server := udp.ServerTLS("127.0.0.1", 8080, "main/host.cert", "main/host.key")
 
 	server.Route().Group("/", func(route *http.Router) {
 		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
@@ -38,6 +40,14 @@ func main() {
 	})
 
 	fmt.Printf("Running server on %s", server.Host())
+
+	// server := udp.ServerTLS("127.0.0.1", 8080, "./main/host.cert", "./main/host.key")
+
+	// server.OnRequest(func(conn *connection.Connection, w hp.ResponseWriter, r *hp.Request) {
+	// 	fmt.Println("Connection")
+
+	// 	w.Write([]byte("Hello World..."))
+	// })
 
 	server.Listen()
 }
