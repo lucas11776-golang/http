@@ -13,6 +13,7 @@ import (
 
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/server/tcp"
+	"github.com/lucas11776-golang/http/server/udp"
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/response"
 	"github.com/lucas11776-golang/http/utils/slices"
@@ -44,7 +45,7 @@ type HttpServer interface {
 
 type HTTP struct {
 	TCP                     HttpServer
-	UDP                     interface{}
+	UDP                     HttpServer
 	Debug                   bool
 	MaxWebSocketPayloadSize int
 	dependency              Dependencies
@@ -306,7 +307,7 @@ func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
 }
 
 // Comment
-func Init(tcp HttpServer) *HTTP {
+func Init(tcp HttpServer, udp HttpServer) *HTTP {
 	server := &HTTP{
 		MaxWebSocketPayloadSize: MAX_WEBSOCKET_PAYLOAD,
 		dependency: Dependencies{
@@ -315,36 +316,44 @@ func Init(tcp HttpServer) *HTTP {
 	}
 
 	server.TCP = tcp
-	server.UDP = nil
+	server.UDP = udp
 
 	server.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 	server.Session([]byte(str.Random(10)))
 
-	server.TCP.OnRequest(func(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
-		req := server.NewRequest(r, conn)
-		req.Response.Writer = w
-
-		server.Handler(conn, req)
-		req.Session.Save()
-	})
+	server.TCP.OnRequest(server.onRequest) // HTTP/1.1 and HTTP/2.0 requests
+	server.UDP.OnRequest(server.onRequest) // HTTP/3.0 requests
 
 	return server
 }
 
 // Comment
+func (ctx *HTTP) onRequest(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
+	if strings.ToLower(r.Header.Get("upgrade")) == "websocket" && strings.ToLower(r.Proto) == "HTTP/3.0" {
+		return
+	}
+
+	req := ctx.NewRequest(r, conn)
+	req.Response.Writer = w
+
+	ctx.Handler(conn, req)
+	req.Session.Save()
+}
+
+// Comment
 func ServerTLS(host string, port int, certFile string, keyFile string) *HTTP {
-	// TODO: must bind address to QUIC/UDP server here
-	return Init(
-		tcp.ServeTLS(host, port, certFile, keyFile),
-	)
+	tcp := tcp.ServeTLS(host, port, certFile, keyFile)
+	udp := udp.ServerTLS(host, tcp.Port(), certFile, keyFile)
+
+	return Init(tcp, udp)
 }
 
 // Comment
 func Server(address string, port int) *HTTP {
-	// TODO: must bind address to QUIC/UDP server here
-	return Init(
-		tcp.Serve(address, port),
-	)
+	tcp := tcp.Serve(address, port)
+	udp := udp.Serve(address, tcp.Port())
+
+	return Init(tcp, udp)
 }
 
 // Comm
@@ -359,7 +368,9 @@ func (ctx *HTTP) Port() int {
 
 // Comment
 func (ctx *HTTP) Listen() {
-	ctx.TCP.Listen()
+	go ctx.TCP.Listen()
+	go ctx.UDP.Listen()
+	select {}
 }
 
 // Comment

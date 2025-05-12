@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-type ConnectionPlaceholder struct{}
+type ConnContextHolder struct{}
 
 type Server struct {
 	server   *http.Server
@@ -49,15 +50,19 @@ type Handler struct {
 
 // Comment
 func (ctx *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if ctx.Server.callback != nil {
-		c, ok := r.Context().Value(ConnectionPlaceholder{}).(net.Conn)
-
-		if !ok {
-			panic("Could not find the request connection...")
-		}
-
-		ctx.Server.callback(connection.Init(&c), w, r)
+	if ctx.Server.callback == nil {
+		return
 	}
+
+	c, ok := r.Context().Value(ConnContextHolder{}).(net.Conn)
+
+	if !ok {
+		log.Fatalf("%s: Could not find the request connection.", r.RemoteAddr)
+
+		return
+	}
+
+	ctx.Server.callback(connection.Init(&c), w, r)
 }
 
 // Comment
@@ -90,7 +95,7 @@ func initialize(listener net.Listener, tlsConfig *tls.Config) *Server {
 	httpServer := &http.Server{
 		TLSConfig: tlsConfig,
 		ConnContext: func(ctx context.Context, c net.Conn) context.Context {
-			return context.WithValue(ctx, ConnectionPlaceholder{}, c)
+			return context.WithValue(ctx, ConnContextHolder{}, c)
 		},
 	}
 
@@ -112,24 +117,16 @@ func Serve(host string, port int) *Server {
 
 // Comment
 func ServeTLS(host string, port int, certFile string, keyFile string) *Server {
-	var config *tls.Config
 	var err error
+	config := &tls.Config{}
 
-	config = &tls.Config{}
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+	config.InsecureSkipVerify = true
 
 	if err != nil {
 		panic(err)
 	}
-
-	certs, err := tls.X509KeyPair([]byte(certFile), []byte(keyFile))
-
-	if err != nil {
-		panic(err)
-	}
-
-	config.Certificates[0] = certs
 
 	return initialize(tls.NewListener(listener(host, port), config), config)
 }
