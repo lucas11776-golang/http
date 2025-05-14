@@ -10,8 +10,8 @@ HTTP requests [Go](https://go.dev) version [1.23](https://go.dev/doc/devel/relea
 
 **Http key features:**
 
-- Router
-- Response Types `body`, `html`, `json`, `redirect`, `download` and `view`
+- Router         - `Group`, `Subdomain`
+- Response Types - `body`, `html`, `json`, `redirect`, `download` and `view`
 - Static Assets
 - WebSocket
 - Middleware
@@ -276,7 +276,88 @@ func main() {
 }
 ```
 
-And then visit [127.0.0.1:8080](http://127.0.0.1:8080) and see what we got.
+
+#### Route Subdomain
+
+HTTP allows subdomain to break up services e.g api and web.
+If you are running you code you need to change you `hosts` file to 
+
+If you are running you code on local machine you need to change you host file e.g
+
+- Linux/MacOs - hosts file path `/etc/hosts` or `/private/etc/hosts`
+127.0.0.1 api.example.com
+
+- Windows - hosts file path `C:\Windows\System32\drivers\etc\hosts`
+127.0.0.1:80 api.example.com
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/lucas11776-golang/http"
+)
+
+type User struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func main() {
+	server := http.Server("127.0.0.1", 80)
+
+	server.Route().Subdomain("api", func(route *http.Router) {
+		route.Get("users", func(req *http.Request, res *http.Response) *http.Response {
+			return res.Json([]User{
+				{
+					ID:    1,
+					Name:  "Jeo Doe",
+					Email: "jeo@deo.com",
+				},
+				{
+					ID:    2,
+					Name:  "Jane Doe",
+					Email: "jane@deo.com",
+				},
+			})
+		})
+	})
+
+	fmt.Printf("Running server on %s", server.Host())
+
+	server.Listen()
+}
+```
+
+Subdomain also support dynamic parameters here is a example.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/lucas11776-golang/http"
+)
+
+func main() {
+	server := http.Server("127.0.0.1", 80)
+
+	server.Route().Subdomain("{company}", func(route *http.Router) {
+		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
+			return res.Json(map[string]string{
+				"company": req.Parameters.Get("company"),
+			})
+		})
+	})
+
+	fmt.Printf("Running server on %s", server.Host())
+
+	server.Listen()
+}
+```
 
 
 ### Websocket

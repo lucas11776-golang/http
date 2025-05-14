@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net"
 	"reflect"
 	"regexp"
 	"strings"
@@ -47,6 +48,7 @@ type RouterGroup struct {
 }
 
 type Router struct {
+	subdomain  string
 	path       string
 	middleware []Middleware
 	routes     *RouterGroup
@@ -82,6 +84,7 @@ func (ctx *Route) Middlewares() []Middleware {
 func (ctx *Route) setParameters(req *Request, parameters Parameters) *Route {
 	ctx.parameters = parameters
 	req.Parameters = parameters
+	// fmt.Println(parameters)
 
 	return ctx
 }
@@ -126,56 +129,103 @@ func (ctx *Route) Call(value ...reflect.Value) *Response {
 }
 
 // Comment
-func parametersRouteMatch(route *Route, path []string) (Parameters, bool) {
+func parametersRouteMatch(routePath []string, requestPath []string) (found bool, arameters Parameters) {
 	regex, _ := regexp.Compile(ParameterRegex)
-	parameters := make(Parameters)
+	params := make(Parameters)
 
-	for i, seg := range path {
-		if i >= len(route.path) {
-			return nil, false
+	for i, seg := range requestPath {
+		if i >= len(routePath) {
+			return false, nil
 		}
 
-		if route.path[i] == "*" {
-			return parameters, true
+		if routePath[i] == "*" {
+			return true, params
 		}
 
-		if seg == route.path[i] {
+		if seg == routePath[i] {
 			continue
 		}
 
-		if regex.Match([]byte(route.path[i])) {
-			parameters[strings.Trim(strings.Trim(route.path[i], "{"), "}")] = path[i]
+		if regex.Match([]byte(routePath[i])) {
+			// TODO: requestPath will be empty == ""
+			params[strings.Trim(strings.Trim(routePath[i], "{"), "}")] = requestPath[i]
+
 			continue
 		}
 
-		return nil, false
+		return false, nil
 	}
 
-	return parameters, true
+	return true, params
+}
+
+// Comment
+func getSubdomain(host string) string {
+	host = strings.Split(host, ":")[0]
+
+	if net.ParseIP(host) != nil {
+		return ""
+	}
+
+	parts := strings.Split(host, ".")
+
+	if len(parts) < 3 {
+		return ""
+	}
+
+	return strings.Join(parts[:len(parts)-2], ".")
+}
+
+// TODO: move to utils...
+// Comment
+func mergeMap(m map[string]string, maps ...map[string]string) map[string]string {
+	for _, mp := range maps {
+		for k, v := range mp {
+			m[k] = v
+		}
+	}
+
+	return m
 }
 
 // comment
-func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
+func routeMatch(routes Routes, req *Request) (*Route, Parameters) {
+	method := req.Method
+	uri := req.Path()
 	path := strings.Split(strings.Trim(uri, "/"), "/")
+	requestSubdomain := strings.Split(getSubdomain(req.Host), ".")
 
 	for _, route := range routes {
 		if strings.ToUpper(method) != route.Method() {
 			continue
 		}
 
-		if route.Path() == "*" {
-			return route, make(Parameters)
-		}
+		parameters := make(Parameters)
+		routeSubdomain := strings.Split(route.router.subdomain, ".")
 
-		if strings.Trim(uri, "/") == route.Path() {
-			return route, make(Parameters)
-		}
-
-		parameters, ok := parametersRouteMatch(route, path)
+		ok, params := parametersRouteMatch(routeSubdomain, requestSubdomain)
 
 		if !ok {
 			continue
 		}
+
+		parameters = mergeMap(parameters, params)
+
+		if route.Path() == "*" {
+			return route, parameters
+		}
+
+		if strings.Trim(uri, "/") == route.Path() {
+			return route, parameters
+		}
+
+		ok, params = parametersRouteMatch(route.path, path)
+
+		if !ok {
+			continue
+		}
+
+		parameters = mergeMap(parameters, params)
 
 		return route, parameters
 	}
@@ -185,7 +235,7 @@ func routeMatch(routes Routes, method string, uri string) (*Route, Parameters) {
 
 // Comment
 func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
-	route, parameters := routeMatch(ctx.web, req.Method, req.Path())
+	route, parameters := routeMatch(ctx.web, req)
 
 	if route == nil {
 		return nil
@@ -196,7 +246,7 @@ func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
 
 // Comment
 func (ctx *RouterGroup) MatchWsRoute(req *Request) *Route {
-	route, parameters := routeMatch(ctx.ws, req.Method, req.Path())
+	route, parameters := routeMatch(ctx.ws, req)
 
 	if route == nil {
 		return nil
@@ -233,8 +283,23 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route
 }
 
 // Comment
+func (ctx *Router) Subdomain(subdomain string, group GroupCallback) *Router {
+	router := &Router{
+		subdomain:  subdomain,
+		path:       ctx.path,
+		routes:     ctx.routes,
+		middleware: ctx.middleware,
+	}
+
+	group(router)
+
+	return router
+}
+
+// Comment
 func (ctx *Router) Group(prefix string, group GroupCallback) *Router {
 	router := &Router{
+		subdomain:  ctx.subdomain,
 		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
 		middleware: ctx.middleware,
