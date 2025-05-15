@@ -493,30 +493,42 @@ import (
 	"github.com/lucas11776-golang/http"
 )
 
-type Message struct {
-	Message string `json:"message"`
+// Comment
+func IsAuth(req *http.Request, res *http.Response, next http.Next) *http.Response {
+	// Auth logic
+	return next()
 }
 
-func Authorization(req *http.Request, res *http.Response, next http.Next) *http.Response {
-	if req.GetHeader("auth-key") != "test@123" {
-		return res.SetStatus(http.HTTP_RESPONSE_UNAUTHORIZED).Json(Message{
-			Message: "Unauthorized Access",
-		})
-	}
-
+// Comment
+func IsGuest(req *http.Request, res *http.Response, next http.Next) *http.Response {
+	// Guest Logic
 	return next()
 }
 
 func main() {
 	server := http.Server("127.0.0.1", 8080)
 
-	server.Route().Middleware(Authorization).Get("/", func(req *http.Request, res *http.Response) *http.Response {
-		return res.Json(Message{
-			Message: "Hello World, You Authorized To See This Route...",
+	server.Route().Middleware(IsGuest).Group("authentication", func(route *http.Router) {
+		route.Group("login", func(route *http.Router) {
+			// Login routes...
 		})
+		route.Group("register", func(route *http.Router) {
+			// Register routes...
+		})
+		route.Post("logout", func(req *http.Request, res *http.Response) *http.Response {
+			return res.Redirect("authentication/login")
+		}, IsGuest)
+		// OR
+		route.Post("logout", func(req *http.Request, res *http.Response) *http.Response {
+			return res.Redirect("authentication/login")
+		}, IsGuest).Middleware(IsAuth)
 	})
 
-	fmt.Println("Server running ", server.Host())
+	server.Route().Group("dashboard", func(route *http.Router) {
+		// Dashboard routes...
+	}, IsAuth)
+
+	fmt.Printf("Server running %s", server.Host())
 
 	server.Listen()
 }
@@ -525,9 +537,7 @@ func main() {
 If you `visit` [127.0.0.1:8080](http://127.0.0.1:8080) with Postman or you favorite API testing tool without header `Auth-Key` with value of `test@123` you will get code status `401` with message `Unauthorized Access`.
 
 
-### Session
-
-HTTP support session to allow us to store user `data` like user ID, user role etc below is a simple code of how session works we will example everything below the sample code. 
+Before we forget `subdomain` also supports middleware e.g
 
 ```go
 package main
@@ -538,8 +548,51 @@ import (
 	"github.com/lucas11776-golang/http"
 )
 
+func IsAuth(req *http.Request, res *http.Response, next http.Next) *http.Response {
+	// Auth logic
+	return next()
+}
+
+func IsEmployee(req *http.Request, res *http.Response, next http.Next) *http.Response {
+	// Auth logic
+	return next()
+}
+
+func main() {
+	server := http.Server("127.0.0.1", 80)
+
+	server.Route().Middleware(IsAuth, IsEmployee).Subdomain("{company}", func(route *http.Router) {
+		// Company routes
+	}, IsAuth, IsEmployee)
+
+	// OR
+
+	server.Route().Subdomain("{company}", func(route *http.Router) {
+		// Company routes
+	}, IsAuth, IsEmployee)
+
+	fmt.Printf("Running server on %s", server.Host())
+
+	server.Listen()
+}
+```
+
+### Session
+
+HTTP support session to allow us to store user `data` like user ID, user role etc below is a simple code of how session works we will example everything below the sample code. 
+
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/lucas11776-golang/http"
+)
+
 // Comment
-func IsUser(req *http.Request, res *http.Response, next *http.Next) *http.Response {
+func IsAuth(req *http.Request, res *http.Response, next http.Next) *http.Response {
 	if req.Session.Get("user_id") != "" {
 		return res.Redirect("/")
 	}
@@ -548,7 +601,7 @@ func IsUser(req *http.Request, res *http.Response, next *http.Next) *http.Respon
 }
 
 // Comment
-func IsGuest(req *http.Request, res *http.Response, next *http.Next) *http.Response {
+func IsGuest(req *http.Request, res *http.Response, next http.Next) *http.Response {
 	if req.Session.Get("user_id") != "" {
 		return res.Redirect("/")
 	}
@@ -560,32 +613,32 @@ func main() {
 	server := http.Server("127.0.0.1", 8080)
 
 	// Initialize application session
-	server.Session([]byte("session-key"))
+	server.Session([]byte(os.Getenv("SESSION_KEY")))
 
 	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
 		return res.Html("<h1>Home Page</h1>")
 	})
 
 	server.Route().Group("authentication", func(route *http.Router) {
-		route.Group("login", func() {
+		route.Group("login", func(route *http.Router) {
 			route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
 				return res.Html("<h1>Add Post form to login</h1>")
 			})
 			route.Post("/", func(req *http.Request, res *http.Response) *http.Response {
-				res.Session.Set("user_id", "1") // or req.Session.Set("user_id", "1")
+				res.Session.Set("user_id", "1")
 
 				return res.Redirect("dashboard")
 			})
-		}).Middleware(IsGuest)
+		}, IsGuest)
 
 		route.Post("logout", func(req *http.Request, res *http.Response) *http.Response {
 			res.Session.Remove("user_id")
 
 			return res.Redirect("authentication/login")
-		}).Middleware(IsUser)
+		}).Middleware(IsAuth)
 	})
 
-	server.Route().Middleware(IsUser).Group("dashboard", func(route *http.Router) {
+	server.Route().Middleware(IsAuth).Group("dashboard", func(route *http.Router) {
 		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Html("<h1>Dashboard Page Can Be Viewed By Login Users</h1>")
 		})
@@ -596,7 +649,6 @@ func main() {
 	server.Listen()
 }
 ```
-
 
 ## Issues
 

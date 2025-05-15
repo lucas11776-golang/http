@@ -98,7 +98,7 @@ func TestRouter(t *testing.T) {
 				router.Head("/{id}", func(req *Request, res *Response) *Response {
 					return res
 				})
-			})
+			}, middleware)
 		})
 
 		router.Router().Connect("/*", func(req *Request, res *Response) *Response {
@@ -106,12 +106,12 @@ func TestRouter(t *testing.T) {
 		})
 
 		testingRoute(t, router.web, router.web[0], 0, "OPTIONS", "api/*", 1)
-		testingRoute(t, router.web, router.web[1], 1, "GET", "api/products", 1)
-		testingRoute(t, router.web, router.web[2], 2, "POST", "api/products", 1)
-		testingRoute(t, router.web, router.web[3], 3, "PUT", "api/products", 1)
-		testingRoute(t, router.web, router.web[4], 4, "PATCH", "api/products/{id}", 1)
-		testingRoute(t, router.web, router.web[5], 5, "DELETE", "api/products/{id}", 1)
-		testingRoute(t, router.web, router.web[6], 6, "HEAD", "api/products/{id}", 1)
+		testingRoute(t, router.web, router.web[1], 1, "GET", "api/products", 2)
+		testingRoute(t, router.web, router.web[2], 2, "POST", "api/products", 2)
+		testingRoute(t, router.web, router.web[3], 3, "PUT", "api/products", 2)
+		testingRoute(t, router.web, router.web[4], 4, "PATCH", "api/products/{id}", 2)
+		testingRoute(t, router.web, router.web[5], 5, "DELETE", "api/products/{id}", 2)
+		testingRoute(t, router.web, router.web[6], 6, "HEAD", "api/products/{id}", 2)
 		testingRoute(t, router.web, router.web[7], 7, "CONNECT", "*", 0)
 	})
 

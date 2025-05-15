@@ -257,12 +257,12 @@ func (ctx *RouterGroup) MatchWsRoute(req *Request) *Route {
 }
 
 // Comment
-func (ctx *Router) getRoute(router *Router, method string, uri string, callback reflect.Value) *Route {
+func (ctx *Router) getRoute(router *Router, method string, uri string, callback reflect.Value, middleware ...Middleware) *Route {
 	return &Route{
 		method:     strings.ToUpper(method),
 		path:       strings.Split(str.JoinPath(ctx.path, uri), "/"),
 		parameters: make(Parameters),
-		middleware: ctx.middleware,
+		middleware: append(ctx.middleware, middleware...),
 		router:     router,
 		callback:   callback,
 	}
@@ -274,8 +274,8 @@ func (ctx *RouterGroup) Router() *Router {
 }
 
 // Comment
-func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route {
-	route := ctx.getRoute(ctx, method, uri, reflect.ValueOf(callback))
+func (ctx *Router) Route(method string, uri string, callback WebCallback, middleware ...Middleware) *Route {
+	route := ctx.getRoute(ctx, method, uri, reflect.ValueOf(callback), middleware...)
 
 	ctx.routes.web = append(ctx.routes.web, route)
 
@@ -283,22 +283,22 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route
 }
 
 // Comment
-func (ctx *Router) Subdomain(subdomain string, group GroupCallback) {
+func (ctx *Router) Subdomain(subdomain string, group GroupCallback, middleware ...Middleware) {
 	group(&Router{
 		subdomain:  subdomain,
 		path:       ctx.path,
 		routes:     ctx.routes,
-		middleware: ctx.middleware,
+		middleware: append(ctx.middleware, middleware...),
 	})
 }
 
 // Comment
-func (ctx *Router) Group(prefix string, group GroupCallback) {
+func (ctx *Router) Group(prefix string, group GroupCallback, middleware ...Middleware) {
 	group(&Router{
 		subdomain:  ctx.subdomain,
 		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
-		middleware: ctx.middleware,
+		middleware: append(ctx.middleware, middleware...),
 	})
 }
 
@@ -310,48 +310,48 @@ func (ctx *Router) Middleware(middlewares ...Middleware) *Router {
 }
 
 // Comment
-func (ctx *Router) Get(uri string, callback WebCallback) *Route {
-	return ctx.Route("GET", uri, callback)
+func (ctx *Router) Get(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("GET", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Post(uri string, callback WebCallback) *Route {
-	return ctx.Route("POST", uri, callback)
+func (ctx *Router) Post(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("POST", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Put(uri string, callback WebCallback) *Route {
-	return ctx.Route("PUT", uri, callback)
+func (ctx *Router) Put(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("PUT", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Patch(uri string, callback WebCallback) *Route {
-	return ctx.Route("PATCH", uri, callback)
+func (ctx *Router) Patch(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("PATCH", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Delete(uri string, callback WebCallback) *Route {
-	return ctx.Route("DELETE", uri, callback)
+func (ctx *Router) Delete(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("DELETE", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Head(uri string, callback WebCallback) *Route {
-	return ctx.Route("HEAD", uri, callback)
+func (ctx *Router) Head(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("HEAD", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Options(uri string, callback WebCallback) *Route {
-	return ctx.Route("OPTIONS", uri, callback)
+func (ctx *Router) Options(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("OPTIONS", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Connect(uri string, callback WebCallback) *Route {
-	return ctx.Route("CONNECT", uri, callback)
+func (ctx *Router) Connect(uri string, callback WebCallback, middleware ...Middleware) *Route {
+	return ctx.Route("CONNECT", uri, callback, middleware...)
 }
 
 // Comment
-func (ctx *Router) Ws(uri string, callback WsCallback) *Route {
-	route := ctx.getRoute(ctx, "GET", uri, reflect.ValueOf(callback))
+func (ctx *Router) Ws(uri string, callback WsCallback, middleware ...Middleware) *Route {
+	route := ctx.getRoute(ctx, "GET", uri, reflect.ValueOf(callback), middleware...)
 
 	ctx.routes.ws = append(ctx.routes.ws, route)
 
