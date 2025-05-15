@@ -655,4 +655,4 @@ func main() {
 Having issues with HTTP framework contact me on:
 
 - Email    - [thembangubeni04@gmail.com](mailto:thembangubeni04@gmail.com)
-- Linkedin - [lucas11776](https://linkedin.com/)
+- Linkedin - [lucas11776](https://www.linkedin.com/in/themba-lucas-ngubeni/)
