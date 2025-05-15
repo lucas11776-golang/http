@@ -521,7 +521,7 @@ func main() {
 		// OR
 		route.Post("logout", func(req *http.Request, res *http.Response) *http.Response {
 			return res.Redirect("authentication/login")
-		}, IsGuest).Middleware(IsAuth)
+		}).Middleware(IsAuth)
 	})
 
 	server.Route().Group("dashboard", func(route *http.Router) {
