@@ -36,7 +36,7 @@ func TestRouter(t *testing.T) {
 		}
 
 		if len(route.Middlewares()) < middlewares {
-			t.Fatalf("Middleware is not add to route")
+			t.Fatalf("Expected number of middleware to be %d but got %d", middlewares, len(route.Middlewares()))
 		}
 	}
 

@@ -283,31 +283,23 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback) *Route
 }
 
 // Comment
-func (ctx *Router) Subdomain(subdomain string, group GroupCallback) *Router {
-	router := &Router{
+func (ctx *Router) Subdomain(subdomain string, group GroupCallback) {
+	group(&Router{
 		subdomain:  subdomain,
 		path:       ctx.path,
 		routes:     ctx.routes,
 		middleware: ctx.middleware,
-	}
-
-	group(router)
-
-	return router
+	})
 }
 
 // Comment
-func (ctx *Router) Group(prefix string, group GroupCallback) *Router {
-	router := &Router{
+func (ctx *Router) Group(prefix string, group GroupCallback) {
+	group(&Router{
 		subdomain:  ctx.subdomain,
 		path:       str.JoinPath(ctx.path, prefix),
 		routes:     ctx.routes,
 		middleware: ctx.middleware,
-	}
-
-	group(router)
-
-	return router
+	})
 }
 
 // Comment
