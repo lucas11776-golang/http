@@ -33,7 +33,6 @@ func (ctx Parameters) Get(key string) string {
 type Route struct {
 	method     string
 	path       []string
-	parameters Parameters
 	middleware []Middleware
 	router     *Router
 	callback   reflect.Value
@@ -78,31 +77,6 @@ func (ctx *Route) Method() string {
 // Comment
 func (ctx *Route) Middlewares() []Middleware {
 	return ctx.middleware
-}
-
-// Comment
-func (ctx *Route) setParameters(req *Request, parameters Parameters) *Route {
-	ctx.parameters = parameters
-	req.Parameters = parameters
-	// fmt.Println(parameters)
-
-	return ctx
-}
-
-// Comment
-func (ctx *Route) Parameters() Parameters {
-	return ctx.parameters
-}
-
-// Comment
-func (ctx *Route) Parameter(parameter string) string {
-	param, ok := ctx.parameters[parameter]
-
-	if !ok {
-		return ""
-	}
-
-	return param
 }
 
 // Comment
@@ -237,22 +211,21 @@ func routeMatch(routes Routes, req *Request) (*Route, Parameters) {
 func (ctx *RouterGroup) MatchWebRoute(req *Request) *Route {
 	route, parameters := routeMatch(ctx.web, req)
 
-	if route == nil {
-		return nil
+	if route != nil {
+		req.Parameters = parameters
 	}
-
-	return route.setParameters(req, parameters)
+	return route
 }
 
 // Comment
 func (ctx *RouterGroup) MatchWsRoute(req *Request) *Route {
 	route, parameters := routeMatch(ctx.ws, req)
 
-	if route == nil {
-		return nil
+	if route != nil {
+		req.Parameters = parameters
 	}
 
-	return route.setParameters(req, parameters)
+	return route
 
 }
 
@@ -261,7 +234,6 @@ func (ctx *Router) getRoute(router *Router, method string, uri string, callback 
 	return &Route{
 		method:     strings.ToUpper(method),
 		path:       strings.Split(str.JoinPath(ctx.path, uri), "/"),
-		parameters: make(Parameters),
 		middleware: append(ctx.middleware, middleware...),
 		router:     router,
 		callback:   callback,

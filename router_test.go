@@ -162,10 +162,11 @@ func TestRouter(t *testing.T) {
 		testingRoute(t, router.web, router.MatchWebRoute(routeRequest("127.0.0.1:8080", "GET", "api/products/20")), 3, "GET", "api/products/{id}", 0)
 		testingRoute(t, router.web, router.MatchWebRoute(routeRequest("127.0.0.1:8080", "POST", "api/products/20")), 4, "POST", "api/products/{id}", 0)
 
-		route := router.MatchWebRoute(routeRequest("127.0.0.1:8080", "POST", "api/products/203"))
+		req := routeRequest("127.0.0.1:8080", "POST", "api/products/203")
+		_ = router.MatchWebRoute(req)
 
-		if route.Parameter("id") != "203" {
-			t.Fatalf("The route parameter is id is not %s but got %s", "203", route.Parameter("id"))
+		if req.Parameters.Get("id") != "203" {
+			t.Fatalf("The route parameter is id is not %s but got %s", "203", req.Parameters.Get("id"))
 		}
 	})
 
@@ -186,10 +187,11 @@ func TestRouter(t *testing.T) {
 		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "devices/R833WC0GL3CF")), 0, "GET", "devices/{device}", 0)
 		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "devices/R833WC0GL3CF/position")), 1, "GET", "devices/{device}/position", 0)
 
-		route := router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "devices/R833WC0GL3CF/position"))
+		req := routeRequest("127.0.0.1:8080", "GET", "devices/R833WC0GL3CF/position")
+		_ = router.MatchWsRoute(req)
 
-		if route.Parameter("device") != "R833WC0GL3CF" {
-			t.Fatalf("The route parameter is id is not %s but got %s", "1", route.Parameter("id"))
+		if req.Parameters.Get("device") != "R833WC0GL3CF" {
+			t.Fatalf("The route parameter is id is not %s but got %s", "1", req.Parameters.Get("device"))
 		}
 	})
 
@@ -222,10 +224,11 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("Expected route to be not when requesting route products/1 request comming from tracker.com")
 		}
 
-		route := router.MatchWebRoute(routeRequest("grpc.tracker.com", "GET", "/"))
+		req := routeRequest("grpc.tracker.com", "GET", "/")
+		_ = router.MatchWebRoute(req)
 
-		if route.Parameters().Get("company") != "grpc" {
-			t.Fatalf("Expected route parameter campany to be %s but got %s", "grpc", route.Parameters().Get("company"))
+		if req.Parameters.Get("company") != "grpc" {
+			t.Fatalf("Expected route parameter campany to be %s but got %s", "grpc", req.Parameters.Get("company"))
 		}
 	})
 
@@ -258,10 +261,11 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("Expected route to be not when requesting route products/1 request comming from tracker.com")
 		}
 
-		route := router.MatchWsRoute(routeRequest("grpc.tracker.com", "GET", "vehicles"))
+		req := routeRequest("grpc.tracker.com", "GET", "vehicles")
+		_ = router.MatchWsRoute(req)
 
-		if route.Parameters().Get("company") != "grpc" {
-			t.Fatalf("Expected route parameter campany to be %s but got %s", "grpc", route.Parameters().Get("company"))
+		if req.Parameters.Get("company") != "grpc" {
+			t.Fatalf("Expected route parameter campany to be %s but got %s", "grpc", req.Parameters.Get("company"))
 		}
 	})
 }
