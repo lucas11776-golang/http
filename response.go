@@ -190,6 +190,15 @@ func (ctx *Response) SetHeader(key string, value string) *Response {
 }
 
 // Comment
+func (ctx *Response) SetHeaders(headers types.Headers) *Response {
+	for k, v := range headers {
+		ctx.SetHeader(k, v)
+	}
+
+	return ctx
+}
+
+// Comment
 func (ctx *Response) GetHeader(key string) string {
 	header, ok := ctx.Header[cases.Title(language.English).String(key)]
 
@@ -245,10 +254,10 @@ func (ctx *Response) Redirect(path string) *Response {
 
 // Comment
 func (ctx *Response) Download(contentType string, filename string, binary []byte) *Response {
-	ctx.SetHeader("Content-Disposition", "attachment; filename=\""+filename+"\"").
-		SetHeader("Content-Type", contentType)
-
-	return ctx.SetBody(binary)
+	return ctx.SetHeaders(types.Headers{
+		"Content-Disposition": "attachment; filename=\"" + filename + "\"",
+		"Content-Type":        contentType}).
+		SetBody(binary)
 }
 
 // Comment
