@@ -50,7 +50,7 @@ func main() {
 To run the code, use the `go run` command, like:
 
 ```sh
-$ go run main.go
+go run main.go
 ```
 
 Then open your favorite browser and visit [`127.0.0.1:8080`](http://12.0.0.1:8080) you should see `Hello World`

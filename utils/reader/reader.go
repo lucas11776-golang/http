@@ -3,6 +3,8 @@ package reader
 import (
 	"io"
 	"io/fs"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/open2b/scriggo"
@@ -14,19 +16,19 @@ type TestingReader struct {
 	mutex sync.Mutex
 }
 
-type CacheReader interface {
+// TODO: Something feel wrong here...
+type Cache interface {
 	Open(name string) (fs.File, error)
-	Cache(name string) (scriggo.Files, error)
 	Write(name string, data []byte) error
 }
 
 // Comment
-func ReadCache(reader CacheReader, cache scriggo.Files, name string) (scriggo.Files, error) {
+func ReadCache(reader Cache, cache scriggo.Files, name string) (fs.File, error) {
 	if _, ok := cache[name]; ok {
-		return cache, nil
+		return cache.Open(name)
 	}
 
-	file, err := reader.Open(name)
+	file, err := os.Open(name)
 
 	if err != nil {
 		return nil, err
@@ -38,9 +40,9 @@ func ReadCache(reader CacheReader, cache scriggo.Files, name string) (scriggo.Fi
 		return nil, err
 	}
 
-	reader.Write(name, data)
+	reader.Write(strings.Trim(name, "/"), data)
 
-	return cache, nil
+	return cache.Open(strings.Trim(name, "/"))
 }
 
 // Comment
@@ -54,11 +56,6 @@ func NewTestingReader(files scriggo.Files) *TestingReader {
 // Comment
 func (ctx *TestingReader) Open(name string) (fs.File, error) {
 	return ctx.files.Open(name)
-}
-
-// Comment
-func (ctx *TestingReader) Cache(name string) (scriggo.Files, error) {
-	return ReadCache(ctx, ctx.cache, name)
 }
 
 // Comment

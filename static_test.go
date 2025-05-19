@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/lucas11776-golang/http/types"
-	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 )
 
@@ -76,11 +75,6 @@ type staticReaderTest struct {
 // Comment
 func (ctx *staticReaderTest) Open(name string) (fs.File, error) {
 	return staticReaderTestFS.Open(name)
-}
-
-// Comment
-func (ctx *staticReaderTest) Cache(name string) (scriggo.Files, error) {
-	return reader.ReadCache(ctx, ctx.cache, name)
 }
 
 // Comment

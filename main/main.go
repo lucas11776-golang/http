@@ -12,14 +12,25 @@ type User struct {
 	Email string `json:"email"`
 }
 
-func main() {
-	server := http.Server("127.0.0.1", 80)
+var Users = []User{
+	{
+		ID:    1,
+		Name:  "Jeo Doe",
+		Email: "jeo@deo.com",
+	},
+	{
+		ID:    2,
+		Name:  "Jane Doe",
+		Email: "jane@deo.com",
+	},
+}
 
-	server.Route().Subdomain("api", func(route *http.Router) {
-		route.Get("/", func(req *http.Request, res *http.Response) *http.Response {
-			return res.Json(map[string]string{
-				"company": req.Parameters.Get("company"),
-			})
+func main() {
+	server := http.Server("127.0.0.1", 9090).SetView("main/views", "html").SetStatic("main/static")
+
+	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {
+		return res.View("home", http.ViewData{
+			"users": &Users,
 		})
 	})
 

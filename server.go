@@ -143,17 +143,13 @@ func (ctx *HTTP) Route() *Router {
 }
 
 // Comment
-func (ctx *HTTP) SetView(views string, extension string) *HTTP {
-	ctx.Set("view", InitView(DefaultViewReader(views), extension))
-
-	return ctx
+func (ctx *HTTP) SetView(path string, extension string) *HTTP {
+	return ctx.Set("view", InitView(DefaultViewReader(path), extension))
 }
 
 // Comment
-func (ctx *HTTP) SetStatic(statics string) *HTTP {
-	ctx.Set("static", InitStatic(DefaultStaticReader(statics)))
-
-	return ctx
+func (ctx *HTTP) SetStatic(path string) *HTTP {
+	return ctx.Set("static", InitStatic(DefaultStaticReader(path)))
 }
 
 // Comment

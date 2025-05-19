@@ -16,32 +16,24 @@ import (
 )
 
 type Static struct {
-	fs reader.CacheReader
+	fs reader.Cache
 }
 
 type defaultStaticReader struct {
 	mutex sync.Mutex
 	dir   string
-	cache scriggo.Files
+	fs    scriggo.Files
 }
 
 // Comment
 func (ctx *defaultStaticReader) Open(name string) (fs.File, error) {
-	return os.Open(path.Path(ctx.dir, name))
-}
-
-// Comment
-func (ctx *defaultStaticReader) Cache(name string) (scriggo.Files, error) {
-	// TODO Should I set max cache size.
-	return reader.ReadCache(ctx, ctx.cache, name)
+	return reader.ReadCache(ctx, ctx.fs, fmt.Sprintf("%s/%s", strings.Trim("/", ctx.dir), strings.Trim("/", name)))
 }
 
 // Comment
 func (ctx *defaultStaticReader) Write(name string, data []byte) error {
 	ctx.mutex.Lock()
-
-	ctx.cache[name] = data
-
+	ctx.fs[name] = data
 	ctx.mutex.Unlock()
 
 	return nil
@@ -56,25 +48,20 @@ func DefaultStaticReader(dir string) *defaultStaticReader {
 	}
 
 	return &defaultStaticReader{
-		dir:   path.Path(wd, dir),
-		cache: make(scriggo.Files),
+		dir: path.Path(wd, dir),
+		fs:  make(scriggo.Files),
 	}
 }
 
 // Comment
-func InitStatic(fs reader.CacheReader) *Static {
+func InitStatic(fs reader.Cache) *Static {
 	return &Static{fs: fs}
 }
 
 // Comment
 func (ctx *Static) Read(name string) ([]byte, error) {
-	files, err := ctx.fs.Cache(name)
 
-	if err != nil {
-		return nil, err
-	}
-
-	file, err := files.Open(name)
+	file, err := ctx.fs.Open(name)
 
 	if err != nil {
 		return nil, err

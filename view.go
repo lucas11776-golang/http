@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -26,7 +27,7 @@ type defaultViewReader struct {
 }
 
 type View struct {
-	fs        reader.CacheReader
+	fs        reader.Cache
 	extension string
 }
 
@@ -48,13 +49,15 @@ func (ctx *viewWriter) Parsed() []byte {
 
 // Comment
 func (ctx *defaultViewReader) Open(name string) (fs.File, error) {
-	return os.Open(strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
+	// return os.Open(strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
+
+	return reader.ReadCache(ctx, ctx.cache, strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
 }
 
 // Comment
-func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
-	return reader.ReadCache(ctx, ctx.cache, name)
-}
+// func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
+// 	return reader.ReadCache(ctx, ctx.cache, name)
+// }
 
 // Comment
 func (ctx *defaultViewReader) Write(name string, data []byte) error {
@@ -79,7 +82,7 @@ func DefaultViewReader(views string) *defaultViewReader {
 }
 
 // Comment
-func InitView(fs reader.CacheReader, extension string) *View {
+func InitView(fs reader.Cache, extension string) *View {
 	return &View{
 		fs:        fs,
 		extension: extension,
@@ -94,15 +97,11 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		globals[key] = value
 	}
 
-	vw := strings.Join([]string{strings.ReplaceAll(view, ".", "/"), ctx.extension}, ".")
+	viewName := strings.Join([]string{strings.ReplaceAll(view, ".", "/"), ctx.extension}, ".")
 
-	views, err := ctx.fs.Cache(vw)
+	fmt.Println("\r\nVIEW NAME", viewName)
 
-	if err != nil {
-		return nil, err
-	}
-
-	template, err := scriggo.BuildTemplate(views, vw, &scriggo.BuildOptions{
+	template, err := scriggo.BuildTemplate(ctx.fs, viewName, &scriggo.BuildOptions{
 		Globals: globals,
 	})
 
@@ -119,6 +118,8 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
 
+// --------------------------------------------------------------------------------------------------------- //
+
 type ViewReaderTest struct {
 	mutex sync.Mutex
 	Files scriggo.Files
@@ -127,13 +128,14 @@ type ViewReaderTest struct {
 
 // Comment
 func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
+
 	return ctx.Files.Open(name)
 }
 
 // Comment
-func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
-	return reader.ReadCache(ctx, ctx.cache, name)
-}
+// func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
+// 	return reader.ReadCache(ctx, ctx.cache, name)
+// }
 
 // Comment
 func (ctx *ViewReaderTest) Write(name string, data []byte) error {
