@@ -27,7 +27,29 @@ type DefaultStaticReader struct {
 
 // Comment
 func (ctx *DefaultStaticReader) Open(name string) (fs.File, error) {
-	return ctx.fs.Open(strings.Split(name, "?")[0])
+	if file, err := ctx.files.Open(name); err == nil {
+		return file, nil
+	}
+
+	file, err := ctx.fs.Open(name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := io.ReadAll(file)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.mutex.Lock()
+
+	ctx.files[name] = data
+
+	ctx.mutex.Unlock()
+
+	return ctx.files.Open(name)
 }
 
 // Comment
