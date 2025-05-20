@@ -12,8 +12,16 @@ import (
 )
 
 func TestStatic(t *testing.T) {
-	static := InitStatic(&staticReaderTest{
-		cache: make(scriggo.Files),
+	var cssName = "assets/css/main.css"
+
+	var cssContent = strings.Join([]string{
+		"body { margin: 0px !important; padding: 0px !important; background-color: limegreen; }",
+	}, "\r\n")
+
+	static := InitStatic(&StaticReaderTest{
+		Files: scriggo.Files{
+			cssName: []byte(cssContent),
+		},
 	})
 
 	t.Run("TestGetStyles", func(t *testing.T) {
@@ -28,7 +36,7 @@ func TestStatic(t *testing.T) {
 		}
 	})
 
-	t.Run("TestHandle request", func(t *testing.T) {
+	t.Run("TestHandleRequest", func(t *testing.T) {
 		request, err := NewRequest("GET", cssName, "HTTP/1.1", types.Headers{"Accept": "text/css"}, strings.NewReader(""))
 
 		if err != nil {
@@ -57,31 +65,21 @@ func TestStatic(t *testing.T) {
 	})
 }
 
-var cssName = "assets/css/main.css"
-
-var cssContent = strings.Join([]string{
-	"body { margin: 0px !important; padding: 0px !important; background-color: limegreen; }",
-}, "\r\n")
-
-var staticReaderTestFS = scriggo.Files{
-	cssName: []byte(cssContent),
-}
-
-type staticReaderTest struct {
+type StaticReaderTest struct {
 	mutex sync.Mutex
-	cache scriggo.Files
+	Files scriggo.Files
 }
 
 // Comment
-func (ctx *staticReaderTest) Open(name string) (fs.File, error) {
-	return staticReaderTestFS.Open(name)
+func (ctx *StaticReaderTest) Open(name string) (fs.File, error) {
+	return ctx.Files.Open(name)
 }
 
 // Comment
-func (ctx *staticReaderTest) Write(name string, data []byte) error {
+func (ctx *StaticReaderTest) Write(name string, data []byte) error {
 	ctx.mutex.Lock()
 
-	ctx.cache[name] = data
+	ctx.Files[name] = data
 
 	ctx.mutex.Unlock()
 

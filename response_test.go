@@ -58,7 +58,6 @@ func TestResponse(t *testing.T) {
 	})
 
 	t.Run("TestResponseHtml", func(t *testing.T) {
-
 		tBody := strings.Join([]string{
 			`<!DOCTYPE html>`,
 			`<head>`,

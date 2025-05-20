@@ -8,9 +8,11 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/lucas11776-golang/http/utils/extensions"
 	"github.com/lucas11776-golang/http/utils/path"
+	"github.com/open2b/scriggo"
 )
 
 type Static struct {
@@ -18,7 +20,9 @@ type Static struct {
 }
 
 type DefaultStaticReader struct {
-	fs fs.FS
+	fs    fs.FS
+	files scriggo.Files
+	mutex sync.Mutex
 }
 
 // Comment
@@ -35,13 +39,16 @@ func NewDefaultStaticReader(dir string) *DefaultStaticReader {
 	}
 
 	return &DefaultStaticReader{
-		fs: os.DirFS(path.Path(wd, dir)),
+		fs:    os.DirFS(path.Path(wd, dir)),
+		files: make(scriggo.Files),
 	}
 }
 
 // Comment
 func InitStatic(fs fs.FS) *Static {
-	return &Static{fs: fs}
+	return &Static{
+		fs: fs,
+	}
 }
 
 // Comment

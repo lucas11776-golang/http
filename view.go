@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/open2b/scriggo"
@@ -23,6 +24,7 @@ type DefaultViewReader struct {
 	extension string
 	files     scriggo.Files
 	fs        fs.FS
+	mutex     sync.Mutex
 }
 
 type View struct {
@@ -63,7 +65,11 @@ func (ctx *DefaultViewReader) Open(name string) (fs.File, error) {
 		return nil, err
 	}
 
+	ctx.mutex.Lock()
+
 	ctx.files[path.FileRealPath(name, ctx.extension)] = data
+
+	ctx.mutex.Unlock()
 
 	return ctx.files.Open(path.FileRealPath(name, ctx.extension))
 }
