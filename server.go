@@ -144,12 +144,12 @@ func (ctx *HTTP) Route() *Router {
 
 // Comment
 func (ctx *HTTP) SetView(path string, extension string) *HTTP {
-	return ctx.Set("view", InitView(DefaultViewReader(path), extension))
+	return ctx.Set("view", NewView(NewDefaultViewReader(path, "html")))
 }
 
 // Comment
 func (ctx *HTTP) SetStatic(path string) *HTTP {
-	return ctx.Set("static", InitStatic(DefaultStaticReader(path)))
+	return ctx.Set("static", InitStatic(NewDefaultStaticReader(path)))
 }
 
 // Comment

@@ -1,19 +1,27 @@
 package http
 
 import (
+	"io/fs"
 	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/open2b/scriggo"
 )
 
 func TestView(t *testing.T) {
-	view := InitView(viewReaderTest, "html")
-
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)
+		view := NewView(&ViewReaderTest{
+			Ext: "html",
+			Files: scriggo.Files{
+				"simple.html": []byte(strings.Join([]string{
+					`<h1>Hello World: {{ world }}</h1>`,
+				}, "\r\n")),
+			},
+		})
 
 		data, err := view.Read("simple", ViewData{
 			"world": world,
@@ -31,6 +39,15 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestIfElse", func(t *testing.T) {
+		view := NewView(&ViewReaderTest{
+			Ext: "html",
+			Files: scriggo.Files{
+				"if.html": []byte(strings.Join([]string{
+					`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
+				}, "\r\n")),
+			},
+		})
+
 		data, err := view.Read("if", ViewData{
 			"age": 17,
 		})
@@ -75,6 +92,15 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestFor", func(t *testing.T) {
+		view := NewView(&ViewReaderTest{
+			Ext: "html",
+			Files: scriggo.Files{
+				"for.html": []byte(strings.Join([]string{
+					`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
+				}, "\r\n")),
+			},
+		})
+
 		cities := []string{"Pretoria", "New York", "Cape Town"}
 
 		data, err := view.Read("for", ViewData{
@@ -99,6 +125,15 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestSwitch", func(t *testing.T) {
+		view := NewView(&ViewReaderTest{
+			Ext: "html",
+			Files: scriggo.Files{
+				"switch.html": []byte(strings.Join([]string{
+					`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
+				}, "\r\n")),
+			},
+		})
+
 		data, err := view.Read("switch", ViewData{
 			"role": "guest",
 		})
@@ -129,6 +164,15 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestSubDirectoryView", func(t *testing.T) {
+		view := NewView(&ViewReaderTest{
+			Ext: "html",
+			Files: scriggo.Files{
+				"authentication/login.html": []byte(strings.Join([]string{
+					"<h1>Login page</h1>",
+				}, "\r\n")),
+			},
+		})
+
 		data, err := view.Read("authentication.login", ViewData{})
 
 		if err != nil {
@@ -143,23 +187,22 @@ func TestView(t *testing.T) {
 	})
 }
 
-var viewReaderTest = &ViewReaderTest{
-	Files: scriggo.Files{
-		"simple.html": []byte(strings.Join([]string{
-			`<h1>Hello World: {{ world }}</h1>`,
-		}, "\r\n")),
-		"for.html": []byte(strings.Join([]string{
-			`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
-		}, "\r\n")),
-		"if.html": []byte(strings.Join([]string{
-			`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
-		}, "\r\n")),
-		"switch.html": []byte(strings.Join([]string{
-			`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
-		}, "\r\n")),
-		"authentication/login.html": []byte(strings.Join([]string{
-			"<h1>Login page</h1>",
-		}, "\r\n")),
-	},
-	cache: make(scriggo.Files),
+type ViewReaderTest struct {
+	Ext   string
+	Files scriggo.Files
+}
+
+// Commet
+func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
+	return ctx.Files.Open(path.FileRealPath(name, ctx.Ext))
+}
+
+// Commet
+func (ctx *ViewReaderTest) Dir() string {
+	return ""
+}
+
+// Commet
+func (ctx *ViewReaderTest) Extension() string {
+	return ""
 }

@@ -12,20 +12,21 @@ type User struct {
 	Email string `json:"email"`
 }
 
-var Users = []User{
-	{
-		ID:    1,
-		Name:  "Jeo Doe",
-		Email: "jeo@deo.com",
-	},
-	{
-		ID:    2,
-		Name:  "Jane Doe",
-		Email: "jane@deo.com",
-	},
-}
-
 func main() {
+
+	var Users = []User{
+		{
+			ID:    1,
+			Name:  "Jeo Doe",
+			Email: "jeo@deo.com",
+		},
+		{
+			ID:    2,
+			Name:  "Jane Doe",
+			Email: "jane@deo.com",
+		},
+	}
+
 	server := http.Server("127.0.0.1", 9090).SetView("main/views", "html").SetStatic("main/static")
 
 	server.Route().Get("/", func(req *http.Request, res *http.Response) *http.Response {

@@ -1,34 +1,32 @@
 package http
 
 import (
-	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/lucas11776-golang/http/utils/path"
-	"github.com/lucas11776-golang/http/utils/reader"
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
 )
 
 type ViewData map[string]interface{}
 
-type viewWriter struct {
+type ViewWriter struct {
 	parsed []byte
 }
 
-type defaultViewReader struct {
-	dir   string
-	cache scriggo.Files
-	mutex sync.Mutex
+type DefaultViewReader struct {
+	dir       string
+	extension string
+	files     scriggo.Files
+	fs        fs.FS
 }
 
 type View struct {
-	fs        reader.Cache
-	extension string
+	fs fs.FS
 }
 
 type ViewInterface interface {
@@ -36,56 +34,60 @@ type ViewInterface interface {
 }
 
 // Comment
-func (ctx *viewWriter) Write(p []byte) (n int, err error) {
+func (ctx *ViewWriter) Write(p []byte) (n int, err error) {
 	ctx.parsed = append(ctx.parsed, p...)
 
 	return len(ctx.parsed), nil
 }
 
 // Comment
-func (ctx *viewWriter) Parsed() []byte {
+func (ctx *ViewWriter) Parsed() []byte {
 	return ctx.parsed
 }
 
 // Comment
-func (ctx *defaultViewReader) Open(name string) (fs.File, error) {
-	// return os.Open(strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
+func (ctx *DefaultViewReader) Open(name string) (fs.File, error) {
+	if file, err := ctx.files.Open(path.FileRealPath(name, ctx.extension)); err == nil {
+		return file, nil
+	}
 
-	return reader.ReadCache(ctx, ctx.cache, strings.ReplaceAll(path.Path(ctx.dir, name), "\\", "/"))
+	file, err := ctx.fs.Open(path.FileRealPath(name, ctx.extension))
+
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := io.ReadAll(file)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ctx.files[path.FileRealPath(name, ctx.extension)] = data
+
+	return ctx.files.Open(path.FileRealPath(name, ctx.extension))
 }
 
 // Comment
-// func (ctx *defaultViewReader) Cache(name string) (scriggo.Files, error) {
-// 	return reader.ReadCache(ctx, ctx.cache, name)
-// }
-
-// Comment
-func (ctx *defaultViewReader) Write(name string, data []byte) error {
-	ctx.mutex.Lock()
-	ctx.cache[name] = data
-	ctx.mutex.Unlock()
-	return nil
-}
-
-// Comment
-func DefaultViewReader(views string) *defaultViewReader {
+func NewDefaultViewReader(views string, extension string) *DefaultViewReader {
 	wd, err := os.Getwd()
 
 	if err != nil {
 		log.Fatalf("Failed to get current working dir in view reader: %s", err.Error())
 	}
 
-	return &defaultViewReader{
-		dir:   path.Path(wd, views),
-		cache: make(scriggo.Files),
+	return &DefaultViewReader{
+		dir:       path.Path(wd, views),
+		extension: extension,
+		files:     make(scriggo.Files),
+		fs:        os.DirFS(views),
 	}
 }
 
 // Comment
-func InitView(fs reader.Cache, extension string) *View {
+func NewView(fs fs.FS) *View {
 	return &View{
-		fs:        fs,
-		extension: extension,
+		fs: fs,
 	}
 }
 
@@ -97,11 +99,7 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		globals[key] = value
 	}
 
-	viewName := strings.Join([]string{strings.ReplaceAll(view, ".", "/"), ctx.extension}, ".")
-
-	fmt.Println("\r\nVIEW NAME", viewName)
-
-	template, err := scriggo.BuildTemplate(ctx.fs, viewName, &scriggo.BuildOptions{
+	template, err := scriggo.BuildTemplate(ctx.fs, view, &scriggo.BuildOptions{
 		Globals: globals,
 	})
 
@@ -109,38 +107,11 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		return nil, err
 	}
 
-	writer := viewWriter{}
+	writer := ViewWriter{}
 
 	if err := template.Run(&writer, nil, nil); err != nil {
 		return nil, err
 	}
 
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
-}
-
-// --------------------------------------------------------------------------------------------------------- //
-
-type ViewReaderTest struct {
-	mutex sync.Mutex
-	Files scriggo.Files
-	cache scriggo.Files
-}
-
-// Comment
-func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
-
-	return ctx.Files.Open(name)
-}
-
-// Comment
-// func (ctx *ViewReaderTest) Cache(name string) (scriggo.Files, error) {
-// 	return reader.ReadCache(ctx, ctx.cache, name)
-// }
-
-// Comment
-func (ctx *ViewReaderTest) Write(name string, data []byte) error {
-	ctx.mutex.Lock()
-	ctx.cache[name] = data
-	ctx.mutex.Unlock()
-	return nil
 }
