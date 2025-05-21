@@ -6,6 +6,3 @@
 
 # Cache
 - Must have resource cache timeout/expire
-
-# View 
-- import, render, layout - not working with view dir.

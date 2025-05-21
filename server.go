@@ -144,7 +144,7 @@ func (ctx *HTTP) Route() *Router {
 
 // Comment
 func (ctx *HTTP) SetView(path string, extension string) *HTTP {
-	return ctx.Set("view", NewView(NewDefaultViewReader(path, "html")))
+	return ctx.Set("view", NewView(NewDefaultViewReader(path), extension))
 }
 
 // Comment

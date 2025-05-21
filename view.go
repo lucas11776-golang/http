@@ -1,12 +1,9 @@
 package http
 
 import (
-	"io"
 	"io/fs"
-	"log"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/open2b/scriggo"
@@ -19,16 +16,9 @@ type ViewWriter struct {
 	parsed []byte
 }
 
-type DefaultViewReader struct {
-	dir       string
-	extension string
-	files     scriggo.Files
-	fs        fs.FS
-	mutex     sync.Mutex
-}
-
 type View struct {
-	fs fs.FS
+	fs        fs.FS
+	extension string
 }
 
 type ViewInterface interface {
@@ -47,54 +37,32 @@ func (ctx *ViewWriter) Parsed() []byte {
 	return ctx.parsed
 }
 
-// Comment
-func (ctx *DefaultViewReader) Open(name string) (fs.File, error) {
-	if file, err := ctx.files.Open(path.FileRealPath(name, ctx.extension)); err == nil {
-		return file, nil
-	}
-
-	file, err := ctx.fs.Open(path.FileRealPath(name, ctx.extension))
-
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := io.ReadAll(file)
-
-	if err != nil {
-		return nil, err
-	}
-
-	ctx.mutex.Lock()
-
-	ctx.files[path.FileRealPath(name, ctx.extension)] = data
-
-	ctx.mutex.Unlock()
-
-	return ctx.files.Open(path.FileRealPath(name, ctx.extension))
+type DefaultViewReader struct {
+	fs.FS
 }
 
 // Comment
-func NewDefaultViewReader(views string, extension string) *DefaultViewReader {
+func NewDefaultViewReader(views string) fs.FS {
 	wd, err := os.Getwd()
 
 	if err != nil {
-		log.Fatalf("Failed to get current working dir in view reader: %s", err.Error())
+		panic(err)
 	}
 
-	return &DefaultViewReader{
-		dir:       path.Path(wd, views),
+	return &DefaultViewReader{os.DirFS(path.Path(wd, views))}
+}
+
+// Comment
+func NewView(fs fs.FS, extension string) *View {
+	return &View{
+		fs:        fs,
 		extension: extension,
-		files:     make(scriggo.Files),
-		fs:        os.DirFS(views),
 	}
 }
 
 // Comment
-func NewView(fs fs.FS) *View {
-	return &View{
-		fs: fs,
-	}
+func (ctx *View) buildTemplate(view string, options *scriggo.BuildOptions) (*scriggo.Template, error) {
+	return scriggo.BuildTemplate(ctx.fs, path.FileRealPath(view, ctx.extension), options)
 }
 
 // Comment
@@ -105,17 +73,15 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		globals[key] = value
 	}
 
-	template, err := scriggo.BuildTemplate(ctx.fs, view, &scriggo.BuildOptions{
-		Globals: globals,
-	})
+	template, err := ctx.buildTemplate(view, &scriggo.BuildOptions{Globals: globals})
 
 	if err != nil {
 		return nil, err
 	}
 
-	writer := ViewWriter{}
+	writer := &ViewWriter{}
 
-	if err := template.Run(&writer, nil, nil); err != nil {
+	if err := template.Run(writer, nil, nil); err != nil {
 		return nil, err
 	}
 

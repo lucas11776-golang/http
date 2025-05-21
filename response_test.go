@@ -195,7 +195,6 @@ func TestResponse(t *testing.T) {
 		}, "\r\n"))
 
 		var responseViewTest = &ViewReaderTest{
-			Ext:   "html",
 			Files: scriggo.Files{"home.html": tBody},
 		}
 
@@ -207,7 +206,7 @@ func TestResponse(t *testing.T) {
 
 		res.Request = req
 
-		vw := NewView(responseViewTest)
+		vw := NewView(responseViewTest, "html")
 
 		res.Request.Server = Server("127.0.0.1", 0)
 
