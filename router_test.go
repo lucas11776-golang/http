@@ -268,4 +268,31 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("Expected route parameter campany to be %s but got %s", "grpc", req.Parameters.Get("company"))
 		}
 	})
+
+	t.Run("TestCallback", func(t *testing.T) {
+		router := &RouterGroup{}
+
+		router.Router().Callback(func(route *Router) {
+			router.Router().Group("api", func(router *Router) {
+				router.Group("products", func(router *Router) {
+					router.Get("/", func(req *Request, res *Response) *Response {
+						return res
+					})
+				})
+			})
+			router.Router().Group("chats", func(route *Router) {
+				route.Ws("{id}", func(req *Request, ws *Ws) {
+					ws.OnReady(func(ws *Ws) {
+						// Emit location logic...
+					})
+				})
+			})
+
+		})
+
+		// Web Route Test
+		testingRoute(t, router.web, router.MatchWebRoute(routeRequest("127.0.0.1:8080", "GET", "api/products")), 0, "GET", "api/products", 0)
+		// WebSocket  Route Test
+		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "chats/c-43gpdmwr")), 0, "GET", "chats/{id}", 0)
+	})
 }

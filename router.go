@@ -254,6 +254,10 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback, middle
 	return route
 }
 
+func (ctx *Router) Callback(group GroupCallback) {
+	group(ctx)
+}
+
 // Comment
 func (ctx *Router) Subdomain(subdomain string, group GroupCallback, middleware ...Middleware) {
 	group(&Router{
