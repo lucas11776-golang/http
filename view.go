@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lucas11776-golang/http/utils/helper"
 	"github.com/lucas11776-golang/http/utils/path"
 	"github.com/open2b/scriggo"
 	"github.com/open2b/scriggo/native"
@@ -66,8 +67,17 @@ func (ctx *View) buildTemplate(view string, options *scriggo.BuildOptions) (*scr
 }
 
 // Comment
+func viewDeclarationsWithHelpers() native.Declarations {
+	return native.Declarations{
+		"url":       helper.Url,
+		"subdomain": helper.Subdomain,
+		"format":    helper.Format,
+	}
+}
+
+// Comment
 func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
-	globals := native.Declarations{}
+	globals := viewDeclarationsWithHelpers()
 
 	for key, value := range data {
 		globals[key] = value
@@ -85,5 +95,6 @@ func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
 		return nil, err
 	}
 
+	// TODO: Find out what is this for (\r\n\r\n)
 	return []byte(strings.ReplaceAll(string(writer.parsed), "\r\n\r\n", "\r\n")), nil
 }
