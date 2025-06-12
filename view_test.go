@@ -23,7 +23,7 @@ func TestView(t *testing.T) {
 
 		data, err := view.Read("simple", ViewData{
 			"world": world,
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -47,7 +47,7 @@ func TestView(t *testing.T) {
 
 		data, err := view.Read("if", ViewData{
 			"age": 17,
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -61,7 +61,7 @@ func TestView(t *testing.T) {
 
 		data, err = view.Read("if", ViewData{
 			"age": 18,
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -75,7 +75,7 @@ func TestView(t *testing.T) {
 
 		data, err = view.Read("if", ViewData{
 			"age": 21,
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -101,7 +101,7 @@ func TestView(t *testing.T) {
 
 		data, err := view.Read("for", ViewData{
 			"cities": &cities,
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -131,7 +131,7 @@ func TestView(t *testing.T) {
 
 		data, err := view.Read("switch", ViewData{
 			"role": "guest",
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -145,7 +145,7 @@ func TestView(t *testing.T) {
 
 		data, err = view.Read("switch", ViewData{
 			"role": "user",
-		})
+		}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())
@@ -167,7 +167,7 @@ func TestView(t *testing.T) {
 			},
 		}, "html")
 
-		data, err := view.Read("authentication.login", ViewData{})
+		data, err := view.Read("authentication.login", ViewData{}, nil)
 
 		if err != nil {
 			t.Fatalf("Failed to parse view: %s", err.Error())

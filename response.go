@@ -267,7 +267,10 @@ func (ctx *Response) View(view string, data ViewData) *Response {
 		Data: data,
 	}
 
-	html, err := ctx.Request.Server.Get("view").(*View).Read(ctx.Bag.View.Name, ctx.Bag.View.Data)
+	html, err := ctx.Request.
+		Server.
+		Get("view").(*View).
+		Read(ctx.Bag.View.Name, ctx.Bag.View.Data, ctx.Request)
 
 	if err != nil {
 		return ctx.SetStatus(HTTP_RESPONSE_INTERNAL_SERVER_ERROR).Html(err.Error())

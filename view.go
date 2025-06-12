@@ -76,7 +76,7 @@ func viewDeclarationsWithHelpers() native.Declarations {
 }
 
 // Comment
-func (ctx *View) Read(view string, data ViewData) ([]byte, error) {
+func (ctx *View) Read(view string, data ViewData, request *Request) ([]byte, error) {
 	globals := viewDeclarationsWithHelpers()
 
 	for key, value := range data {
