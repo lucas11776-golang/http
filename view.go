@@ -67,17 +67,22 @@ func (ctx *View) buildTemplate(view string, options *scriggo.BuildOptions) (*scr
 }
 
 // Comment
-func viewDeclarationsWithHelpers() native.Declarations {
+func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 	return native.Declarations{
 		"url":       helper.Url,
 		"subdomain": helper.Subdomain,
 		"format":    helper.Format,
+		"session":   SessionValue(req),
+		"has":       SessionHas(req),
+		"error":     SessionError(req),
+		"errors":    SessionErrors(req),
+		"csrf":      SessionCsrf(req),
 	}
 }
 
 // Comment
-func (ctx *View) Read(view string, data ViewData, request *Request) ([]byte, error) {
-	globals := viewDeclarationsWithHelpers()
+func (ctx *View) Read(view string, data ViewData, req *Request) ([]byte, error) {
+	globals := viewDeclarationsWithHelpers(req)
 
 	for key, value := range data {
 		globals[key] = value

@@ -2,30 +2,41 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
+
+	str "strings"
 
 	"github.com/gorilla/sessions"
+	"github.com/lucas11776-golang/http/utils/strings"
+	"github.com/spf13/cast"
 )
 
 const SESSION_DEFAULT_EXPIRE = (60 * 60) * 24
 
-type Errors map[string]string
+type SessionErrorsBag map[string]string
 
 // TODO: temp session remove for better version.
 const (
-	ERROR_KEY_STORE   = "__ERROR__STORE__"
-	ERROR_KEY_REQUEST = "__ERROR__REQUEST__"
+	ERROR_KEY_STORE_KEY   = "__ERROR__STORE__"
+	ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__"
+	CSFR_KEY              = "__CSRF__"
+	CSRF_INPUT_NAME       = "CSRF_TOKEN"
 )
 
 type SessionManager interface {
-	Set(key string, value string) SessionManager
+	Set(key string, value interface{}) SessionManager
 	Get(key string) string
 	Clear() SessionManager
 	Path(path string) SessionManager
 	Remove(key string) SessionManager
 	CanSave() bool
 	Save() SessionManager
-	SetError(value string, error string) SessionManager
-	Error(value string) string
+	SetError(key string, value string) SessionManager
+	SetErrors(errors SessionErrorsBag) SessionManager
+	Errors() SessionErrorsBag
+	Error(key string) string
+	Csrf() string
 }
 
 type SessionsManager interface {
@@ -59,11 +70,57 @@ func InitSession(name string, key []byte) *Sessions {
 	return &Sessions{name: name, store: s}
 }
 
+func (ctx *Session) newCsrf() *Session {
+	ctx.session.Values[CSFR_KEY] = fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50))
+
+	ctx.save = true
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) initCsrf() *Session {
+	csrf, ok := ctx.session.Values[CSFR_KEY].(string)
+
+	if !ok {
+		return ctx.newCsrf()
+	}
+
+	token := str.Split(csrf, "-")
+
+	if len(token) != 2 {
+		return ctx.newCsrf()
+	}
+
+	if t := cast.ToInt64(token[0]); t == 0 || time.Now().Unix() > t {
+		return ctx.newCsrf()
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) initErrors() *Session {
+	data, ok := ctx.session.Values[ERROR_KEY_STORE_KEY].(string)
+
+	if !ok {
+		data = ""
+	}
+
+	errs := make(SessionErrorsBag)
+
+	json.Unmarshal([]byte(data), &errs)
+
+	ctx.session.Values[ERROR_KEY_REQUEST_KEY] = errs
+
+	return ctx
+}
+
 // Comment
 func (ctx *Sessions) Session(req *Request) SessionManager {
 	session, _ := ctx.store.Get(req.Request, ctx.name)
 
-	return (&Session{session: session, request: req}).decodeErrors()
+	return (&Session{session: session, request: req}).initCsrf().initErrors()
 }
 
 // Comment
@@ -115,8 +172,8 @@ func (ctx *Session) Path(path string) SessionManager {
 type SessionBag map[string]interface{}
 
 // Comment
-func (ctx *Session) Set(key string, value string) SessionManager {
-	ctx.session.Values[key] = value
+func (ctx *Session) Set(key string, value interface{}) SessionManager {
+	ctx.session.Values[key] = cast.ToString(value)
 
 	ctx.save = true
 
@@ -161,28 +218,11 @@ func (ctx *Session) CanSave() bool {
 
 // Comment
 func (ctx *Session) stringflyErrors() *Session {
-	errors, _ := json.Marshal(ctx.session.Values[ERROR_KEY_STORE])
+	errors, _ := json.Marshal(ctx.session.Values[ERROR_KEY_STORE_KEY])
 
-	ctx.session.Values[ERROR_KEY_STORE] = string(errors)
+	ctx.session.Values[ERROR_KEY_STORE_KEY] = string(errors)
 
-	delete(ctx.session.Values, ERROR_KEY_REQUEST)
-
-	return ctx
-}
-
-// Comment
-func (ctx *Session) decodeErrors() *Session {
-	data, ok := ctx.session.Values[ERROR_KEY_STORE].(string)
-
-	if !ok {
-		data = ""
-	}
-
-	errs := make(Errors)
-
-	json.Unmarshal([]byte(data), &errs)
-
-	ctx.session.Values[ERROR_KEY_REQUEST] = errs
+	delete(ctx.session.Values, ERROR_KEY_REQUEST_KEY)
 
 	return ctx
 }
@@ -197,12 +237,12 @@ func (ctx *Session) Save() SessionManager {
 }
 
 // Comment
-func (ctx *Session) SetError(key string, err string) SessionManager {
-	if _, ok := ctx.session.Values[ERROR_KEY_STORE]; !ok {
-		ctx.session.Values[ERROR_KEY_STORE] = make(Errors)
+func (ctx *Session) SetError(key string, value string) SessionManager {
+	if _, ok := ctx.session.Values[ERROR_KEY_STORE_KEY]; !ok {
+		ctx.session.Values[ERROR_KEY_STORE_KEY] = make(SessionErrorsBag)
 	}
 
-	ctx.session.Values[ERROR_KEY_STORE].(Errors)[key] = err
+	ctx.session.Values[ERROR_KEY_STORE_KEY].(SessionErrorsBag)[key] = value
 
 	ctx.save = true
 
@@ -210,12 +250,78 @@ func (ctx *Session) SetError(key string, err string) SessionManager {
 }
 
 // Comment
-func (ctx *Session) Error(value string) string {
-	err, ok := ctx.session.Values[ERROR_KEY_REQUEST].(Errors)[value]
+func (ctx *Session) SetErrors(errors SessionErrorsBag) SessionManager {
+	for k, v := range errors {
+		ctx.SetError(k, v)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) Errors() SessionErrorsBag {
+	return ctx.session.Values[ERROR_KEY_REQUEST_KEY].(SessionErrorsBag)
+}
+
+// Comment
+func (ctx *Session) Error(key string) string {
+	err, ok := ctx.session.Values[ERROR_KEY_REQUEST_KEY].(SessionErrorsBag)[key]
 
 	if !ok {
 		return ""
 	}
 
 	return err
+}
+
+// Comment
+func (ctx *Session) Csrf() string {
+	csrf, ok := ctx.session.Values[CSFR_KEY].(string)
+
+	if !ok {
+		return ""
+	}
+
+	token := str.Split(csrf, "-")
+
+	if len(token) != 2 {
+		return ""
+	}
+
+	return fmt.Sprintf(`<input name="%s" value="%s">`, CSRF_INPUT_NAME, token[1])
+}
+
+// Comment
+func SessionValue(req *Request) func(key string) string {
+	return func(key string) string {
+		return req.Session.Get(key)
+	}
+}
+
+// Comment
+func SessionHas(req *Request) func(key string) bool {
+	return func(key string) bool {
+		return req.Session.Error(key) != ""
+	}
+}
+
+// Comment
+func SessionError(req *Request) func(key string) string {
+	return func(key string) string {
+		return req.Session.Error(key)
+	}
+}
+
+// Comment
+func SessionErrors(req *Request) func() SessionErrorsBag {
+	return func() SessionErrorsBag {
+		return req.Session.Errors()
+	}
+}
+
+// Comment
+func SessionCsrf(req *Request) func() string {
+	return func() string {
+		return req.Session.Csrf()
+	}
 }

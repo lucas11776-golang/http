@@ -10,6 +10,7 @@ import (
 
 	"github.com/lucas11776-golang/http/types"
 	str "github.com/lucas11776-golang/http/utils/strings"
+	"github.com/spf13/cast"
 )
 
 func TestSession(t *testing.T) {
@@ -222,10 +223,10 @@ func TestSession(t *testing.T) {
 
 		session := sessions.Session(req)
 
-		emailNameError := "The email is required"
-		passwordNameError := "The password is required"
+		emailError := "The email is required"
+		passwordError := "The password is required"
 
-		session.SetError("email", emailNameError).SetError("password", passwordNameError)
+		session.SetError("email", emailError).SetError("password", passwordError)
 
 		session.Save() // SAVING SESSION
 
@@ -248,12 +249,22 @@ func TestSession(t *testing.T) {
 
 		session = sessions.Session(req)
 
-		if session.Error("email") != emailNameError {
-			t.Fatalf("Expected email error to be (%s) but got (%s)", emailNameError, session.Error("email"))
+		if session.Error("email") != emailError {
+			t.Fatalf("Expected email error to be (%s) but got (%s)", emailError, session.Error("email"))
 		}
 
-		if session.Error("password") != passwordNameError {
-			t.Fatalf("Expected email error to be (%s) but got (%s)", passwordNameError, session.Error("password"))
+		if session.Error("password") != passwordError {
+			t.Fatalf("Expected password error to be (%s) but got (%s)", passwordError, session.Error("password"))
+		}
+
+		errors := session.Errors()
+
+		if err := errors["email"]; err != emailError {
+			t.Fatalf("Expected email error to be (%s) but got (%s)", err, err)
+		}
+
+		if err := errors["password"]; err != passwordError {
+			t.Fatalf("Expected password error to be (%s) but got (%s)", err, err)
 		}
 
 		session.Save() // SAVING SESSION
@@ -284,5 +295,123 @@ func TestSession(t *testing.T) {
 		if session.Error("password") != "" {
 			t.Fatalf("Expected email error to be empty but got (%s)", session.Error("password"))
 		}
+
+	})
+
+	t.Run("TestSessionManagerCsrf", func(t *testing.T) {
+		sessions := InitSession("session", []byte(str.Random(10)))
+
+		req, err := NewRequest("POST", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		// First Request
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		session := sessions.Session(req)
+
+		session.Save() // SAVING SESSION
+
+		// Second Request
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers := types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Session = sessions.Session(req)
+
+		if session.Csrf() == "" {
+			t.Fatalf("Expected csrf to not be empty.")
+		}
+	})
+
+	t.Run("TestSessionManagerHelperFunctions", func(t *testing.T) {
+		userID := rand.Int()
+		sessions := InitSession("session", []byte(str.Random(10)))
+
+		req, err := NewRequest("POST", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		// First Request
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		session := sessions.Session(req)
+
+		firstNameError := "The first name is required"
+
+		session.SetError("first_name", firstNameError).Set("user_id", userID)
+
+		session.Save() // SAVING SESSION
+
+		// Second Request
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers := types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Session = sessions.Session(req)
+
+		// Function - Has
+		if !SessionHas(req)("first_name") {
+			t.Fatalf("Expected session to have first_name error.")
+		}
+
+		if SessionHas(req)("email") {
+			t.Fatalf("Expected session to not have email error.")
+		}
+
+		// Function - Error
+		if err := SessionError(req)("first_name"); err != firstNameError {
+			t.Fatalf("Expected first name error to be (%s) but got (%s).", firstNameError, err)
+		}
+
+		if err := SessionError(req)("email"); err != "" {
+			t.Fatalf("Expected email error to be empty but got (%s).", err)
+		}
+
+		// Function - Error
+		errors := SessionErrors(req)()
+
+		if err := errors["first_name"]; err == "" {
+			t.Fatalf("Expected first name error to be (%s) but got (%s),", err, firstNameError)
+		}
+
+		if err := errors["password"]; err != "" {
+			t.Fatalf("Expected email error to be empty but got (%s).", err)
+		}
+
+		// Function - Session
+		if id := SessionValue(req)("user_id"); id != cast.ToString(userID) {
+			t.Fatalf("Expected session user id to be (%s) but got (%s).", cast.ToString(userID), id)
+		}
+
+		// Function - Csrf
+		if SessionCsrf(req)() == "" {
+			t.Fatalf("Expected csrf not to be empty.")
+		}
+
 	})
 }

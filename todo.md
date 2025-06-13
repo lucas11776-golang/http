@@ -5,4 +5,7 @@
 - Maybe/Should add GraphQL route.
 
 # Cache
-- Must have resource cache timeout/expire
+- Must have resource cache timeout/expire.
+
+# CSRF
+- Must add cross site request forgery.

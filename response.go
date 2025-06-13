@@ -210,6 +210,24 @@ func (ctx *Response) GetHeader(key string) string {
 }
 
 // Comment
+func (ctx *Response) WithError(key string, value string) *Response {
+	if ctx.Session != nil {
+		ctx.Session.SetError(key, value)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) WithErrors(errors SessionErrorsBag) *Response {
+	if ctx.Session != nil {
+		ctx.Session.SetErrors(errors)
+	}
+
+	return ctx
+}
+
+// Comment
 func (ctx *Response) SetBody(body []byte) *Response {
 	ctx.Body = &ResponseBodyReader{Reader: bytes.NewReader(body)}
 

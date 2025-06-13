@@ -20,3 +20,8 @@ func Redirect(to string) string {
 func ServerError() string {
 	return ""
 }
+
+// Comment
+func CsrfExpired() string {
+	return "<h1>Request token has expired refresh page</h1>"
+}
