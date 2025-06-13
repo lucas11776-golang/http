@@ -177,4 +177,112 @@ func TestSession(t *testing.T) {
 			t.Fatalf("Expected session user id to be empty but got (%s)", session.Get("role"))
 		}
 	})
+
+	t.Run("TestSessionsManager", func(t *testing.T) {
+		domain := "map.guarded.com"
+		maxAge := ((60 * 60) * 24) * 5
+		secure := true
+		httpOnly := true
+		sameSite := true
+
+		sessions := InitSession("session", []byte(str.Random(10)))
+
+		sessions.Domain(domain).MaxAge(maxAge).Secure(secure).HttpOnly(httpOnly).SameSite(sameSite)
+
+		if sessions.store.Options.Domain != domain {
+			t.Fatalf("Expected the domain to be (%s) but got (%s)", domain, sessions.store.Options.Domain)
+		}
+
+		if sessions.store.Options.MaxAge != maxAge {
+			t.Fatalf("Expected the max age to be (%d) but got (%d)", maxAge, sessions.store.Options.MaxAge)
+		}
+
+		if sessions.store.Options.Secure != secure {
+			t.Fatalf("Expected the secure to be (%t) but got (%t)", secure, sessions.store.Options.Secure)
+		}
+
+		if sessions.store.Options.HttpOnly != httpOnly {
+			t.Fatalf("Expected the http only to be (%t) but got (%t)", httpOnly, sessions.store.Options.HttpOnly)
+		}
+
+		if sessions.store.Options.SameSite != 1 {
+			t.Fatalf("Expected the same site to be (%d) but got (%d)", 1, sessions.store.Options.SameSite)
+		}
+	})
+
+	t.Run("TestSessionManagerErrors", func(t *testing.T) {
+		sessions := InitSession("session", []byte(str.Random(10)))
+
+		req, err := NewRequest("POST", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		// First Request
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		session := sessions.Session(req)
+
+		emailNameError := "The email is required"
+		passwordNameError := "The password is required"
+
+		session.SetError("email", emailNameError).SetError("password", passwordNameError)
+
+		session.Save() // SAVING SESSION
+
+		// Second Request
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers := types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		session = sessions.Session(req)
+
+		if session.Error("email") != emailNameError {
+			t.Fatalf("Expected email error to be (%s) but got (%s)", emailNameError, session.Error("email"))
+		}
+
+		if session.Error("password") != passwordNameError {
+			t.Fatalf("Expected email error to be (%s) but got (%s)", passwordNameError, session.Error("password"))
+		}
+
+		session.Save() // SAVING SESSION
+
+		// Third Request
+		cookie, err = url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers = types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		session = sessions.Session(req)
+
+		if session.Error("email") != "" {
+			t.Fatalf("Expected email error to be empty but got (%s)", session.Error("email"))
+		}
+
+		if session.Error("password") != "" {
+			t.Fatalf("Expected email error to be empty but got (%s)", session.Error("password"))
+		}
+	})
 }
