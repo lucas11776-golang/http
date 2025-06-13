@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	str "strings"
@@ -22,12 +23,12 @@ type SessionOldBag map[string]string
 
 // TODO: temp session remove for better version.
 const (
-	ERROR_KEY_STORE_KEY   = "__ERROR__STORE__KEY__"
-	ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__KEY__"
-	CSFR_KEY              = "__CSRF__KEY__"
-	OLD_STORE_KEY         = "__OLD__FORM__VALUES__STORE_KEY__"
-	OLD_REQUEST_KEY       = "__OLD__FORM__VALUES__REQUEST__KEY__"
-	CSRF_INPUT_NAME       = "CSRF_TOKEN"
+	ERROR_KEY_STORE_KEY = "__ERROR__STORE__KEY__"
+	// ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__KEY__"
+	CSFR_KEY        = "__CSRF__KEY__"
+	OLD_STORE_KEY   = "__OLD__FORM__VALUES__STORE_KEY__"
+	OLD_REQUEST_KEY = "__OLD__FORM__VALUES__REQUEST__KEY__"
+	CSRF_INPUT_NAME = "CSRF_TOKEN"
 )
 
 type SessionManager interface {
@@ -61,9 +62,12 @@ type Sessions struct {
 }
 
 type Session struct {
-	session *sessions.Session
-	request *Request
-	save    bool
+	session     *sessions.Session
+	request     *Request
+	save        bool
+	storeErrors SessionErrorsBag
+	errors      SessionErrorsBag
+	valuesMutex sync.Mutex
 }
 
 // Comment
@@ -77,8 +81,11 @@ func InitSession(name string, key []byte) *Sessions {
 	return &Sessions{name: name, store: s}
 }
 
-func (ctx *Session) newCsrf() *Session {
-	ctx.session.Values[CSFR_KEY] = fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50))
+// Comment
+func (ctx *Session) setValues(key string, value interface{}) *Session {
+	ctx.valuesMutex.Lock()
+	ctx.session.Values[key] = value
+	ctx.valuesMutex.Unlock()
 
 	ctx.save = true
 
@@ -86,14 +93,38 @@ func (ctx *Session) newCsrf() *Session {
 }
 
 // Comment
-func (ctx *Session) initCsrf() *Session {
-	csrf, ok := ctx.session.Values[CSFR_KEY].(string)
+func (ctx *Session) getValues(key string) interface{} {
+	ctx.valuesMutex.Lock()
+	value := ctx.session.Values[key]
+	ctx.valuesMutex.Unlock()
 
-	if !ok {
+	return value
+}
+
+// Comment
+func (ctx *Session) removeValues(key interface{}) *Session {
+	ctx.valuesMutex.Lock()
+	delete(ctx.session.Values, key)
+	ctx.valuesMutex.Unlock()
+
+	ctx.save = true
+
+	return ctx
+}
+
+func (ctx *Session) newCsrf() *Session {
+	return ctx.setValues(CSFR_KEY, fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50)))
+}
+
+// Comment
+func (ctx *Session) initCsrf() *Session {
+	csrf := ctx.getValues(CSFR_KEY)
+
+	if csrf == nil {
 		return ctx.newCsrf()
 	}
 
-	token := str.Split(csrf, "-")
+	token := str.Split(csrf.(string), "-")
 
 	if len(token) != 2 {
 		return ctx.newCsrf()
@@ -108,19 +139,21 @@ func (ctx *Session) initCsrf() *Session {
 
 // Comment
 func (ctx *Session) initErrors() *Session {
-	data, ok := ctx.session.Values[ERROR_KEY_STORE_KEY].(string)
+	data := ctx.getValues(ERROR_KEY_STORE_KEY)
 
-	if !ok {
-		data = ""
+	if data == nil {
+		return ctx
 	}
 
 	errs := make(SessionErrorsBag)
 
-	json.Unmarshal([]byte(data), &errs)
+	json.Unmarshal([]byte(data.(string)), &errs)
 
-	ctx.session.Values[ERROR_KEY_REQUEST_KEY] = errs
+	ctx.errors = errs
 
-	if len(errs) != 0 {
+	ctx.removeValues(ERROR_KEY_STORE_KEY)
+
+	if len(ctx.errors) != 0 {
 		ctx.save = true
 	}
 
@@ -129,9 +162,9 @@ func (ctx *Session) initErrors() *Session {
 
 // Comment
 func (ctx *Session) initOld() *Session {
-	values, ok := ctx.session.Values[OLD_STORE_KEY]
+	values := ctx.getValues(OLD_STORE_KEY)
 
-	if !ok {
+	if values == nil {
 		return ctx
 	}
 
@@ -139,7 +172,7 @@ func (ctx *Session) initOld() *Session {
 
 	json.Unmarshal([]byte(values.(string)), &form)
 
-	ctx.session.Values[OLD_REQUEST_KEY] = form
+	ctx.setValues(OLD_REQUEST_KEY, form)
 
 	if len(form) != 0 {
 		ctx.save = true
@@ -152,7 +185,14 @@ func (ctx *Session) initOld() *Session {
 func (ctx *Sessions) Session(req *Request) SessionManager {
 	session, _ := ctx.store.Get(req.Request, ctx.name)
 
-	return (&Session{session: session, request: req}).initCsrf().initErrors().initOld()
+	s := &Session{
+		session:     session,
+		request:     req,
+		storeErrors: make(SessionErrorsBag),
+		errors:      make(SessionErrorsBag),
+	}
+
+	return s.initCsrf().initErrors().initOld()
 }
 
 // Comment
@@ -205,7 +245,7 @@ type SessionBag map[string]interface{}
 
 // Comment
 func (ctx *Session) Set(key string, value interface{}) SessionManager {
-	ctx.session.Values[key] = cast.ToString(value)
+	ctx.setValues(key, cast.ToString(value))
 
 	ctx.save = true
 
@@ -214,9 +254,9 @@ func (ctx *Session) Set(key string, value interface{}) SessionManager {
 
 // Comment
 func (ctx *Session) Get(key string) string {
-	value, ok := ctx.session.Values[key]
+	value := ctx.getValues(key)
 
-	if !ok {
+	if value == nil {
 		return ""
 	}
 
@@ -225,8 +265,8 @@ func (ctx *Session) Get(key string) string {
 
 // Comment
 func (ctx *Session) Clear() SessionManager {
-	for k := range ctx.session.Values {
-		delete(ctx.session.Values, k)
+	for k, _ := range ctx.session.Values {
+		ctx.removeValues(k)
 	}
 
 	ctx.save = true
@@ -236,7 +276,7 @@ func (ctx *Session) Clear() SessionManager {
 
 // Comment
 func (ctx *Session) Remove(key string) SessionManager {
-	delete(ctx.session.Values, key)
+	ctx.removeValues(key)
 
 	ctx.save = true
 
@@ -248,17 +288,6 @@ func (ctx *Session) CanSave() bool {
 	return ctx.save
 }
 
-// Comment
-func (ctx *Session) stringflyErrors() *Session {
-	errors, _ := json.Marshal(ctx.session.Values[ERROR_KEY_STORE_KEY])
-
-	ctx.session.Values[ERROR_KEY_STORE_KEY] = string(errors)
-
-	delete(ctx.session.Values, ERROR_KEY_REQUEST_KEY)
-
-	return ctx
-}
-
 func (ctx *Session) saveFormValues(values url.Values) {
 	formValues := map[string]string{}
 
@@ -267,13 +296,13 @@ func (ctx *Session) saveFormValues(values url.Values) {
 	}
 
 	form, _ := json.Marshal(formValues)
-	ctx.session.Values[OLD_STORE_KEY] = string(form)
+
+	ctx.setValues(OLD_STORE_KEY, string(form))
 }
 
 // comment
 func (ctx *Session) clearCache() *Session {
-	delete(ctx.session.Values, ERROR_KEY_REQUEST_KEY)
-	delete(ctx.session.Values, OLD_REQUEST_KEY)
+	ctx.removeValues(OLD_REQUEST_KEY)
 
 	return ctx
 }
@@ -284,26 +313,26 @@ func (ctx *Session) Save() SessionManager {
 		return ctx
 	}
 
-	if errors, ok := ctx.session.Values[ERROR_KEY_STORE_KEY].(SessionErrorsBag); ok && len(errors) != 0 {
+	if len(ctx.storeErrors) != 0 {
 		if values := ctx.request.Form; values != nil {
 			ctx.saveFormValues(values)
 		}
 	}
 
-	ctx.stringflyErrors().session.Save(ctx.request.Request, ctx.request.Response.Writer)
+	if len(ctx.storeErrors) != 0 {
+		errors, _ := json.Marshal(ctx.storeErrors)
 
-	return ctx.clearCache()
+		ctx.setValues(ERROR_KEY_STORE_KEY, string(errors))
+	}
+
+	ctx.clearCache().session.Save(ctx.request.Request, ctx.request.Response.Writer)
+
+	return ctx
 }
 
 // Comment
 func (ctx *Session) SetError(key string, value string) SessionManager {
-	if _, ok := ctx.session.Values[ERROR_KEY_STORE_KEY]; !ok {
-		ctx.session.Values[ERROR_KEY_STORE_KEY] = make(SessionErrorsBag)
-	}
-
-	ctx.session.Values[ERROR_KEY_STORE_KEY].(SessionErrorsBag)[key] = value
-
-	ctx.save = true
+	ctx.storeErrors[key] = value
 
 	return ctx
 }
@@ -319,12 +348,12 @@ func (ctx *Session) SetErrors(errors SessionErrorsBag) SessionManager {
 
 // Comment
 func (ctx *Session) Errors() SessionErrorsBag {
-	return ctx.session.Values[ERROR_KEY_REQUEST_KEY].(SessionErrorsBag)
+	return ctx.errors
 }
 
 // Comment
 func (ctx *Session) Error(key string) string {
-	err, ok := ctx.session.Values[ERROR_KEY_REQUEST_KEY].(SessionErrorsBag)[key]
+	err, ok := ctx.errors[key]
 
 	if !ok {
 		return ""
@@ -335,13 +364,13 @@ func (ctx *Session) Error(key string) string {
 
 // Comment
 func (ctx *Session) Csrf() string {
-	csrf, ok := ctx.session.Values[CSFR_KEY].(string)
+	csrf := ctx.getValues(CSFR_KEY)
 
-	if !ok {
+	if csrf == nil {
 		return ""
 	}
 
-	token := str.Split(csrf, "-")
+	token := str.Split(csrf.(string), "-")
 
 	if len(token) != 2 {
 		return ""
@@ -352,7 +381,9 @@ func (ctx *Session) Csrf() string {
 
 // Comment
 func (ctx *Session) Old(key string) string {
+	ctx.valuesMutex.Lock()
 	old, ok := ctx.session.Values[OLD_REQUEST_KEY].(SessionOldBag)[key]
+	ctx.valuesMutex.Unlock()
 
 	if !ok {
 		return ""
