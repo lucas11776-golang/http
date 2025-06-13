@@ -1,9 +1,18 @@
 package pages
 
-import "strings"
+import (
+	"net/url"
+	"strings"
+
+	"github.com/lucas11776-golang/http/utils/helper"
+)
 
 // Comment
 func Redirect(to string) string {
+	if _, err := url.Parse(to); err != nil {
+		to = helper.Url(to)
+	}
+
 	return strings.Join([]string{
 		`<!DOCTYPE html>`,
 		`<head>`,

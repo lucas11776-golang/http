@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -124,6 +125,8 @@ func TestResponse(t *testing.T) {
 	})
 
 	t.Run("TestResponseRedirect", func(t *testing.T) {
+		os.Setenv("APP_URL", "http://localhost:8080/")
+
 		uri := "authentication/login"
 		tBody := pages.Redirect(uri)
 		reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
