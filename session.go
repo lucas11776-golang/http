@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	str "strings"
@@ -12,15 +13,20 @@ import (
 	"github.com/spf13/cast"
 )
 
+// TODO: Many have errors saving session.Save
+
 const SESSION_DEFAULT_EXPIRE = (60 * 60) * 24
 
 type SessionErrorsBag map[string]string
+type SessionOldBag map[string]string
 
 // TODO: temp session remove for better version.
 const (
-	ERROR_KEY_STORE_KEY   = "__ERROR__STORE__"
-	ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__"
-	CSFR_KEY              = "__CSRF__"
+	ERROR_KEY_STORE_KEY   = "__ERROR__STORE__KEY__"
+	ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__KEY__"
+	CSFR_KEY              = "__CSRF__KEY__"
+	OLD_STORE_KEY         = "__OLD__FORM__VALUES__STORE_KEY__"
+	OLD_REQUEST_KEY       = "__OLD__FORM__VALUES__REQUEST__KEY__"
 	CSRF_INPUT_NAME       = "CSRF_TOKEN"
 )
 
@@ -37,6 +43,7 @@ type SessionManager interface {
 	Errors() SessionErrorsBag
 	Error(key string) string
 	Csrf() string
+	Old(key string) string
 }
 
 type SessionsManager interface {
@@ -113,6 +120,31 @@ func (ctx *Session) initErrors() *Session {
 
 	ctx.session.Values[ERROR_KEY_REQUEST_KEY] = errs
 
+	if len(errs) != 0 {
+		ctx.save = true
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Session) initOld() *Session {
+	values, ok := ctx.session.Values[OLD_STORE_KEY]
+
+	if !ok {
+		return ctx
+	}
+
+	form := SessionOldBag{}
+
+	json.Unmarshal([]byte(values.(string)), &form)
+
+	ctx.session.Values[OLD_REQUEST_KEY] = form
+
+	if len(form) != 0 {
+		ctx.save = true
+	}
+
 	return ctx
 }
 
@@ -120,7 +152,7 @@ func (ctx *Session) initErrors() *Session {
 func (ctx *Sessions) Session(req *Request) SessionManager {
 	session, _ := ctx.store.Get(req.Request, ctx.name)
 
-	return (&Session{session: session, request: req}).initCsrf().initErrors()
+	return (&Session{session: session, request: req}).initCsrf().initErrors().initOld()
 }
 
 // Comment
@@ -227,13 +259,40 @@ func (ctx *Session) stringflyErrors() *Session {
 	return ctx
 }
 
-// Comment
-func (ctx *Session) Save() SessionManager {
-	if ctx.CanSave() {
-		ctx.stringflyErrors().session.Save(ctx.request.Request, ctx.request.Response.Writer)
+func (ctx *Session) saveFormValues(values url.Values) {
+	formValues := map[string]string{}
+
+	for k, v := range values {
+		formValues[k] = v[0]
 	}
 
+	form, _ := json.Marshal(formValues)
+	ctx.session.Values[OLD_STORE_KEY] = string(form)
+}
+
+// comment
+func (ctx *Session) clearCache() *Session {
+	delete(ctx.session.Values, ERROR_KEY_REQUEST_KEY)
+	delete(ctx.session.Values, OLD_REQUEST_KEY)
+
 	return ctx
+}
+
+// Comment
+func (ctx *Session) Save() SessionManager {
+	if !ctx.CanSave() {
+		return ctx
+	}
+
+	if errors, ok := ctx.session.Values[ERROR_KEY_STORE_KEY].(SessionErrorsBag); ok && len(errors) != 0 {
+		if values := ctx.request.Form; values != nil {
+			ctx.saveFormValues(values)
+		}
+	}
+
+	ctx.stringflyErrors().session.Save(ctx.request.Request, ctx.request.Response.Writer)
+
+	return ctx.clearCache()
 }
 
 // Comment
@@ -292,6 +351,17 @@ func (ctx *Session) Csrf() string {
 }
 
 // Comment
+func (ctx *Session) Old(key string) string {
+	old, ok := ctx.session.Values[OLD_REQUEST_KEY].(SessionOldBag)[key]
+
+	if !ok {
+		return ""
+	}
+
+	return old
+}
+
+// Comment
 func SessionValue(req *Request) func(key string) string {
 	return func(key string) string {
 		return req.Session.Get(key)
@@ -323,5 +393,12 @@ func SessionErrors(req *Request) func() SessionErrorsBag {
 func SessionCsrf(req *Request) func() string {
 	return func() string {
 		return req.Session.Csrf()
+	}
+}
+
+// Comment
+func SessionOld(req *Request) func(key string) string {
+	return func(key string) string {
+		return req.Session.Old(key)
 	}
 }

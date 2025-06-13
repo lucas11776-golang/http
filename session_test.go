@@ -336,6 +336,56 @@ func TestSession(t *testing.T) {
 		}
 	})
 
+	t.Run("TestSessionManagerOld", func(t *testing.T) {
+		sessions := InitSession("session", []byte(str.Random(10)))
+
+		req, err := NewRequest("POST", "/", "HTTP/1.1", make(types.Headers), bytes.NewReader([]byte{}))
+
+		// First Request
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		session := sessions.Session(req).SetError("email", "The email is invalid")
+
+		email := "jeo@doe.com"
+
+		req.Form = url.Values{"email": []string{email}}
+
+		session.Save() // SAVING SESSION
+
+		// Second Request
+		cookie, err := url.ParseQuery(strings.ReplaceAll(req.Response.GetHeader("Set-Cookie"), "; ", "&"))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers := types.Headers{
+			"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+		}
+
+		req, err = NewRequest("POST", "/", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Session = sessions.Session(req)
+
+		if old := req.Session.Old("email"); old != email {
+			t.Fatalf("Expected old email value to be (%s) but got (%s)", email, old)
+		}
+
+		if old := SessionOld(req)("email"); old != email {
+			t.Fatalf("Expected old email value to be (%s) but got (%s)", email, old)
+		}
+
+		if old := SessionOld(req)("first_name"); old != "" {
+			t.Fatalf("Expected old first name value to be empty but got (%s)", old)
+		}
+	})
+
 	t.Run("TestSessionManagerHelperFunctions", func(t *testing.T) {
 		userID := rand.Int()
 		sessions := InitSession("session", []byte(str.Random(10)))
