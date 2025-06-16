@@ -9,7 +9,6 @@ import (
 
 	str "strings"
 
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/lucas11776-golang/http/utils/strings"
 	"github.com/spf13/cast"
@@ -336,13 +335,9 @@ func (ctx *Session) Save() SessionManager {
 		ctx.setValues(ERROR_KEY_STORE_KEY, string(errors))
 	}
 
-	encoded, err := securecookie.EncodeMulti(ctx.session.Name(), ctx.session.Values, ctx.store.Codecs...)
-
-	if err != nil {
-		return ctx
+	if err := ctx.clearCache().session.Save(ctx.request.Request, ctx.request.Response.Writer); err != nil {
+		// TODO: log error
 	}
-
-	ctx.clearCache().request.Response.SetHeader("Set-Cookie", sessions.NewCookie(ctx.session.Name(), encoded, ctx.session.Options).String())
 
 	return ctx
 }

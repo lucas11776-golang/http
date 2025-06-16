@@ -278,28 +278,18 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 }
 
 // Comment
-func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) {
+func (ctx *HTTP) Handler(conn *connection.Connection, req *Request) *Response {
 	res := ctx.HandleRequest(req)
 
 	if res == nil {
-		return
+		return nil
 	}
 
 	for key, value := range res.Header {
 		req.Response.Writer.Header().Set(key, value[0])
 	}
 
-	body, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		req.Response.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
-		req.Response.Writer.Write([]byte{})
-
-		return
-	}
-
-	req.Response.Writer.WriteHeader(res.StatusCode)
-	req.Response.Writer.Write(body)
+	return res
 }
 
 // Comment
@@ -324,6 +314,25 @@ func Init(tcp HttpServer, udp HttpServer) *HTTP {
 }
 
 // Comment
+func (ctx *HTTP) writeResponse(res *Response) error {
+	res.Session.Save()
+
+	body, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		res.Writer.WriteHeader(int(HTTP_RESPONSE_INTERNAL_SERVER_ERROR))
+		res.Writer.Write([]byte{})
+
+		return err
+	}
+
+	res.Writer.WriteHeader(res.StatusCode)
+	res.Writer.Write(body)
+
+	return nil
+}
+
+// Comment
 func (ctx *HTTP) onRequest(conn *connection.Connection, w http.ResponseWriter, r *http.Request) {
 	// TODO: Need to check http3 support websocket not sure.
 	if strings.ToLower(r.Header.Get("upgrade")) == "websocket" && strings.ToUpper(r.Proto) == "HTTP/3.0" {
@@ -333,8 +342,15 @@ func (ctx *HTTP) onRequest(conn *connection.Connection, w http.ResponseWriter, r
 	req := ctx.NewRequest(r, conn)
 	req.Response.Writer = w
 
-	ctx.Handler(conn, req)
-	req.Session.Save()
+	res := ctx.Handler(conn, req)
+
+	if res == nil {
+		return
+	}
+
+	if err := ctx.writeResponse(res); err != nil {
+		// TODO: log error
+	}
 }
 
 // Comment
