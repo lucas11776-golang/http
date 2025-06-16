@@ -9,6 +9,7 @@ import (
 
 	str "strings"
 
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/lucas11776-golang/http/utils/strings"
 	"github.com/spf13/cast"
@@ -54,6 +55,7 @@ type SessionsManager interface {
 	Domain(domain string) SessionsManager
 	HttpOnly(httpOnly bool) SessionsManager
 	SameSite(sameSite bool) SessionsManager
+	Path(path string) SessionsManager
 }
 
 type Sessions struct {
@@ -68,6 +70,7 @@ type Session struct {
 	storeErrors SessionErrorsBag
 	errors      SessionErrorsBag
 	valuesMutex sync.Mutex
+	store       *sessions.CookieStore
 }
 
 // Comment
@@ -190,6 +193,7 @@ func (ctx *Sessions) Session(req *Request) SessionManager {
 		request:     req,
 		storeErrors: make(SessionErrorsBag),
 		errors:      make(SessionErrorsBag),
+		store:       ctx.store,
 	}
 
 	return s.initCsrf().initErrors().initOld()
@@ -230,6 +234,13 @@ func (ctx *Sessions) SameSite(sameSite bool) SessionsManager {
 	} else {
 		ctx.store.Options.SameSite = 0
 	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Sessions) Path(domain string) SessionsManager {
+	ctx.store.Options.Path = domain
 
 	return ctx
 }
@@ -325,7 +336,13 @@ func (ctx *Session) Save() SessionManager {
 		ctx.setValues(ERROR_KEY_STORE_KEY, string(errors))
 	}
 
-	ctx.clearCache().session.Save(ctx.request.Request, ctx.request.Response.Writer)
+	encoded, err := securecookie.EncodeMulti(ctx.session.Name(), ctx.session.Values, ctx.store.Codecs...)
+
+	if err != nil {
+		return ctx
+	}
+
+	ctx.clearCache().request.Response.SetHeader("Set-Cookie", sessions.NewCookie(ctx.session.Name(), encoded, ctx.session.Options).String())
 
 	return ctx
 }

@@ -59,10 +59,11 @@ func TestSession(t *testing.T) {
 		secure := true
 		httpOnly := true
 		sameSite := true
+		path := "/authentication"
 
 		sessions := InitSession("session", []byte(str.Random(10)))
 
-		sessions.Domain(domain).MaxAge(maxAge).Secure(secure).HttpOnly(httpOnly).SameSite(sameSite)
+		sessions.Domain(domain).MaxAge(maxAge).Secure(secure).HttpOnly(httpOnly).SameSite(sameSite).Path(path)
 
 		if sessions.store.Options.Domain != domain {
 			t.Fatalf("Expected the domain to be (%s) but got (%s)", domain, sessions.store.Options.Domain)
@@ -82,6 +83,10 @@ func TestSession(t *testing.T) {
 
 		if sessions.store.Options.SameSite != 1 {
 			t.Fatalf("Expected the same site to be (%d) but got (%d)", 1, sessions.store.Options.SameSite)
+		}
+
+		if sessions.store.Options.Path != path {
+			t.Fatalf("Expected the path to be (%s) but got (%s)", path, sessions.store.Options.Path)
 		}
 	})
 
