@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
+	"github.com/spf13/cast"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -96,6 +98,11 @@ func (ctx *Request) GetHeader(key string) string {
 }
 
 // Comment
+func (ctx *Request) IP() string {
+	return ctx.Conn.IP()
+}
+
+// Comment
 func (ctx *Request) contentType() string {
 	header := strings.Split(ctx.GetHeader("content-type"), ";")
 
@@ -120,8 +127,50 @@ func (ctx *Request) parseBodyX_WWW_FORM_URLENCODED() {
 }
 
 // Comment
-func (ctx *Request) IP() string {
-	return ctx.Conn.IP()
+func (ctx *Request) addJsonField(value interface{}, names []string) {
+	for i, name := range names {
+		if i > 0 {
+			names[i] = fmt.Sprintf("[%s]", name)
+		}
+	}
+
+	ctx.Form.Set(strings.Join(names, ""), cast.ToString(value))
+}
+
+// Comment
+func (ctx *Request) addJsonFields(structure map[string]interface{}, names []string) {
+	for k, v := range structure {
+		switch v.(type) {
+		case map[string]interface{}:
+			ctx.addJsonFields(v.(map[string]interface{}), append(names, k))
+
+		default:
+			ctx.addJsonField(v, append(names, k))
+		}
+	}
+}
+
+// Comment
+func (ctx *Request) parseBodyJson() {
+	body, err := io.ReadAll(ctx.Body)
+
+	if err != nil {
+		return
+	}
+
+	jsonMap := map[string]interface{}{}
+
+	err = json.Unmarshal(body, &jsonMap)
+
+	if err != nil {
+		return
+	}
+
+	if ctx.Form == nil {
+		ctx.Form = url.Values{}
+	}
+
+	ctx.addJsonFields(jsonMap, []string{})
 }
 
 // Comment
@@ -131,6 +180,8 @@ func (ctx *Request) parseBody() {
 		ctx.parseBodyX_WWW_FORM_URLENCODED()
 	case "multipart/form-data":
 		ctx.ParseMultipartForm(ctx.ContentLength)
+	case "application/json":
+		ctx.parseBodyJson()
 	}
 }
 

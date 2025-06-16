@@ -124,12 +124,18 @@ func (ctx *HTTP) handleRouteMiddleware(route *Route, req *Request) *Response {
 
 // Comment
 func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Request {
-	return &Request{
+	req := &Request{
 		Request:  rq,
 		Server:   ctx,
 		Response: NewResponse(rq.Proto, HTTP_RESPONSE_OK, make(types.Headers), []byte{}),
 		Conn:     conn,
 	}
+
+	if req.contentType() == "application/json" {
+		req.parseBodyJson()
+	}
+
+	return req
 }
 
 // Comment

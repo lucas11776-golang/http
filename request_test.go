@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,70 +12,72 @@ import (
 
 // Comment
 func TestRequest(t *testing.T) {
-	body := []byte("username=test123&password=pass1234")
+	t.Run("TestBasicRequest", func(t *testing.T) {
+		body := []byte("username=test123&password=pass1234")
 
-	httpText := strings.Join([]string{
-		"POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1",
-		"HOST: example.com",
-		"Content-Type: application/x-www-form-urlencoded",
-		"Content-Length: " + strconv.Itoa(len(body)) + "\r\n",
-		string(body) + "\r\n",
-	}, "\r\n")
+		httpText := strings.Join([]string{
+			"POST /authentication/login?redirect=cart&ref=lucas11776 HTTP/1.1",
+			"HOST: example.com",
+			"Content-Type: application/x-www-form-urlencoded",
+			"Content-Length: " + strconv.Itoa(len(body)) + "\r\n",
+			string(body) + "\r\n",
+		}, "\r\n")
 
-	req, _ := ParseHttpRequest(httpText)
+		req, _ := ParseHttpRequest(httpText)
 
-	t.Run("TestMethod", func(t *testing.T) {
-		if req.Method != "POST" {
-			t.Fatalf("Expected method to be (%s) but got (%s)", "POST", req.Method)
-		}
-	})
+		t.Run("TestMethod", func(t *testing.T) {
+			if req.Method != "POST" {
+				t.Fatalf("Expected method to be (%s) but got (%s)", "POST", req.Method)
+			}
+		})
 
-	t.Run("TestPath", func(t *testing.T) {
-		if req.Path() != "authentication/login" {
-			t.Fatalf("Expected path to be (%s) but got (%s)", "authentication/login", req.Path())
-		}
-	})
+		t.Run("TestPath", func(t *testing.T) {
+			if req.Path() != "authentication/login" {
+				t.Fatalf("Expected path to be (%s) but got (%s)", "authentication/login", req.Path())
+			}
+		})
 
-	t.Run("TestProtocol", func(t *testing.T) {
-		if req.Protocol() != "HTTP/1.1" {
-			t.Fatalf("Expected protocol to be (%s) but got (%s)", "HTTP/1.1", req.Protocol())
-		}
-	})
+		t.Run("TestProtocol", func(t *testing.T) {
+			if req.Protocol() != "HTTP/1.1" {
+				t.Fatalf("Expected protocol to be (%s) but got (%s)", "HTTP/1.1", req.Protocol())
+			}
+		})
 
-	t.Run("TestQuery", func(t *testing.T) {
-		if req.GetQuery("redirect") != "cart" {
-			t.Fatalf("Expected query to be (%s) but got (%s)", "cart", req.GetQuery("redirect"))
-		}
+		t.Run("TestQuery", func(t *testing.T) {
+			if req.GetQuery("redirect") != "cart" {
+				t.Fatalf("Expected query to be (%s) but got (%s)", "cart", req.GetQuery("redirect"))
+			}
 
-		if req.GetQuery("ref") != "lucas11776" {
-			t.Fatalf("Expected query to be (%s) but got (%s)", "lucas11776", req.GetQuery("lucas11776"))
-		}
-	})
+			if req.GetQuery("ref") != "lucas11776" {
+				t.Fatalf("Expected query to be (%s) but got (%s)", "lucas11776", req.GetQuery("lucas11776"))
+			}
+		})
 
-	t.Run("TestHost", func(t *testing.T) {
-		if req.Host != "example.com" {
-			t.Fatalf("Expected host to be (%s) but got (%s)", "example.com", req.Host)
-		}
-	})
+		t.Run("TestHost", func(t *testing.T) {
+			if req.Host != "example.com" {
+				t.Fatalf("Expected host to be (%s) but got (%s)", "example.com", req.Host)
+			}
+		})
 
-	t.Run("TestHeaders", func(t *testing.T) {
-		if req.GetHeader("content-type") != "application/x-www-form-urlencoded" {
-			t.Fatalf("Expected content type to be (%s) but got (%s)", "application/x-www-form-urlencoded", req.GetHeader("content-type"))
-		}
+		t.Run("TestHeaders", func(t *testing.T) {
+			if req.GetHeader("content-type") != "application/x-www-form-urlencoded" {
+				t.Fatalf("Expected content type to be (%s) but got (%s)", "application/x-www-form-urlencoded", req.GetHeader("content-type"))
+			}
 
-		if req.GetHeader("content-length") != strconv.Itoa(len(body)) {
-			t.Fatalf("Expected content length to be (%s) but got (%s)", "6", req.GetHeader("content-length"))
-		}
-	})
+			if req.GetHeader("content-length") != strconv.Itoa(len(body)) {
+				t.Fatalf("Expected content length to be (%s) but got (%s)", "6", req.GetHeader("content-length"))
+			}
+		})
 
-	t.Run("TestParseBodyX_WWW_FORM_URLENCODED", func(t *testing.T) {
-		if req.Form.Get("username") != "test123" {
-			t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))
-		}
+		t.Run("TestParseBodyX_WWW_FORM_URLENCODED", func(t *testing.T) {
+			if req.Form.Get("username") != "test123" {
+				t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))
+			}
 
-		if req.Form.Get("password") != "pass1234" {
-			t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))
-		}
+			if req.Form.Get("password") != "pass1234" {
+				t.Fatalf("Expected username to be (%s) but go (%s)", "test123", req.Form.Get("username"))
+			}
+		})
 	})
 
 	t.Run("TestParseBodyFormData", func(t *testing.T) {
@@ -134,6 +138,55 @@ func TestRequest(t *testing.T) {
 
 		if string(content) != fileContent {
 			t.Fatalf("Expected file content to be (%s) but go (%s)", fileContent, string(content))
+		}
+	})
+
+	t.Run("TestParseBodyJson", func(t *testing.T) {
+		credentials := map[string]interface{}{
+			"account": map[string]string{
+				"name":    "Jeo",
+				"surname": "Doe",
+			},
+			"email": "test@123",
+		}
+
+		body, err := json.Marshal(credentials)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		headers := types.Headers{
+			"content-type":   "application/json",
+			"content-length": strconv.Itoa(len(body)),
+		}
+
+		req, err := NewRequest("POST", "login", "HTTP/1.1", headers, bytes.NewBuffer(body))
+
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to create request: %s", err.Error())
+		}
+
+		req.parseBodyJson()
+
+		if req.FormValue("email") != credentials["email"] {
+			t.Fatalf("Expected email to be (%s) but go (%s)", credentials["email"], req.FormValue("email"))
+		}
+
+		if req.FormValue("account[name]") != credentials["account"].(map[string]string)["name"] {
+			t.Fatalf(
+				"Expected account[name] to be (%s) but go (%s)",
+				credentials["account"].(map[string]string)["name"],
+				req.FormValue("account[name]"),
+			)
+		}
+
+		if req.FormValue("account[surname]") != credentials["account"].(map[string]string)["surname"] {
+			t.Fatalf(
+				"Expected account[surname] to be (%s) but go (%s)",
+				credentials["account"].(map[string]string)["surname"],
+				req.FormValue("account[surname]"),
+			)
 		}
 	})
 }
