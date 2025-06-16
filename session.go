@@ -346,6 +346,8 @@ func (ctx *Session) Save() SessionManager {
 func (ctx *Session) SetError(key string, value string) SessionManager {
 	ctx.storeErrors[key] = value
 
+	ctx.save = true
+
 	return ctx
 }
 

@@ -314,7 +314,11 @@ func Init(tcp HttpServer, udp HttpServer) *HTTP {
 }
 
 // Comment
-func (ctx *HTTP) writeResponse(res *Response) error {
+func (ctx *HTTP) writeResponse(res *Response, w http.ResponseWriter) error {
+	for k := range res.Response.Header {
+		w.Header().Set(k, res.GetHeader(k))
+	}
+
 	res.Session.Save()
 
 	body, err := io.ReadAll(res.Body)
@@ -348,7 +352,7 @@ func (ctx *HTTP) onRequest(conn *connection.Connection, w http.ResponseWriter, r
 		return
 	}
 
-	if err := ctx.writeResponse(res); err != nil {
+	if err := ctx.writeResponse(res, w); err != nil {
 		// TODO: log error
 	}
 }
