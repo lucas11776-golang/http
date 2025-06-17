@@ -1,11 +1,184 @@
 package validation
 
-import "net/http"
+import (
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"strings"
+)
+
+type File struct {
+	header *multipart.FileHeader
+	file   multipart.File
+}
+
+type Errors map[string]string
+
+type Fields map[string]string
+
+type Files map[string]*File
+
+type Data struct {
+	Files  Files
+	Fields Fields
+}
 
 type Validator struct {
+	errors    Errors
+	validated *Data
+	request   *http.Request
+	rules     RulesBag
+}
+
+type Rule interface{}
+
+type Rules []Rule
+
+type RulesBag map[string]Rules
+
+type RuleValidation interface {
+	Validate(validator *Validator, field string, value interface{}, args ...string) error
 }
 
 // Comment
-func Validation(req *http.Request, rules any) *Validator {
-	return &Validator{}
+func (ctx *File) Mime() string {
+	return ctx.header.Header.Get("Content-Type")
+}
+
+// Comment
+func (ctx *File) Read() ([]byte, error) {
+	return io.ReadAll(ctx.file)
+}
+
+// Comment
+func (ctx *File) Size() int64 {
+	return ctx.header.Size
+}
+
+// Comment
+func Validation(req *http.Request, rules RulesBag) *Validator {
+	return &Validator{
+		errors:  make(Errors),
+		request: req,
+		rules:   rules,
+		validated: &Data{
+			Files:  make(Files),
+			Fields: make(Fields),
+		},
+	}
+}
+
+// Comment
+func (ctx *Validator) Validated() (fields Fields, files Files) {
+	return ctx.validated.Fields, ctx.validated.Files
+}
+
+// Comment
+func (ctx *Validator) Errors() Errors {
+	return ctx.errors
+}
+
+// Comment
+func (ctx *Validator) Error(key string) string {
+	return ctx.errors[key]
+}
+
+// Comment
+func (ctx *Validator) getValue(key string) interface{} {
+	if value := ctx.request.FormValue(key); value != "" {
+		return value
+	}
+
+	if file, header, err := ctx.request.FormFile(key); err == nil {
+		return &File{
+			file:   file,
+			header: header,
+		}
+	}
+
+	return nil
+}
+
+// Comment
+func (ctx *Validator) addValue(key string, value interface{}) {
+	switch value.(type) {
+	case *File:
+		ctx.validated.Files[key] = value.(*File)
+
+	case string:
+		ctx.validated.Fields[key] = value.(string)
+	}
+}
+
+// Comment
+func (ctx *Validator) call(callback RuleValidation, field string, args ...string) error {
+	value := ctx.getValue(field)
+
+	if err := callback.Validate(ctx, field, value, args...); err != nil {
+		return err
+	}
+
+	ctx.addValue(field, value)
+
+	return nil
+}
+
+// Comment
+func (ctx *Validator) validate(field string, rules Rules) error {
+	for _, rule := range rules {
+
+		switch rule.(type) {
+		case RuleValidation:
+			return ctx.call(rule.(RuleValidation), field)
+
+		case string:
+			_field := strings.Split(rule.(string), ":")
+
+			if len(_field) > 2 {
+				return fmt.Errorf("invalid args %s", _field[1:])
+			}
+
+			_args := []string{}
+
+			if len(_field) == 2 {
+				_args = strings.Split(_field[1], ",")
+			}
+
+			_rule, ok := ValidatorsRules[_field[0]]
+
+			if !ok {
+				return fmt.Errorf("rule %s does not exist", rule)
+			}
+
+			return ctx.call(_rule, field, _args...)
+
+		default:
+			return fmt.Errorf("rule %s does not exist", rule)
+		}
+	}
+
+	return nil
+}
+
+// Comment
+func (ctx *Validator) Validate() bool {
+	for field, rules := range ctx.rules {
+		if err := ctx.validate(field, rules); err != nil {
+			ctx.errors[field] = strings.ToUpper(err.Error()[:1]) + err.Error()[1:]
+		}
+	}
+
+	return len(ctx.errors) == 0
+}
+
+// Comment
+func (ctx *Validator) Reset() *Validator {
+	ctx.errors = make(Errors)
+	ctx.validated = &Data{
+		Files:  make(Files),
+		Fields: make(Fields),
+	}
+
+	return ctx
 }

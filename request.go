@@ -11,6 +11,7 @@ import (
 	"github.com/lucas11776-golang/http/server/connection"
 	"github.com/lucas11776-golang/http/types"
 	h "github.com/lucas11776-golang/http/utils/headers"
+	"github.com/lucas11776-golang/http/validation"
 	"github.com/spf13/cast"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -37,6 +38,7 @@ type Request struct {
 	Session    SessionManager
 	Ws         *Ws
 	Parameters Parameters
+	Validation *validation.Validator
 }
 
 type HttpRequestHeader struct {
@@ -49,6 +51,26 @@ type HttpRequestContent struct {
 	host    string
 	headers types.Headers
 	body    io.Reader
+}
+
+// TODO: Implement form request...
+// Comment
+func FormRequest(rules validation.RulesBag) Middleware {
+	return func(req *Request, res *Response, next Next) *Response {
+		// validator := validation.Validation(req.Request, rules)
+
+		// if !validator.Validate() {
+		// 	// check if json
+
+		// 	if req.Session != nil {
+		// 		req.Session.SetErrors(SessionErrorsBag(validator.Errors()))
+		// 	}
+
+		// 	return res.Back() // TODO: implement
+		// }
+
+		return next()
+	}
 }
 
 // Comment

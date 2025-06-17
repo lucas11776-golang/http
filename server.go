@@ -44,12 +44,11 @@ type HttpServer interface {
 }
 
 type HTTP struct {
-	TCP                     HttpServer
-	UDP                     HttpServer
-	Debug                   bool
+	tcp                     HttpServer
+	udp                     HttpServer
 	MaxWebSocketPayloadSize int
 	dependency              Dependencies
-	MaxRequestSize          int64
+	parseJson               bool
 }
 
 type HttpHandler interface {
@@ -131,7 +130,7 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 		Conn:     conn,
 	}
 
-	if req.contentType() == "application/json" {
+	if ctx.parseJson && req.contentType() == "application/json" {
 		req.parseBodyJson()
 	}
 
@@ -167,9 +166,13 @@ func (ctx *HTTP) SetMaxWebsocketPayload(size int) *HTTP {
 
 // Comment
 func (ctx *HTTP) Session(key []byte) SessionsManager {
-	ctx.Set("session", InitSession(SESSION_NAME, key))
+	return ctx.Set("session", InitSession(SESSION_NAME, key)).Get("session").(SessionsManager)
+}
 
-	return ctx.Get("session").(SessionsManager)
+func (ctx *HTTP) ParseJson(parse bool) *HTTP {
+	ctx.parseJson = parse
+
+	return ctx
 }
 
 // Comment
@@ -307,14 +310,14 @@ func Init(tcp HttpServer, udp HttpServer) *HTTP {
 		},
 	}
 
-	server.TCP = tcp
-	server.UDP = udp
+	server.tcp = tcp
+	server.udp = udp
 
 	server.Set("router", InitRouter()).Get("router").(*RouterGroup).fallback = defaultRouteFallback
 	server.Session([]byte(str.Random(10)))
 
-	server.TCP.OnRequest(server.onRequest) // HTTP/1.1 and HTTP/2.0 requests
-	server.UDP.OnRequest(server.onRequest) // HTTP/3.0 requests
+	server.tcp.OnRequest(server.onRequest) // HTTP/1.1 and HTTP/2.0 requests
+	server.udp.OnRequest(server.onRequest) // HTTP/3.0 requests
 
 	return server
 }
@@ -381,22 +384,22 @@ func Server(address string, port int) *HTTP {
 
 // Comm
 func (ctx *HTTP) Host() string {
-	return ctx.TCP.Host()
+	return ctx.tcp.Host()
 }
 
 // Comment
 func (ctx *HTTP) Port() int {
-	return ctx.TCP.Port()
+	return ctx.tcp.Port()
 }
 
 // Comment
 func (ctx *HTTP) Listen() {
-	go ctx.TCP.Listen()
-	go ctx.UDP.Listen()
+	go ctx.tcp.Listen()
+	go ctx.udp.Listen()
 	select {}
 }
 
 // Comment
 func (ctx *HTTP) Close() (tcp error, udp error) {
-	return ctx.TCP.Close(), nil
+	return ctx.tcp.Close(), nil
 }

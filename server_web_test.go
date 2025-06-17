@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -188,6 +189,34 @@ func TestServerWeb(t *testing.T) {
 		server.Close()
 	})
 
+	t.Run("TestFormValidation", func(t *testing.T) {
+		server := Server("127.0.0.1", 0)
+
+		server.Route().Group("authentication", func(route *Router) {
+			route.Group("login", func(route *Router) {
+				route.Post("/", func(req *Request, res *Response) *Response {
+					return res.Redirect("dashboard")
+				})
+			})
+		})
+
+		go server.Listen()
+
+		// ------------------------------ Web Request ------------------------------ //
+
+		r := req.CreateRequest().
+			SetHeaders(types.Headers{
+				"content-type": "application/json",
+				"host":         "127.0.0.1:4567",
+			})
+
+		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+
+		fmt.Println(http, err)
+
+		server.Close()
+	})
+
 	t.Run("TestStatic", func(t *testing.T) {
 		var (
 			fileName = "assets/css/main.css"
@@ -249,6 +278,15 @@ func TestServerWeb(t *testing.T) {
 			return next()
 		}
 
+		// Comment
+		IsAuth := func(req *Request, res *Response, next Next) *Response {
+			if req.Session.Get("user_id") == "" {
+				return res.Redirect("/dashboar")
+			}
+
+			return next()
+		}
+
 		server.Route().Group("authentication", func(route *Router) {
 			route.Middleware(IsGuest).Group("login", func(route *Router) {
 				route.Get("/", func(req *Request, res *Response) *Response {
@@ -264,6 +302,12 @@ func TestServerWeb(t *testing.T) {
 				})
 			})
 		})
+
+		server.Route().Group("dashboard", func(route *Router) {
+			route.Get("/", func(req *Request, res *Response) *Response {
+				return res.Html("Dashboard")
+			})
+		}, IsAuth)
 
 		go server.Listen()
 
@@ -285,29 +329,29 @@ func TestServerWeb(t *testing.T) {
 			t.Fatalf("Expected status code to be (%d) but got (%d)", 307, res.StatusCode)
 		}
 
-		// cookie, err := url.ParseQuery(strings.ReplaceAll(res.GetHeader("Set-Cookie"), "; ", "&"))
+		cookie, err := url.ParseQuery(strings.ReplaceAll(res.GetHeader("Set-Cookie"), "; ", "&"))
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to convert set-cooke to query: %s", err.Error())
+		}
 
-		// r = req.CreateRequest().SetHeader("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
+		r = req.CreateRequest().SetHeader("Cookie", strings.Join([]string{"session", cookie.Get("session")}, "="))
 
-		// http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
+		http, err = r.Get(strings.Join([]string{"http://", server.Host(), "/dashboard"}, ""))
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong when trying to get dashboard view: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong when trying to get dashboard view: %s", err.Error())
+		}
 
-		// res, err = HttpToResponse(http)
+		res, err = HttpToResponse(http)
 
-		// if err != nil {
-		// 	t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
-		// }
+		if err != nil {
+			t.Fatalf("Something went wrong went trying convert http to response: %s", err.Error())
+		}
 
-		// if res.StatusCode != int(HTTP_RESPONSE_OK) {
-		// 	t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
-		// }
+		if res.StatusCode != int(HTTP_RESPONSE_OK) {
+			t.Fatalf("Expected status code to be (%d) but got (%d)", HTTP_RESPONSE_OK, res.StatusCode)
+		}
 
 		server.Close()
 	})
