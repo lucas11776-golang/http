@@ -24,11 +24,9 @@ type SessionOldBag map[string]string
 // TODO: temp session remove for better version.
 const (
 	ERROR_KEY_STORE_KEY = "__ERROR__STORE__KEY__"
-	// ERROR_KEY_REQUEST_KEY = "__ERROR__REQUEST__KEY__"
-	CSFR_KEY        = "__CSRF__KEY__"
-	OLD_STORE_KEY   = "__OLD__FORM__VALUES__STORE_KEY__"
-	OLD_REQUEST_KEY = "__OLD__FORM__VALUES__REQUEST__KEY__"
-	CSRF_INPUT_NAME = "CSRF_TOKEN"
+	CSFR_KEY            = "__CSRF__KEY__"
+	OLD_STORE_KEY       = "__OLD__FORM__VALUES__STORE_KEY__"
+	CSRF_INPUT_NAME     = "CSRF_TOKEN"
 )
 
 type SessionManager interface {
@@ -316,13 +314,6 @@ func (ctx *Session) saveFormValues(values url.Values) {
 	ctx.setValues(OLD_STORE_KEY, string(form))
 }
 
-// comment
-func (ctx *Session) clearCache() *Session {
-	ctx.removeValues(OLD_REQUEST_KEY)
-
-	return ctx
-}
-
 // Comment
 func (ctx *Session) Save() SessionManager {
 	if !ctx.CanSave() {
@@ -341,7 +332,7 @@ func (ctx *Session) Save() SessionManager {
 		ctx.setValues(ERROR_KEY_STORE_KEY, string(errors))
 	}
 
-	if err := ctx.clearCache().session.Save(ctx.request.Request, ctx.request.Response.Writer); err != nil {
+	if err := ctx.session.Save(ctx.request.Request, ctx.request.Response.Writer); err != nil {
 		// TODO: log error
 	}
 
