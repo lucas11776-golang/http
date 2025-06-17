@@ -370,7 +370,7 @@ func (ctx *Session) Error(key string) string {
 		return ""
 	}
 
-	return err
+	return str.ToUpper(err[:1]) + err[1:]
 }
 
 // Comment
