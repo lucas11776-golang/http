@@ -30,6 +30,10 @@ const (
 	METHOD_CONNECT Method = "CONNECT"
 )
 
+const (
+	FormValidationErrorMessage = "Form validation faild check errors below"
+)
+
 type Request struct {
 	*http.Request
 	Conn       *connection.Connection
@@ -38,7 +42,7 @@ type Request struct {
 	Session    SessionManager
 	Ws         *Ws
 	Parameters Parameters
-	Validation *validation.Validator
+	Validator  *validation.Validator
 }
 
 type HttpRequestHeader struct {
@@ -53,23 +57,38 @@ type HttpRequestContent struct {
 	body    io.Reader
 }
 
-// TODO: Implement form request...
+type JsonErrorResponse struct {
+	Message string           `json:"message"`
+	Errors  SessionErrorsBag `json:"errors"`
+}
+
 // Comment
 func FormRequest(rules validation.RulesBag) Middleware {
 	return func(req *Request, res *Response, next Next) *Response {
-		// validator := validation.Validation(req.Request, rules)
+		switch Method(req.Method) {
+		case METHOD_POST, METHOD_PATCH, METHOD_PUT, METHOD_DELETE:
+			if req.Validator = validation.Validation(req.Request, rules); !req.Validator.Validate() {
+				switch strings.ToLower(req.contentType()) {
+				case "application/json":
+					return res.SetStatus(HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(JsonErrorResponse{
+						Message: FormValidationErrorMessage,
+						Errors:  SessionErrorsBag(req.Validator.Errors()),
+					})
 
-		// if !validator.Validate() {
-		// 	// check if json
+				default:
+					if req.Session != nil {
+						req.Session.SetErrors(SessionErrorsBag(req.Validator.Errors()))
+					}
 
-		// 	if req.Session != nil {
-		// 		req.Session.SetErrors(SessionErrorsBag(validator.Errors()))
-		// 	}
+					return res.Back()
+				}
+			}
 
-		// 	return res.Back() // TODO: implement
-		// }
+			return next()
 
-		return next()
+		default:
+			return next()
+		}
 	}
 }
 

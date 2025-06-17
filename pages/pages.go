@@ -8,18 +8,25 @@ import (
 )
 
 // Comment
-func Redirect(to string) string {
-	if _, err := url.Parse(to); err != nil {
-		to = helper.Url(to)
+func getUrl(to string) string {
+	parsed, err := url.Parse(to)
+
+	if err != nil || parsed.Host == "" {
+		return helper.Url(to)
 	}
 
+	return to
+}
+
+// Comment
+func Redirect(to string) string {
 	return strings.Join([]string{
 		`<!DOCTYPE html>`,
 		`<head>`,
-		`  <meta http-equiv="Refresh" content="0, url='` + to + `'">`,
+		`  <meta http-equiv="Refresh" content="0, url='` + getUrl(to) + `'">`,
 		`</head>`,
 		`<body>`,
-		`  <p>You will be redirected to ` + to + `</p>`,
+		`  <p>You will be redirected to ` + getUrl(to) + `</p>`,
 		`</body>`,
 		`</html>`,
 	}, "\r\n")

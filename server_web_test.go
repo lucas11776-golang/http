@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -18,8 +19,10 @@ import (
 	"github.com/lucas11776-golang/http/types"
 	"github.com/lucas11776-golang/http/utils/reader"
 	req "github.com/lucas11776-golang/http/utils/request"
+	"github.com/lucas11776-golang/http/utils/response"
 	"github.com/lucas11776-golang/http/utils/rsa"
 	str "github.com/lucas11776-golang/http/utils/strings"
+	"github.com/lucas11776-golang/http/validation"
 	"github.com/open2b/scriggo"
 	"github.com/quic-go/quic-go/http3"
 )
@@ -190,29 +193,109 @@ func TestServerWeb(t *testing.T) {
 	})
 
 	t.Run("TestFormValidation", func(t *testing.T) {
-		server := Server("127.0.0.1", 0)
+		server := Server("127.0.0.1", 0).ParseJson(true)
+		sessions := server.Session([]byte(str.Random(10)))
+		emailErrMsg := "The email is required"
+
+		LoginRequest := func() Middleware {
+			return FormRequest(validation.RulesBag{
+				"email": validation.Rules{"required"},
+			})
+		}
 
 		server.Route().Group("authentication", func(route *Router) {
 			route.Group("login", func(route *Router) {
 				route.Post("/", func(req *Request, res *Response) *Response {
 					return res.Redirect("dashboard")
+				}, LoginRequest())
+				route.Get("/", func(req *Request, res *Response) *Response {
+					return res.Html("Login Veiw")
 				})
 			})
 		})
 
 		go server.Listen()
 
-		// ------------------------------ Web Request ------------------------------ //
+		t.Run("TestWebRequest", func(t *testing.T) {
+			r := req.CreateRequest().
+				SetHeaders(types.Headers{
+					"content-type": "application/x-www-form-urlencoded",
+					"host":         "127.0.0.1:4567",
+				})
 
-		r := req.CreateRequest().
-			SetHeaders(types.Headers{
-				"content-type": "application/json",
-				"host":         "127.0.0.1:4567",
-			})
+			http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
 
-		http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/api/users"}, ""), []byte{})
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		fmt.Println(http, err)
+			_, _, h, _, err := response.ParseHttpToResponse(http)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cookie, err := url.ParseQuery(strings.ReplaceAll(h.Get("Set-Cookie"), "; ", "&"))
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Second Request
+			headers := types.Headers{
+				"cookie": strings.Join([]string{"session", cookie.Get("session")}, "="),
+			}
+
+			req, err := NewRequest("GET", "/authentication/login", "HTTP/1.1", headers, bytes.NewReader([]byte{}))
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			session := sessions.Session(req)
+
+			if msg := session.Error("email"); msg != emailErrMsg {
+				t.Fatalf("Expected email to be (%s) but got (%s)", emailErrMsg, msg)
+			}
+		})
+
+		t.Run("TestWebRequest", func(t *testing.T) {
+			r := req.CreateRequest().
+				SetHeaders(types.Headers{
+					"content-type": "application/json",
+					"host":         "127.0.0.1:4567",
+				})
+
+			http, err := r.Post(strings.Join([]string{"http://", server.Host(), "/authentication/login"}, ""), []byte{})
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, statusCode, _, body, err := response.ParseHttpToResponse(http)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if statusCode != int(HTTP_RESPONSE_UNPROCESSABLE_CONTENT) {
+				t.Fatalf("Expected response statuts code to be (%d) but got (%d)", HTTP_RESPONSE_UNPROCESSABLE_CONTENT, statusCode)
+			}
+
+			var jsonErrorResponse JsonErrorResponse
+
+			if err := json.Unmarshal(body, &jsonErrorResponse); err != nil {
+				t.Fatal(err)
+			}
+
+			if jsonErrorResponse.Message != FormValidationErrorMessage {
+				t.Fatalf("Expected json error message to be (%s) but got (%s)", FormValidationErrorMessage, jsonErrorResponse.Message)
+			}
+
+			if msg := jsonErrorResponse.Errors["email"]; msg != emailErrMsg {
+				t.Fatalf("Expected email error to be (%s) but got (%s)", emailErrMsg, msg)
+			}
+		})
 
 		server.Close()
 	})

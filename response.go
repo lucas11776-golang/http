@@ -257,11 +257,11 @@ func (ctx *Response) Json(v any) *Response {
 }
 
 // Comment
-// func (ctx *Response) RedirectBack() *Response {
-// 	// ctx.Bag.Redirect = &RedirectBag{To: strings.Trim(path, "/")}
-// 	// referer to redirect back....
-// 	return ctx
-// }
+func (ctx *Response) Back() *Response {
+	ctx.Bag.Redirect = &RedirectBag{To: ctx.Request.Header.Get("Referer")}
+
+	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.Redirect(ctx.Bag.Redirect.To))
+}
 
 // Comment
 func (ctx *Response) Redirect(path string) *Response {

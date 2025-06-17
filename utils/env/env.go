@@ -2,9 +2,9 @@ package env
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/spf13/cast"
 )
 
 // Comment
@@ -21,7 +21,15 @@ func Env(key string) string {
 
 // Comment
 func EnvInt(key string) int {
-	n, _ := strconv.Atoi(Env(key))
+	return cast.ToInt(Env(key))
+}
 
-	return n
+// Comment
+func EnvInt64(key string) int64 {
+	return cast.ToInt64(Env(key))
+}
+
+// Comment
+func EnvBool(key string) bool {
+	return cast.ToBool(Env(key))
 }

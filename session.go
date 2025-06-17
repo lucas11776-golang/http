@@ -63,13 +63,14 @@ type Sessions struct {
 }
 
 type Session struct {
-	session     *sessions.Session
-	request     *Request
-	save        bool
-	storeErrors SessionErrorsBag
-	errors      SessionErrorsBag
-	valuesMutex sync.Mutex
-	store       *sessions.CookieStore
+	session          *sessions.Session
+	request          *Request
+	save             bool
+	storeErrors      SessionErrorsBag
+	storeErrorsMutex sync.Mutex
+	errors           SessionErrorsBag
+	valuesMutex      sync.Mutex
+	store            *sessions.CookieStore
 }
 
 // Comment
@@ -344,7 +345,9 @@ func (ctx *Session) Save() SessionManager {
 
 // Comment
 func (ctx *Session) SetError(key string, value string) SessionManager {
+	ctx.storeErrorsMutex.Lock()
 	ctx.storeErrors[key] = value
+	ctx.storeErrorsMutex.Unlock()
 
 	ctx.save = true
 

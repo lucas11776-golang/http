@@ -12,6 +12,7 @@ import (
 
 	"github.com/lucas11776-golang/http/pages"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/http/utils/helper"
 	"github.com/lucas11776-golang/http/utils/response"
 	"github.com/open2b/scriggo"
 )
@@ -127,11 +128,51 @@ func TestResponse(t *testing.T) {
 	t.Run("TestResponseRedirect", func(t *testing.T) {
 		os.Setenv("APP_URL", "http://localhost:8080/")
 
-		uri := "authentication/login"
-		tBody := pages.Redirect(uri)
+		uri := "authentication/register"
+		tBody := pages.Redirect(helper.Url(uri))
 		reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
 			SetHeader("content-type", "application/json").
 			Redirect(uri)
+		res, _ := HttpToResponse(response.ResponseToHttp(reply.Response))
+
+		body, err := io.ReadAll(res.Body)
+
+		if err != nil {
+			t.Fatalf("Failed to read body: %v", err)
+		}
+
+		if res.StatusCode != int(HTTP_RESPONSE_TEMPORARY_REDIRECT) {
+			t.Fatalf("Expected response status code to be (%d) but got (%d)", 200, res.StatusCode)
+		}
+
+		if tBody != string(body) {
+			t.Fatalf("Expected response body to be (%s) but got (%s)", tBody, string(body))
+		}
+	})
+
+	t.Run("TestResponseRedirectBack", func(t *testing.T) {
+		os.Setenv("APP_URL", "http://localhost:8080/")
+
+		var err error
+
+		referer := "http://localhost:8080/authentication/login?redirect=dashboard"
+		tBody := pages.Redirect(referer)
+
+		rsp := InitResponse().SetStatus(HTTP_RESPONSE_OK).
+			SetHeaders(types.Headers{
+				"content": "application/json",
+			})
+
+		rsp.Request, err = NewRequest("POST", "authentication/login", "HTTP/1.1", types.Headers{
+			"referer": referer,
+		}, strings.NewReader(""))
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		reply := rsp.Back()
+
 		res, _ := HttpToResponse(response.ResponseToHttp(reply.Response))
 
 		body, err := io.ReadAll(res.Body)

@@ -15,13 +15,13 @@ type File struct {
 
 type Errors map[string]string
 
-type Fields map[string]string
+type Values map[string]string
 
 type Files map[string]*File
 
 type Data struct {
 	Files  Files
-	Fields Fields
+	Values Values
 }
 
 type Validator struct {
@@ -36,6 +36,17 @@ type Rule interface{}
 type Rules []Rule
 
 type RulesBag map[string]Rules
+
+// Comment
+func (ctx Files) Get(key string) *File {
+	file, ok := ctx[key]
+
+	if !ok {
+		return nil
+	}
+
+	return file
+}
 
 type RuleValidation interface {
 	Validate(validator *Validator, field string, value interface{}, args ...string) error
@@ -64,14 +75,46 @@ func Validation(req *http.Request, rules RulesBag) *Validator {
 		rules:   rules,
 		validated: &Data{
 			Files:  make(Files),
-			Fields: make(Fields),
+			Values: make(Values),
 		},
 	}
 }
 
 // Comment
-func (ctx *Validator) Validated() (fields Fields, files Files) {
-	return ctx.validated.Fields, ctx.validated.Files
+func (ctx *Validator) Validated() (fields Values, files Files) {
+	return ctx.validated.Values, ctx.validated.Files
+}
+
+// Comment
+func (ctx *Validator) Values() Values {
+	return ctx.validated.Values
+}
+
+// Comment
+func (ctx *Validator) GetValue(key string) string {
+	value, ok := ctx.validated.Values[key]
+
+	if !ok {
+		return ""
+	}
+
+	return value
+}
+
+// Comment
+func (ctx *Validator) Files() Files {
+	return ctx.validated.Files
+}
+
+// Comment
+func (ctx *Validator) GetFile(key string) *File {
+	file, ok := ctx.validated.Files[key]
+
+	if !ok {
+		return nil
+	}
+
+	return file
 }
 
 // Comment
@@ -107,7 +150,7 @@ func (ctx *Validator) addValue(key string, value interface{}) {
 		ctx.validated.Files[key] = value.(*File)
 
 	case string:
-		ctx.validated.Fields[key] = value.(string)
+		ctx.validated.Values[key] = value.(string)
 	}
 }
 
@@ -177,7 +220,7 @@ func (ctx *Validator) Reset() *Validator {
 	ctx.errors = make(Errors)
 	ctx.validated = &Data{
 		Files:  make(Files),
-		Fields: make(Fields),
+		Values: make(Values),
 	}
 
 	return ctx
