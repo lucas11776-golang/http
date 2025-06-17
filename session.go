@@ -37,7 +37,6 @@ type SessionManager interface {
 	Clear() SessionManager
 	Path(path string) SessionManager
 	Remove(key string) SessionManager
-	CanSave() bool
 	Save() SessionManager
 	SetError(key string, value string) SessionManager
 	SetErrors(errors SessionErrorsBag) SessionManager
@@ -63,14 +62,14 @@ type Sessions struct {
 }
 
 type Session struct {
-	session          *sessions.Session
-	request          *Request
-	save             bool
-	storeErrors      SessionErrorsBag
-	storeErrorsMutex sync.Mutex
-	errors           SessionErrorsBag
-	valuesMutex      sync.Mutex
-	store            *sessions.CookieStore
+	session     *sessions.Session
+	request     *Request
+	save        bool
+	storeErrors SessionErrorsBag
+	errors      SessionErrorsBag
+	old         SessionOldBag
+	valuesMutex sync.Mutex
+	store       *sessions.CookieStore
 }
 
 // Comment
@@ -150,7 +149,11 @@ func (ctx *Session) initErrors() *Session {
 
 	errs := make(SessionErrorsBag)
 
-	json.Unmarshal([]byte(data.(string)), &errs)
+	err := json.Unmarshal([]byte(data.(string)), &errs)
+
+	if err != nil {
+		return ctx
+	}
 
 	ctx.errors = errs
 
@@ -175,7 +178,9 @@ func (ctx *Session) initOld() *Session {
 
 	json.Unmarshal([]byte(values.(string)), &form)
 
-	ctx.setValues(OLD_REQUEST_KEY, form)
+	ctx.old = form
+
+	ctx.removeValues(OLD_STORE_KEY)
 
 	if len(form) != 0 {
 		ctx.save = true
@@ -345,9 +350,7 @@ func (ctx *Session) Save() SessionManager {
 
 // Comment
 func (ctx *Session) SetError(key string, value string) SessionManager {
-	ctx.storeErrorsMutex.Lock()
 	ctx.storeErrors[key] = value
-	ctx.storeErrorsMutex.Unlock()
 
 	ctx.save = true
 
@@ -398,9 +401,7 @@ func (ctx *Session) Csrf() string {
 
 // Comment
 func (ctx *Session) Old(key string) string {
-	ctx.valuesMutex.Lock()
-	old, ok := ctx.session.Values[OLD_REQUEST_KEY].(SessionOldBag)[key]
-	ctx.valuesMutex.Unlock()
+	old, ok := ctx.old[key]
 
 	if !ok {
 		return ""

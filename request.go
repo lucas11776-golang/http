@@ -219,8 +219,10 @@ func (ctx *Request) parseBody() {
 	switch strings.ToLower(ctx.contentType()) {
 	case "application/x-www-form-urlencoded":
 		ctx.parseBodyX_WWW_FORM_URLENCODED()
+
 	case "multipart/form-data":
 		ctx.ParseMultipartForm(ctx.ContentLength)
+
 	case "application/json":
 		ctx.parseBodyJson()
 	}
