@@ -189,8 +189,8 @@ func (ctx *Validator) call(callback RuleValidation, field string, args ...string
 }
 
 // Comment
-func (ctx *Validator) validate(field string, rules Rules) error {
-	for _, rule := range rules {
+func (ctx *Validator) validate(field string, _rules Rules) error {
+	for _, rule := range _rules {
 
 		switch rule.(type) {
 		case RuleValidation:
@@ -209,7 +209,7 @@ func (ctx *Validator) validate(field string, rules Rules) error {
 				_args = strings.Split(_field[1], ",")
 			}
 
-			_rule, ok := ValidatorsRules[_field[0]]
+			_rule, ok := rules[_field[0]]
 
 			if !ok {
 				return fmt.Errorf("rule %s does not exist", rule)

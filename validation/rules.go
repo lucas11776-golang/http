@@ -146,9 +146,14 @@ func (ctx *Confirmed) Validate(validator *Validator, field string, value interfa
 	)
 }
 
-var ValidatorsRules = map[string]RuleValidation{
+var rules = map[string]RuleValidation{
 	"required":  &Required{},
 	"min":       &Minimum{},
 	"max":       &Maximum{},
 	"confirmed": &Confirmed{},
+}
+
+// Comment
+func AddRule(name string, rule RuleValidation) {
+	rules[name] = rule
 }
