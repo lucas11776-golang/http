@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -20,6 +21,10 @@ func TestRules(t *testing.T) {
 		}
 
 		return request, Validation(request, bag)
+	}
+
+	errorMsg := func(err string) string {
+		return strings.ToUpper(err[:1]) + err[1:]
 	}
 
 	testValidator := func(validator *Validator, valid bool, errors Errors) {
@@ -83,6 +88,24 @@ func TestRules(t *testing.T) {
 
 		// Pass
 		request.Form.Set("first_name", "Jeo")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestConfirmed", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"password": Rules{"confirmed"},
+		})
+
+		// Fail
+		request.Form.Set("password", "test@123")
+
+		testValidator(validator, false, Errors{
+			"password": errorMsg(fmt.Sprintf(ConfirmedErrorMessage.Value, "password", "password")),
+		})
+
+		// Pass
+		request.Form.Set("password_confirmation", "test@123")
 
 		testValidator(validator.Reset(), true, Errors{})
 	})

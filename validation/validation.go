@@ -91,7 +91,7 @@ func (ctx *Validator) Values() Values {
 }
 
 // Comment
-func (ctx *Validator) GetValue(key string) string {
+func (ctx *Validator) Value(key string) string {
 	value, ok := ctx.validated.Values[key]
 
 	if !ok {
@@ -107,7 +107,7 @@ func (ctx *Validator) Files() Files {
 }
 
 // Comment
-func (ctx *Validator) GetFile(key string) *File {
+func (ctx *Validator) File(key string) *File {
 	file, ok := ctx.validated.Files[key]
 
 	if !ok {
@@ -144,6 +144,23 @@ func (ctx *Validator) getValue(key string) interface{} {
 }
 
 // Comment
+func (ctx *Validator) FormValue(key string) string {
+	return ctx.request.FormValue(key)
+}
+
+// Comment
+func (ctx *Validator) FormFile(key string) *File {
+	if file, header, err := ctx.request.FormFile(key); err == nil {
+		return &File{
+			file:   file,
+			header: header,
+		}
+	}
+
+	return nil
+}
+
+// Comment
 func (ctx *Validator) addValue(key string, value interface{}) {
 	switch value.(type) {
 	case *File:
@@ -157,6 +174,10 @@ func (ctx *Validator) addValue(key string, value interface{}) {
 // Comment
 func (ctx *Validator) call(callback RuleValidation, field string, args ...string) error {
 	value := ctx.getValue(field)
+
+	if value == nil {
+		value = ""
+	}
 
 	if err := callback.Validate(ctx, field, value, args...); err != nil {
 		return err

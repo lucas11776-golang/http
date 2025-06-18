@@ -8,31 +8,31 @@ import (
 	"github.com/spf13/cast"
 )
 
-const (
-	REQUIRED       string = "the %s is required"
-	MINIMUM_STRING string = "the %s must have minimum length of %s character"
-	MINIMUM_FILE   string = ""
-	MAXIMUM_STRING string = "the %s must have maximum length of %s character"
-	MAXIMUM_FILE   string = ""
-)
-
-// TODO: refactor to this will all fun(valid bool, message ErrorMessage, params MessageErrorParameters) error
 type ErrorMessage struct {
-	String string
-	File   string
+	Value string
+	File  string
 }
-
-type MessageErrorParameters map[string]string
-
-var (
-	MinimumErrorMessage *ErrorMessage = &ErrorMessage{
-		String: "the :name must have minimum length of :value character",
-		File:   "",
-	}
-)
 
 var (
 	ErrValueNotSupport = errors.New("the value is not support")
+)
+
+var (
+	RequiredErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is required",
+	}
+	MinimumErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s must have minimum length of %s character",
+		File:  "",
+	}
+	MaximumErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s must have maximum length of %s character",
+		File:  "",
+	}
+	ConfirmedErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s does not match %s confirmation",
+		File:  "",
+	}
 )
 
 // Comment
@@ -40,82 +40,115 @@ func FormatName(field string) string {
 	return strings.ReplaceAll(field, "_", " ")
 }
 
+type ValidateRuleCallback func() bool
+
+type TypeValidation struct {
+	Value ValidateRuleCallback
+	File  ValidateRuleCallback
+}
+
+// Comment
+func FormattedErrorMessage(field string, err string, args ...string) string {
+	if len(args) != 0 {
+		return fmt.Sprintf(err, []any{FormatName(field), args[0]}...)
+	}
+
+	return fmt.Sprintf(err, FormatName(field))
+}
+
+// Comment
+func CallRuleValidation(field string, value interface{}, errorMessage *ErrorMessage, validation *TypeValidation, args ...string) error {
+	switch value.(type) {
+	case string:
+		if validation.Value() {
+			return nil
+		}
+
+		return errors.New(FormattedErrorMessage(field, errorMessage.Value, args...))
+
+	case *File:
+		if validation.File() {
+			return nil
+		}
+
+		return errors.New(FormattedErrorMessage(field, errorMessage.File, args...))
+
+	default:
+		return ErrValueNotSupport
+	}
+}
+
+/********************************** Required **********************************/
 type Required struct{}
 
 // Comment
 func (ctx *Required) Validate(validator *Validator, field string, value interface{}, args ...string) error {
-	if value == nil {
-		return fmt.Errorf("the %s is required", FormatName(field))
-	}
-
-	switch value.(type) {
-	case string:
-		if value == "" {
-			return fmt.Errorf("the %s is required", FormatName(field))
-		}
-
-	case *File:
-		// TODO: add file
-
-	default:
-		return ErrValueNotSupport
-	}
-
-	return nil
+	return CallRuleValidation(
+		field,
+		value,
+		RequiredErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return value.(string) != "" },
+			File:  func() bool { return value.(string) != "" },
+		},
+		args...,
+	)
 }
 
-type MinimumLenght struct{}
+/********************************** Minimum **********************************/
+type Minimum struct{}
 
 // Comment
-func (ctx *MinimumLenght) Validate(validator *Validator, field string, value interface{}, args ...string) error {
-	if len(args) != 1 {
-		return errors.New("minimun lenght requires at least one argument of size")
-	}
-
-	switch value.(type) {
-	case string:
-		if len(value.(string)) < cast.ToInt(args[0]) {
-			return fmt.Errorf(MINIMUM_STRING, FormatName(field), args[0])
-		}
-	case *File:
-		// TODO: add file
-
-	default:
-		return ErrValueNotSupport
-	}
-
-	return nil
+func (ctx *Minimum) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		MinimumErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return len(value.(string)) >= cast.ToInt(args[0]) },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
 }
 
-type MaximumLenght struct{}
+/********************************** Minimum **********************************/
+type Maximum struct{}
 
 // Comment
-func (ctx *MaximumLenght) Validate(validator *Validator, field string, value interface{}, args ...string) error {
-	if len(args) != 1 {
-		return errors.New("minimun lenght requires at least one argument of size")
-	}
+func (ctx *Maximum) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		MaximumErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return len(value.(string)) <= cast.ToInt(args[0]) },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
+}
 
-	if value == nil {
-		return fmt.Errorf(MAXIMUM_STRING, FormatName(field), args[0])
-	}
+/********************************** Confirmed **********************************/
+type Confirmed struct{}
 
-	switch value.(type) {
-	case string:
-		if len(value.(string)) > cast.ToInt(args[0]) {
-			return fmt.Errorf(MAXIMUM_STRING, FormatName(field), args[0])
-		}
-	case *File:
-		// TODO: add file
-
-	default:
-		return ErrValueNotSupport
-	}
-
-	return nil
+// Comment
+func (ctx *Confirmed) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		ConfirmedErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return value.(string) == validator.FormValue(fmt.Sprintf("%s_confirmation", field)) },
+			File:  func() bool { return false },
+		},
+		append(args, field)...,
+	)
 }
 
 var ValidatorsRules = map[string]RuleValidation{
-	"required": &Required{},
-	"min":      &MinimumLenght{},
-	"max":      &MaximumLenght{},
+	"required":  &Required{},
+	"min":       &Minimum{},
+	"max":       &Maximum{},
+	"confirmed": &Confirmed{},
 }
