@@ -160,17 +160,17 @@ func TestRules(t *testing.T) {
 			"email": Rules{"exists:users,sqlite"},
 		})
 
-		// Fail
+		// // Pass
 		request.Form.Set("email", "jane@deo.com")
+
+		testValidator(validator.Reset(), true, Errors{})
+
+		// Fail
+		request.Form.Set("email", user.Email)
 
 		testValidator(validator, false, Errors{
 			"email": errorMsg(fmt.Sprintf(ExistsErrorMessage.Value, "email", "users")),
 		})
-
-		// Pass
-		request.Form.Set("email", user.Email)
-
-		testValidator(validator.Reset(), true, Errors{})
 
 		orm.DB.Remove("sqlite")
 	})

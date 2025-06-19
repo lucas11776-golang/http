@@ -210,7 +210,7 @@ func (ctx *Exists) Validate(validator *Validator, field string, value interface{
 					return false
 				}
 
-				return count != 0
+				return count == 0
 			},
 			File: func() bool { return false },
 		},
