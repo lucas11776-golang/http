@@ -95,6 +95,8 @@ func (ctx *HTTP) routeNotFound(req *Request) *Response {
 		res := ctx.handleStatic(req)
 
 		if res != nil {
+			req.isStatic = true
+
 			return res
 		}
 	}
@@ -328,7 +330,9 @@ func (ctx *HTTP) writeResponse(res *Response, w http.ResponseWriter) error {
 		w.Header().Set(k, res.GetHeader(k))
 	}
 
-	res.Session.Save()
+	if !res.Request.isStatic {
+		res.Session.Save()
+	}
 
 	body, err := io.ReadAll(res.Body)
 

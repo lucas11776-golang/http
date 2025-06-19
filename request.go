@@ -43,6 +43,7 @@ type Request struct {
 	Ws         *Ws
 	Parameters Parameters
 	Validator  *validation.Validator
+	isStatic   bool
 }
 
 type HttpRequestHeader struct {
