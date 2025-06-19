@@ -160,10 +160,46 @@ func TestRules(t *testing.T) {
 			"email": Rules{"exists:users,sqlite"},
 		})
 
-		// // Pass
+		// Fail
 		request.Form.Set("email", "jane@deo.com")
 
+		testValidator(validator, false, Errors{
+			"email": errorMsg(fmt.Sprintf(ExistsErrorMessage.Value, "email", "users")),
+		})
+
+		// Pass
+		request.Form.Set("email", user.Email)
+
 		testValidator(validator.Reset(), true, Errors{})
+
+		orm.DB.Remove("sqlite")
+	})
+
+	t.Run("TestUnique", func(t *testing.T) {
+		type User struct {
+			Connection string    `json:"-" connection:"sqlite"`
+			ID         int64     `json:"id" column:"id" type:"primary_key"`
+			CreatedAt  time.Time `json:"created_at" column:"created_at" type:"datetime_current"`
+			Email      string    `json:"email" column:"email" type:"string"`
+		}
+
+		orm.DB.Add("sqlite", sqlite.Connect(":memory:"))
+
+		db := orm.DB.Database("sqlite").Migration()
+
+		if err := db.Migrate(orm.Models{User{}}); err != nil {
+			t.Fatal(err)
+		}
+
+		user, err := orm.Model(User{}).Insert(orm.Values{"email": "jeo@doe.com"})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		request, validator := validation(RulesBag{
+			"email": Rules{"unique:users,sqlite"},
+		})
 
 		// Fail
 		request.Form.Set("email", user.Email)
@@ -172,7 +208,48 @@ func TestRules(t *testing.T) {
 			"email": errorMsg(fmt.Sprintf(ExistsErrorMessage.Value, "email", "users")),
 		})
 
+		// Pass
+		request.Form.Set("email", "jane@doe.com")
+
+		testValidator(validator.Reset(), true, Errors{})
+
 		orm.DB.Remove("sqlite")
+	})
+
+	t.Run("TestDatetime", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"due_date": Rules{"datetime"},
+		})
+
+		// Fail
+		request.Form.Set("due_date", "02 Jane 2015")
+
+		testValidator(validator, false, Errors{
+			"due_date": errorMsg(fmt.Sprintf(DatetimeErrorMessage.Value, "due date")),
+		})
+
+		// Pass
+		request.Form.Set("due_date", "2025-06-19 12:36:05")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestDate", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"start_date": Rules{"date"},
+		})
+
+		// Fail
+		request.Form.Set("start_date", "19-06-2015")
+
+		testValidator(validator, false, Errors{
+			"start_date": errorMsg(fmt.Sprintf(DateErrorMessage.Value, "start date")),
+		})
+
+		// Pass
+		request.Form.Set("start_date", "2025-06-19")
+
+		testValidator(validator.Reset(), true, Errors{})
 	})
 
 }

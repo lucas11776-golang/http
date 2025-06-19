@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/lucas11776-golang/orm"
 	"github.com/spf13/cast"
@@ -38,7 +39,16 @@ var (
 		Value: "the %s is invalid",
 	}
 	ExistsErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s does not exists in %s",
+	}
+	UniqueErrorMessage *ErrorMessage = &ErrorMessage{
 		Value: "the %s already exists in %s",
+	}
+	DatetimeErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is invalid datetime",
+	}
+	DateErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is invalid date",
 	}
 )
 
@@ -210,11 +220,102 @@ func (ctx *Exists) Validate(validator *Validator, field string, value interface{
 					return false
 				}
 
+				return count != 0
+			},
+			File: func() bool { return false },
+		},
+		append(args, field)...,
+	)
+}
+
+/********************************** Exists **********************************/
+type Unique struct{}
+
+// Comment
+func (ctx *Unique) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	if len(args) < 2 {
+		return errors.New("exists expect at least 2 arguments")
+	}
+
+	db := orm.DB.Database(args[1])
+
+	if db == nil {
+		return fmt.Errorf("connection %s does not exist in database", args[1])
+	}
+
+	if len(args) > 2 {
+		field = args[2]
+	}
+
+	return CallRuleValidation(
+		field,
+		value,
+		ExistsErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				count, err := db.Count(&orm.Statement{
+					Table: args[0],
+					Where: []interface{}{&orm.Where{
+						Key:      field,
+						Operator: orm.EQUALS,
+						Value:    value,
+					}},
+				})
+
+				if err != nil {
+					return false
+				}
+
 				return count == 0
 			},
 			File: func() bool { return false },
 		},
 		append(args, field)...,
+	)
+}
+
+/********************************** Email **********************************/
+type Datetime struct{}
+
+// Comment
+func (ctx *Datetime) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		DatetimeErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				_, err := time.Parse(time.DateTime, value.(string))
+
+				return err == nil
+			},
+			File: func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Email **********************************/
+type Date struct{}
+
+// Comment
+func (ctx *Date) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+
+	//
+
+	return CallRuleValidation(
+		field,
+		value,
+		DateErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				_, err := time.Parse(time.DateOnly, value.(string))
+
+				return err == nil
+			},
+			File: func() bool { return false },
+		},
+		args...,
 	)
 }
 
@@ -224,7 +325,10 @@ var rules = map[string]RuleValidation{
 	"max":       &Maximum{},
 	"confirmed": &Confirmed{},
 	"email":     &Email{},
+	"unique":    &Unique{},
 	"exists":    &Exists{},
+	"datetime":  &Datetime{},
+	"date":      &Date{},
 }
 
 // Comment
