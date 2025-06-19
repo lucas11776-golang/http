@@ -194,7 +194,9 @@ func (ctx *Validator) validate(field string, _rules Rules) error {
 
 		switch rule.(type) {
 		case RuleValidation:
-			return ctx.call(rule.(RuleValidation), field)
+			if err := ctx.call(rule.(RuleValidation), field); err != nil {
+				return err
+			}
 
 		case string:
 			_field := strings.Split(rule.(string), ":")
@@ -215,7 +217,9 @@ func (ctx *Validator) validate(field string, _rules Rules) error {
 				return fmt.Errorf("rule %s does not exist", rule)
 			}
 
-			return ctx.call(_rule, field, _args...)
+			if err := ctx.call(_rule, field, _args...); err != nil {
+				return err
+			}
 
 		default:
 			return fmt.Errorf("rule %s does not exist", rule)
