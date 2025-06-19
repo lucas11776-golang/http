@@ -26,7 +26,6 @@ func Redirect(to string) string {
 		`  <meta http-equiv="Refresh" content="0, url='` + getUrl(to) + `'">`,
 		`</head>`,
 		`<body>`,
-		`  <p>You will be redirected to ` + getUrl(to) + `</p>`,
 		`</body>`,
 		`</html>`,
 	}, "\r\n")

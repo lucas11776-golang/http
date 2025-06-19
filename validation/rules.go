@@ -3,8 +3,10 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
+	"github.com/lucas11776-golang/orm"
 	"github.com/spf13/cast"
 )
 
@@ -31,7 +33,12 @@ var (
 	}
 	ConfirmedErrorMessage *ErrorMessage = &ErrorMessage{
 		Value: "the %s does not match %s confirmation",
-		File:  "",
+	}
+	EmailErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is invalid",
+	}
+	ExistsErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s already exists in %s",
 	}
 )
 
@@ -112,7 +119,7 @@ func (ctx *Minimum) Validate(validator *Validator, field string, value interface
 	)
 }
 
-/********************************** Minimum **********************************/
+/********************************** Maximum **********************************/
 type Maximum struct{}
 
 // Comment
@@ -146,11 +153,78 @@ func (ctx *Confirmed) Validate(validator *Validator, field string, value interfa
 	)
 }
 
+/********************************** Email **********************************/
+type Email struct{}
+
+// Comment
+func (ctx *Email) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		EmailErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				return regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`).MatchString(value.(string))
+			},
+			File: func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Exists **********************************/
+type Exists struct{}
+
+// Comment
+func (ctx *Exists) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	if len(args) < 2 {
+		return errors.New("exists expect at least 2 arguments")
+	}
+
+	db := orm.DB.Database(args[1])
+
+	if db == nil {
+		return fmt.Errorf("connection %s does not exist in database", args[1])
+	}
+
+	if len(args) > 2 {
+		field = args[2]
+	}
+
+	return CallRuleValidation(
+		field,
+		value,
+		ExistsErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				count, err := db.Count(&orm.Statement{
+					Table: args[0],
+					Where: []interface{}{&orm.Where{
+						Key:      field,
+						Operator: orm.EQUALS,
+						Value:    value,
+					}},
+				})
+
+				if err != nil {
+					return false
+				}
+
+				return count != 0
+			},
+			File: func() bool { return false },
+		},
+		append(args, field)...,
+	)
+}
+
 var rules = map[string]RuleValidation{
 	"required":  &Required{},
 	"min":       &Minimum{},
 	"max":       &Maximum{},
 	"confirmed": &Confirmed{},
+	"email":     &Email{},
+	"exists":    &Exists{},
 }
 
 // Comment

@@ -13,6 +13,11 @@ require (
 )
 
 require (
+	github.com/lucas11776-golang/orm v0.0.0-20250618095051-98c805f6d19b // indirect
+	github.com/mattn/go-sqlite3 v1.14.24 // indirect
+)
+
+require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
