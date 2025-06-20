@@ -28,7 +28,6 @@ func Url(path ...interface{}) string {
 
 // Comment
 func Subdomain(domain string, path ...interface{}) string {
-
 	u, err := url.Parse(env.Env("APP_URL"))
 
 	if err != nil {

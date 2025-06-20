@@ -205,7 +205,7 @@ func TestRules(t *testing.T) {
 		request.Form.Set("email", user.Email)
 
 		testValidator(validator, false, Errors{
-			"email": errorMsg(fmt.Sprintf(ExistsErrorMessage.Value, "email", "users")),
+			"email": errorMsg(fmt.Sprintf(UniqueErrorMessage.Value, "email", "users")),
 		})
 
 		// Pass

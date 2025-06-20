@@ -14,9 +14,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-// TODO: Many have errors saving session.Save
-
-const SESSION_DEFAULT_EXPIRE = (60 * 60) * 24
+const SESSION_DEFAULT_EXPIRE = 60 * 60
 
 type SessionErrorsBag map[string]string
 type SessionOldBag map[string]string

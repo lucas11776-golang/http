@@ -276,7 +276,6 @@ func (ctx *HTTP) websocketHandler(req *Request) {
 // Comment
 func (ctx *HTTP) HandleRequest(req *Request) *Response {
 	switch strings.ToLower(ctx.setupRequest(req).GetHeader("upgrade")) {
-
 	case "websocket":
 		ctx.websocketHandler(req)
 
@@ -284,7 +283,6 @@ func (ctx *HTTP) HandleRequest(req *Request) *Response {
 
 	default:
 		return ctx.requestHandler(req)
-
 	}
 }
 

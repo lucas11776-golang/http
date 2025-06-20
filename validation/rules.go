@@ -250,7 +250,7 @@ func (ctx *Unique) Validate(validator *Validator, field string, value interface{
 	return CallRuleValidation(
 		field,
 		value,
-		ExistsErrorMessage,
+		UniqueErrorMessage,
 		&TypeValidation{
 			Value: func() bool {
 				count, err := db.Count(&orm.Statement{
