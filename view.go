@@ -76,7 +76,8 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 		"has":       SessionHas(req),
 		"error":     SessionError(req),
 		"errors":    SessionErrors(req),
-		"csrf":      SessionCsrf(req),
+		"csrfName":  SessionCsrfName(req),
+		"csrfToken": SessionCsrfToken(req),
 		"old":       SessionOld(req),
 	}
 }

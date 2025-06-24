@@ -50,6 +50,21 @@ var (
 	DateErrorMessage *ErrorMessage = &ErrorMessage{
 		Value: "the %s is invalid date",
 	}
+	StringErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not a string",
+	}
+	IntegerErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not a integer",
+	}
+	FloatErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not a float",
+	}
+	NumberErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not a number",
+	}
+	AcceptedErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not accepted",
+	}
 )
 
 // Comment
@@ -300,9 +315,6 @@ type Date struct{}
 
 // Comment
 func (ctx *Date) Validate(validator *Validator, field string, value interface{}, args ...string) error {
-
-	//
-
 	return CallRuleValidation(
 		field,
 		value,
@@ -319,6 +331,94 @@ func (ctx *Date) Validate(validator *Validator, field string, value interface{},
 	)
 }
 
+/********************************** String **********************************/
+type String struct{}
+
+// Comment
+func (ctx *String) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		StringErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return true },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Integer **********************************/
+type Integer struct{}
+
+// Comment
+func (ctx *Integer) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		IntegerErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return regexp.MustCompile(`^-?\d+$`).MatchString(value.(string)) },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Float **********************************/
+type Float struct{}
+
+// Comment
+func (ctx *Float) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		FloatErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return regexp.MustCompile(`^[+-]?(\d+\.\d+|\.\d+|\d+\.)$`).MatchString(value.(string)) },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Float **********************************/
+type Number struct{}
+
+// Comment
+func (ctx *Number) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		NumberErrorMessage,
+		&TypeValidation{
+			Value: func() bool {
+				return regexp.MustCompile(`^[+-]?(\d+\.\d+|\.\d+|\d+\.)$|^[+-]?\d+$`).MatchString(value.(string))
+			},
+			File: func() bool { return false },
+		},
+		args...,
+	)
+}
+
+/********************************** Float **********************************/
+type Accepted struct{}
+
+// Comment
+func (ctx *Accepted) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	return CallRuleValidation(
+		field,
+		value,
+		AcceptedErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return regexp.MustCompile(`^(?i)(yes|on|true|1)$`).MatchString(value.(string)) },
+			File:  func() bool { return false },
+		},
+		args...,
+	)
+}
+
+// Comment
 var rules = map[string]RuleValidation{
 	"required":  &Required{},
 	"min":       &Minimum{},
@@ -329,6 +429,11 @@ var rules = map[string]RuleValidation{
 	"exists":    &Exists{},
 	"datetime":  &Datetime{},
 	"date":      &Date{},
+	"string":    &String{},
+	"integer":   &Integer{},
+	"float":     &Float{},
+	"number":    &Number{},
+	"accepted":  &Accepted{},
 }
 
 // Comment

@@ -21,10 +21,10 @@ type SessionOldBag map[string]string
 
 // TODO: temp session remove for better version.
 const (
-	ERROR_KEY_STORE_KEY = "__ERROR__STORE__KEY__"
-	CSFR_KEY            = "__CSRF__KEY__"
-	OLD_STORE_KEY       = "__OLD__FORM__VALUES__STORE_KEY__"
-	CSRF_INPUT_NAME     = "CSRF_TOKEN"
+	ERROR_KEY_STORE_KEY = "__ERROR__SESSION__"
+	CSFR_NAME           = "__CSRF__SESSION__"
+	OLD_STORE_KEY       = "__OLD_SESSION__"
+	CSRF_INPUT_NAME     = "__CSRF__"
 )
 
 type SessionManager interface {
@@ -38,7 +38,8 @@ type SessionManager interface {
 	SetErrors(errors SessionErrorsBag) SessionManager
 	Errors() SessionErrorsBag
 	Error(key string) string
-	Csrf() string
+	CsrfToken() string
+	CsrfName() string
 	Old(key string) string
 }
 
@@ -111,12 +112,12 @@ func (ctx *Session) removeValues(key interface{}) *Session {
 }
 
 func (ctx *Session) newCsrf() *Session {
-	return ctx.setValues(CSFR_KEY, fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50)))
+	return ctx.setValues(CSFR_NAME, fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50)))
 }
 
 // Comment
 func (ctx *Session) initCsrf() *Session {
-	csrf := ctx.getValues(CSFR_KEY)
+	csrf := ctx.getValues(CSFR_NAME)
 
 	if csrf == nil {
 		return ctx.newCsrf()
@@ -372,8 +373,13 @@ func (ctx *Session) Error(key string) string {
 }
 
 // Comment
-func (ctx *Session) Csrf() string {
-	csrf := ctx.getValues(CSFR_KEY)
+func (ctx *Session) CsrfName() string {
+	return CSRF_INPUT_NAME
+}
+
+// Comment
+func (ctx *Session) CsrfToken() string {
+	csrf := ctx.getValues(CSFR_NAME)
 
 	if csrf == nil {
 		return ""
@@ -385,7 +391,7 @@ func (ctx *Session) Csrf() string {
 		return ""
 	}
 
-	return fmt.Sprintf(`<input name="%s" value="%s">`, CSRF_INPUT_NAME, token[1])
+	return token[1]
 }
 
 // Comment
@@ -428,9 +434,16 @@ func SessionErrors(req *Request) func() SessionErrorsBag {
 }
 
 // Comment
-func SessionCsrf(req *Request) func() string {
+func SessionCsrfToken(req *Request) func() string {
 	return func() string {
-		return req.Session.Csrf()
+		return req.Session.CsrfToken()
+	}
+}
+
+// Comment
+func SessionCsrfName(req *Request) func() string {
+	return func() string {
+		return req.Session.CsrfName()
 	}
 }
 

@@ -15,7 +15,7 @@ func CsrfMiddleware(req *http.Request, res *http.Response, next http.Next) *http
 			return next()
 		}
 
-		if req.FormValue(http.CSRF_INPUT_NAME) != req.Session.Csrf() {
+		if req.FormValue(http.CSRF_INPUT_NAME) != req.Session.CsrfToken() {
 			return res.Html(pages.CsrfExpired())
 		}
 

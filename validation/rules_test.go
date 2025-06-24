@@ -252,4 +252,86 @@ func TestRules(t *testing.T) {
 		testValidator(validator.Reset(), true, Errors{})
 	})
 
+	t.Run("TestString", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"name": Rules{"string"},
+		})
+
+		// Pass
+		request.Form.Set("name", "Jeo")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestInteger", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"year": Rules{"integer"},
+		})
+
+		// Fail
+		request.Form.Set("year", "this year is 2025")
+
+		testValidator(validator, false, Errors{
+			"year": errorMsg(fmt.Sprintf(IntegerErrorMessage.Value, "year")),
+		})
+
+		// Pass
+		request.Form.Set("year", "2025")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestFloat", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"weight": Rules{"float"},
+		})
+
+		// Fail
+		request.Form.Set("weight", "72")
+
+		testValidator(validator, false, Errors{
+			"weight": errorMsg(fmt.Sprintf(FloatErrorMessage.Value, "weight")),
+		})
+
+		// Pass
+		request.Form.Set("weight", "72.00")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestNumber", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"weight": Rules{"number"},
+		})
+
+		// Fail
+		request.Form.Set("weight", "72kg")
+
+		testValidator(validator, false, Errors{
+			"weight": errorMsg(fmt.Sprintf(NumberErrorMessage.Value, "weight")),
+		})
+
+		// Pass
+		request.Form.Set("weight", "72")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
+
+	t.Run("TestAccepted", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"term_and_conditions": Rules{"accepted"},
+		})
+
+		// Fail
+		request.Form.Set("term_and_conditions", "yebo")
+
+		testValidator(validator, false, Errors{
+			"term_and_conditions": errorMsg(fmt.Sprintf(AcceptedErrorMessage.Value, FormatName("term_and_conditions"))),
+		})
+
+		// Pass
+		request.Form.Set("term_and_conditions", "on")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
 }

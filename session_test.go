@@ -336,8 +336,12 @@ func TestSession(t *testing.T) {
 
 		req.Session = sessions.Session(req)
 
-		if session.Csrf() == "" {
+		if session.CsrfToken() == "" {
 			t.Fatalf("Expected csrf to not be empty.")
+		}
+
+		if session.CsrfName() != CSRF_INPUT_NAME {
+			t.Fatalf("Expected csrf name to be (%s) but got (%s)", CSRF_INPUT_NAME, session.CsrfName())
 		}
 	})
 
@@ -464,9 +468,12 @@ func TestSession(t *testing.T) {
 		}
 
 		// Function - Csrf
-		if SessionCsrf(req)() == "" {
-			t.Fatalf("Expected csrf not to be empty.")
+		if token := SessionCsrfToken(req)(); token != req.Session.CsrfToken() {
+			t.Fatalf("Expected csrf token to be (%s) but got (%s)", req.Session.CsrfToken(), token)
 		}
 
+		if name := SessionCsrfName(req)(); name == "" {
+			t.Fatalf("Expected csrf name to be (%s) but got (%s)", req.Session.CsrfName(), name)
+		}
 	})
 }

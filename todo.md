@@ -7,5 +7,5 @@
 # Cache
 - Must have resource cache timeout/expire.
 
-# CSRF
-- Must add cross site request forgery.
+# Validation
+- Must added file rules
