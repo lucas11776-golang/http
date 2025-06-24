@@ -80,6 +80,7 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 		"csrfToken":  SessionCsrfToken(req),
 		"old":        SessionOld(req),
 		"methodName": func() string { return RequestFormMethodName },
+		"request":    func() *Request { return req },
 	}
 }
 
