@@ -31,7 +31,8 @@ const (
 )
 
 const (
-	FormValidationErrorMessage = "Form validation faild check errors below"
+	FormValidationErrorMessage string = "Form validation faild check errors below"
+	RequestFormMethodName      string = "__METHOD__"
 )
 
 type Request struct {

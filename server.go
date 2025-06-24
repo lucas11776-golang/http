@@ -193,7 +193,7 @@ func (ctx *HTTP) setupRequest(req *Request) *Request {
 	req.Session = ctx.Get("session").(SessionsManager).Session(req)
 	req.Response.Session = req.Session
 
-	if method := req.FormValue("__METHOD__"); method != "" {
+	if method := req.FormValue(RequestFormMethodName); method != "" {
 		req.Method = strings.ToUpper(method)
 	}
 

@@ -69,16 +69,17 @@ func (ctx *View) buildTemplate(view string, options *scriggo.BuildOptions) (*scr
 // Comment
 func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 	return native.Declarations{
-		"url":       helper.Url,
-		"subdomain": helper.Subdomain,
-		"format":    helper.Format,
-		"session":   SessionValue(req),
-		"has":       SessionHas(req),
-		"error":     SessionError(req),
-		"errors":    SessionErrors(req),
-		"csrfName":  SessionCsrfName(req),
-		"csrfToken": SessionCsrfToken(req),
-		"old":       SessionOld(req),
+		"url":        helper.Url,
+		"subdomain":  helper.Subdomain,
+		"format":     helper.Format,
+		"session":    SessionValue(req),
+		"has":        SessionHas(req),
+		"error":      SessionError(req),
+		"errors":     SessionErrors(req),
+		"csrfName":   SessionCsrfName(req),
+		"csrfToken":  SessionCsrfToken(req),
+		"old":        SessionOld(req),
+		"methodName": func() string { return RequestFormMethodName },
 	}
 }
 
