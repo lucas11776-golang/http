@@ -235,6 +235,13 @@ func TestRouter(t *testing.T) {
 	t.Run("TestSubDomainWebSocket", func(t *testing.T) {
 		router := &RouterGroup{}
 
+		isUser := func(req *Request, res *Response, next Next) *Response {
+			if req.Session.Get("user_id") == "" {
+				return res.Redirect("login")
+			}
+			return next()
+		}
+
 		router.Router().Subdomain("socket", func(route *Router) {
 			route.Group("vehicles", func(route *Router) {
 				route.Group("{uuid}", func(route *Router) {
@@ -245,7 +252,7 @@ func TestRouter(t *testing.T) {
 					})
 				})
 			})
-		})
+		}, isUser)
 
 		router.Router().Subdomain("{company}", func(route *Router) {
 			route.Ws("vehicles", func(req *Request, ws *Ws) {
@@ -255,7 +262,7 @@ func TestRouter(t *testing.T) {
 			})
 		})
 
-		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("socket.tracker.com", "GET", "vehicles/v-eidms033/location")), 0, "GET", "vehicles/{uuid}/location", 0)
+		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("socket.tracker.com", "GET", "vehicles/v-eidms033/location")), 0, "GET", "vehicles/{uuid}/location", 1)
 
 		if route := router.MatchWsRoute(routeRequest("tracker.com", "GET", "vehicles/v-eidms033/location")); route != nil {
 			t.Fatalf("Expected route to be not when requesting route products/1 request comming from tracker.com")
@@ -272,15 +279,22 @@ func TestRouter(t *testing.T) {
 	t.Run("TestCallback", func(t *testing.T) {
 		router := &RouterGroup{}
 
+		isUser := func(req *Request, res *Response, next Next) *Response {
+			if req.Session.Get("user_id") == "" {
+				return res.Redirect("login")
+			}
+			return next()
+		}
+
 		router.Router().Callback(func(route *Router) {
-			router.Router().Group("api", func(router *Router) {
-				router.Group("products", func(router *Router) {
-					router.Get("/", func(req *Request, res *Response) *Response {
+			route.Group("api", func(route *Router) {
+				route.Group("products", func(route *Router) {
+					route.Get("/", func(req *Request, res *Response) *Response {
 						return res
 					})
 				})
 			})
-			router.Router().Group("chats", func(route *Router) {
+			route.Group("chats", func(route *Router) {
 				route.Ws("{id}", func(req *Request, ws *Ws) {
 					ws.OnReady(func(ws *Ws) {
 						// Emit location logic...
@@ -288,11 +302,12 @@ func TestRouter(t *testing.T) {
 				})
 			})
 
-		})
+		}, isUser)
 
 		// Web Route Test
-		testingRoute(t, router.web, router.MatchWebRoute(routeRequest("127.0.0.1:8080", "GET", "api/products")), 0, "GET", "api/products", 0)
+		testingRoute(t, router.web, router.MatchWebRoute(routeRequest("127.0.0.1:8080", "GET", "api/products")), 0, "GET", "api/products", 1)
+
 		// WebSocket  Route Test
-		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "chats/c-43gpdmwr")), 0, "GET", "chats/{id}", 0)
+		testingRoute(t, router.ws, router.MatchWsRoute(routeRequest("127.0.0.1:8080", "GET", "chats/c-43gpdmwr")), 0, "GET", "chats/{id}", 1)
 	})
 }

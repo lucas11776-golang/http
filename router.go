@@ -47,10 +47,10 @@ type RouterGroup struct {
 }
 
 type Router struct {
-	subdomain  string
-	path       string
-	middleware []Middleware
-	routes     *RouterGroup
+	subdomain   string
+	path        string
+	middlewares []Middleware
+	routes      *RouterGroup
 }
 
 type GroupCallback func(route *Router)
@@ -234,7 +234,7 @@ func (ctx *Router) getRoute(router *Router, method string, uri string, callback 
 	return &Route{
 		method:     strings.ToUpper(method),
 		path:       strings.Split(str.JoinPath(ctx.path, uri), "/"),
-		middleware: append(ctx.middleware, middleware...),
+		middleware: append(ctx.middlewares, middleware...),
 		router:     router,
 		callback:   callback,
 	}
@@ -254,33 +254,37 @@ func (ctx *Router) Route(method string, uri string, callback WebCallback, middle
 	return route
 }
 
-func (ctx *Router) Callback(group GroupCallback) {
-	group(ctx)
+func (ctx *Router) Callback(group GroupCallback, middleware ...Middleware) {
+	group(&Router{
+		path:        ctx.path,
+		routes:      ctx.routes,
+		middlewares: append(ctx.middlewares, middleware...),
+	})
 }
 
 // Comment
 func (ctx *Router) Subdomain(subdomain string, group GroupCallback, middleware ...Middleware) {
 	group(&Router{
-		subdomain:  subdomain,
-		path:       ctx.path,
-		routes:     ctx.routes,
-		middleware: append(ctx.middleware, middleware...),
+		subdomain:   subdomain,
+		path:        ctx.path,
+		routes:      ctx.routes,
+		middlewares: append(ctx.middlewares, middleware...),
 	})
 }
 
 // Comment
 func (ctx *Router) Group(prefix string, group GroupCallback, middleware ...Middleware) {
 	group(&Router{
-		subdomain:  ctx.subdomain,
-		path:       str.JoinPath(ctx.path, prefix),
-		routes:     ctx.routes,
-		middleware: append(ctx.middleware, middleware...),
+		subdomain:   ctx.subdomain,
+		path:        str.JoinPath(ctx.path, prefix),
+		routes:      ctx.routes,
+		middlewares: append(ctx.middlewares, middleware...),
 	})
 }
 
 // Comment
 func (ctx *Router) Middleware(middlewares ...Middleware) *Router {
-	ctx.middleware = append(ctx.middleware, middlewares...)
+	ctx.middlewares = append(ctx.middlewares, middlewares...)
 
 	return ctx
 }
