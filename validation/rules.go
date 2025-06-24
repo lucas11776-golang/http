@@ -63,7 +63,7 @@ var (
 		Value: "the %s is not a number",
 	}
 	AcceptedErrorMessage *ErrorMessage = &ErrorMessage{
-		Value: "the %s is not accepted",
+		Value: "the %s are accepted",
 	}
 )
 
