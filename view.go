@@ -81,6 +81,7 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 		"old":        SessionOld(req),
 		"methodName": func() string { return RequestFormMethodName },
 		"request":    func() *Request { return req },
+		"replace":    strings.ReplaceAll,
 	}
 }
 
