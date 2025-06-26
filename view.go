@@ -83,7 +83,8 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 		"request":    func() *Request { return req },
 		"replace":    strings.ReplaceAll,
 		"truncate":   helper.Truncate,
-		"current":    func() string { return helper.Url(req.Path()) },
+		"cast":       func() *helper.Cast { return &helper.Cast{} },
+		"current":    func() string { return helper.Url(req.Path()) }, // TODO: create url cast e.g url().Current(), url().To("login")...
 	}
 }
 

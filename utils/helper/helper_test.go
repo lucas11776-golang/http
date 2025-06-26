@@ -34,7 +34,7 @@ func TestHelper(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := fmt.Sprint("http://api.example.com/products/1")
+		expected := "http://api.example.com/products/1"
 		actual := Subdomain("api", "products", 1)
 
 		if expected != actual {
