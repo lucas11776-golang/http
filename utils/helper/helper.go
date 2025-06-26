@@ -41,3 +41,12 @@ func Subdomain(domain string, path ...interface{}) string {
 func Format(time time.Time, layout string) string {
 	return time.Format(layout)
 }
+
+// Comment
+func Truncate(str string, limit int, suffix string) string {
+	if len(str) > limit {
+		return fmt.Sprintf("%s%s", str[:limit], suffix)
+	}
+
+	return str
+}

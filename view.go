@@ -82,6 +82,8 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 		"methodName": func() string { return RequestFormMethodName },
 		"request":    func() *Request { return req },
 		"replace":    strings.ReplaceAll,
+		"truncate":   helper.Truncate,
+		"current":    func() string { return helper.Url(req.Path()) },
 	}
 }
 

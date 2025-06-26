@@ -3,9 +3,12 @@ package helper
 import (
 	"fmt"
 	"os"
-	"strings"
+	str "strings"
+
 	"testing"
 	"time"
+
+	"github.com/lucas11776-golang/http/utils/strings"
 )
 
 func TestHelper(t *testing.T) {
@@ -16,7 +19,7 @@ func TestHelper(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		expected := fmt.Sprintf("%s/products/1", strings.TrimRight(host, "/"))
+		expected := fmt.Sprintf("%s/products/1", str.TrimRight(host, "/"))
 		actual := Url("products", 1)
 
 		if expected != actual {
@@ -47,6 +50,17 @@ func TestHelper(t *testing.T) {
 
 		if expected != actual {
 			t.Fatalf("expected format to be (%s) but got (%s)", expected, actual)
+		}
+	})
+
+	t.Run("TestTruncate", func(t *testing.T) {
+		str := strings.Random(10)
+
+		result := Truncate(str, 5, "...")
+		expected := fmt.Sprintf("%s...", str[:5])
+
+		if result != expected {
+			t.Fatalf("Expected truncate str to be (%s) but got (%s)", result, expected)
 		}
 	})
 }
