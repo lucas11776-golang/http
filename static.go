@@ -48,12 +48,14 @@ func (ctx *DefaultStaticReader) Open(name string) (fs.File, error) {
 	}
 
 	ctx.mutex.Lock()
-
 	ctx.files[name] = data
-
 	ctx.mutex.Unlock()
 
-	return ctx.files.Open(name)
+	ctx.mutex.Lock()
+	file, err = ctx.files.Open(name)
+	ctx.mutex.Unlock()
+
+	return file, err
 }
 
 // Comment
