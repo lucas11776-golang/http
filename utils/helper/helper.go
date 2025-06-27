@@ -54,6 +54,33 @@ func Truncate(str string, limit int, suffix string) string {
 }
 
 // Comment
+func QueryToString(url url.Values, merge ...url.Values) string {
+	query := ""
+
+	for _, value := range merge {
+		for k, v := range value {
+			url[k] = v
+		}
+	}
+
+	var i int64 = 0
+
+	for k, v := range url {
+		query = fmt.Sprintf("%s%s=%s", query, k, v[0])
+
+		if int64(len(url)-1) != i {
+			query = fmt.Sprintf("%s&", query)
+		}
+
+		i++
+	}
+
+	return fmt.Sprintf("?%s", query)
+}
+
+//
+
+// Comment
 func (ctx *Cast) ToString(value interface{}) string {
 	return cast.ToString(value)
 }

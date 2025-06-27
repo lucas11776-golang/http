@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	str "strings"
 
@@ -61,6 +62,17 @@ func TestHelper(t *testing.T) {
 
 		if result != expected {
 			t.Fatalf("Expected truncate str to be (%s) but got (%s)", result, expected)
+		}
+	})
+
+	t.Run("TeestQueryToString", func(t *testing.T) {
+		u := url.Values{"page": []string{"1"}}
+
+		result := QueryToString(u, url.Values{"page": []string{"10"}})
+		expected := "?page=10"
+
+		if result != expected {
+			t.Fatalf("Expected query to string to be (%s) but got (%s)", result, expected)
 		}
 	})
 }
