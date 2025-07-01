@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io/fs"
 	"math/rand"
 	"strconv"
@@ -8,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/open2b/scriggo"
+	"github.com/open2b/scriggo/native"
 )
 
 func TestView(t *testing.T) {
 	t.Run("TestReader", func(t *testing.T) {
 		world := int(rand.Float64() * 10000)
-		view := NewView(&ViewReaderTest{
+		view := NewView(&viewReaderTest{
 			Files: scriggo.Files{
 				"simple.html": []byte(strings.Join([]string{
 					`<h1>Hello World: {{ world }}</h1>`,
@@ -37,7 +39,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestIfElse", func(t *testing.T) {
-		view := NewView(&ViewReaderTest{
+		view := NewView(&viewReaderTest{
 			Files: scriggo.Files{
 				"if.html": []byte(strings.Join([]string{
 					`<h1>{% if age < 18 %}You can not drive{% else if age >= 21 %}You can drive code 12 or 14{% else %}You can drive code 10{% end %}</h1>`,
@@ -89,7 +91,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestFor", func(t *testing.T) {
-		view := NewView(&ViewReaderTest{
+		view := NewView(&viewReaderTest{
 			Files: scriggo.Files{
 				"for.html": []byte(strings.Join([]string{
 					`<ul>{% for city in cities %}<li>{{ city }}</li>{% end %}</ul>`,
@@ -121,7 +123,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestSwitch", func(t *testing.T) {
-		view := NewView(&ViewReaderTest{
+		view := NewView(&viewReaderTest{
 			Files: scriggo.Files{
 				"switch.html": []byte(strings.Join([]string{
 					`<h1>{% switch role %}{% case "user" %}You are a user{% default %}You are a guest{% end %}</h1>`,
@@ -159,7 +161,7 @@ func TestView(t *testing.T) {
 	})
 
 	t.Run("TestSubDirectoryView", func(t *testing.T) {
-		view := NewView(&ViewReaderTest{
+		view := NewView(&viewReaderTest{
 			Files: scriggo.Files{
 				"authentication/login.html": []byte(strings.Join([]string{
 					"<h1>Login page</h1>",
@@ -179,13 +181,47 @@ func TestView(t *testing.T) {
 			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
 		}
 	})
+
+	t.Run("TestViewDeclarations", func(t *testing.T) {
+		email := "jeo@doe.com"
+
+		type User struct {
+			Email string
+		}
+
+		newUser := func(email string) *User {
+			return &User{Email: email}
+		}
+
+		view := NewView(&viewReaderTest{
+			Files: scriggo.Files{
+				"profile.html": []byte(strings.Join([]string{
+					fmt.Sprintf(`<h1>{{ user("%s").Email }}</h1>`, email),
+				}, "\r\n")),
+			},
+		}, "html", native.Declarations{
+			"user": newUser,
+		})
+
+		data, err := view.Read("profile", ViewData{}, nil)
+
+		if err != nil {
+			t.Fatalf("Failed to parse view: %s", err.Error())
+		}
+
+		expected := fmt.Sprintf("<h1>%s</h1>", email)
+
+		if expected != string(data) {
+			t.Fatalf("Expected view to be (%s) but got (%s)", expected, string(data))
+		}
+	})
 }
 
-type ViewReaderTest struct {
+type viewReaderTest struct {
 	Files scriggo.Files
 }
 
-// Commet
-func (ctx *ViewReaderTest) Open(name string) (fs.File, error) {
+// Comment
+func (ctx *viewReaderTest) Open(name string) (fs.File, error) {
 	return ctx.Files.Open(name)
 }

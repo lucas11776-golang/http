@@ -18,8 +18,9 @@ type ViewWriter struct {
 }
 
 type View struct {
-	fs        fs.FS
-	extension string
+	fs           fs.FS
+	extension    string
+	declarations []native.Declarations
 }
 
 type ViewInterface interface {
@@ -54,10 +55,11 @@ func NewDefaultViewReader(views string) fs.FS {
 }
 
 // Comment
-func NewView(fs fs.FS, extension string) *View {
+func NewView(fs fs.FS, extension string, declarations ...native.Declarations) *View {
 	return &View{
-		fs:        fs,
-		extension: extension,
+		fs:           fs,
+		extension:    extension,
+		declarations: declarations,
 	}
 }
 
@@ -92,6 +94,12 @@ func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 // Comment
 func (ctx *View) Read(view string, data ViewData, req *Request) ([]byte, error) {
 	globals := viewDeclarationsWithHelpers(req)
+
+	for _, declarations := range ctx.declarations {
+		for k, v := range declarations {
+			globals[k] = v
+		}
+	}
 
 	for key, value := range data {
 		globals[key] = value

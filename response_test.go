@@ -238,7 +238,7 @@ func TestResponse(t *testing.T) {
 			`</html>`,
 		}, "\r\n"))
 
-		var responseViewTest = &ViewReaderTest{
+		var responseViewTest = &viewReaderTest{
 			Files: scriggo.Files{"home.html": tBody},
 		}
 
