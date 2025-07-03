@@ -191,7 +191,6 @@ func (ctx *Validator) call(callback RuleValidation, field string, args ...string
 // Comment
 func (ctx *Validator) validate(field string, _rules Rules) error {
 	for _, rule := range _rules {
-
 		switch rule.(type) {
 		case RuleValidation:
 			if err := ctx.call(rule.(RuleValidation), field); err != nil {
@@ -233,7 +232,9 @@ func (ctx *Validator) validate(field string, _rules Rules) error {
 func (ctx *Validator) Validate() bool {
 	for field, rules := range ctx.rules {
 		if err := ctx.validate(field, rules); err != nil {
-			ctx.errors[field] = strings.ToUpper(err.Error()[:1]) + err.Error()[1:]
+			if errMsg := err.Error(); errMsg != NullableFlag {
+				ctx.errors[field] = strings.ToUpper(errMsg[:1]) + errMsg[1:]
+			}
 		}
 	}
 

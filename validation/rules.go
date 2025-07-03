@@ -20,6 +20,10 @@ var (
 	ErrValueNotSupport = errors.New("the value is not support")
 )
 
+const (
+	NullableFlag = ":nullable:"
+)
+
 var (
 	RequiredErrorMessage *ErrorMessage = &ErrorMessage{
 		Value: "the %s is required",
@@ -64,6 +68,10 @@ var (
 	}
 	AcceptedErrorMessage *ErrorMessage = &ErrorMessage{
 		Value: "the %s are accepted",
+	}
+	NullableErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: NullableFlag + "/",
+		File:  NullableFlag + "/",
 	}
 )
 
@@ -401,7 +409,7 @@ func (ctx *Number) Validate(validator *Validator, field string, value interface{
 	)
 }
 
-/********************************** Float **********************************/
+/********************************** Accepted **********************************/
 type Accepted struct{}
 
 // Comment
@@ -416,6 +424,28 @@ func (ctx *Accepted) Validate(validator *Validator, field string, value interfac
 		},
 		args...,
 	)
+}
+
+/********************************** Nullable **********************************/
+type Nullable struct{}
+
+// Comment
+func (ctx *Nullable) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	err := CallRuleValidation(
+		field,
+		value,
+		NullableErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return value.(string) != "" },
+			File:  func() bool { return false },
+		},
+	)
+
+	if err != nil {
+		return errors.New(strings.Split(err.Error(), "/")[0])
+	}
+
+	return err
 }
 
 // Comment
@@ -434,6 +464,7 @@ var rules = map[string]RuleValidation{
 	"float":     &Float{},
 	"number":    &Number{},
 	"accepted":  &Accepted{},
+	"nullable":  &Nullable{},
 }
 
 // Comment

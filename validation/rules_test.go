@@ -334,4 +334,22 @@ func TestRules(t *testing.T) {
 
 		testValidator(validator.Reset(), true, Errors{})
 	})
+
+	t.Run("TestNullable", func(t *testing.T) {
+		request, validator := validation(RulesBag{
+			"first_name": Rules{"nullable", "min:3"},
+		})
+
+		// Fail
+		request.Form.Set("first_name", "y")
+
+		testValidator(validator, false, Errors{
+			"first_name": errorMsg(fmt.Sprintf(MinimumErrorMessage.Value, FormatName("first_name"), "3")),
+		})
+
+		// Pass
+		request.Form.Set("first_name", "")
+
+		testValidator(validator.Reset(), true, Errors{})
+	})
 }
