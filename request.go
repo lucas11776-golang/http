@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -214,6 +215,8 @@ func (ctx *Request) parseBodyJson() {
 	}
 
 	ctx.addJsonFields(jsonMap, []string{})
+
+	ctx.Body = io.NopCloser(bytes.NewBuffer(body))
 }
 
 // Comment
