@@ -132,7 +132,7 @@ func (ctx *HTTP) NewRequest(rq *http.Request, conn *connection.Connection) *Requ
 		Conn:     conn,
 	}
 
-	if ctx.parseJson && req.contentType() == "application/json" {
+	if ctx.parseJson && req.ContentType() == "application/json" {
 		req.parseBodyJson()
 	}
 

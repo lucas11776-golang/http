@@ -15,6 +15,11 @@ func Load(path string) {
 }
 
 // Comment
+func Set(key string, value interface{}) {
+	os.Setenv(key, cast.ToString(value))
+}
+
+// Comment
 func Env(key string) string {
 	return os.Getenv(key)
 }

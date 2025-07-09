@@ -71,7 +71,7 @@ func FormRequest(rules validation.RulesBag) Middleware {
 		switch Method(req.Method) {
 		case METHOD_POST, METHOD_PATCH, METHOD_PUT, METHOD_DELETE:
 			if req.Validator = validation.Validation(req.Request, rules); !req.Validator.Validate() {
-				switch strings.ToLower(req.contentType()) {
+				switch strings.ToLower(req.ContentType()) {
 				case "application/json":
 					return res.SetStatus(HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(JsonErrorResponse{
 						Message: FormValidationErrorMessage,
@@ -147,7 +147,7 @@ func (ctx *Request) IP() string {
 }
 
 // Comment
-func (ctx *Request) contentType() string {
+func (ctx *Request) ContentType() string {
 	header := strings.Split(ctx.GetHeader("content-type"), ";")
 
 	if len(header) == 0 {
@@ -221,7 +221,7 @@ func (ctx *Request) parseBodyJson() {
 
 // Comment
 func (ctx *Request) parseBody() {
-	switch strings.ToLower(ctx.contentType()) {
+	switch strings.ToLower(ctx.ContentType()) {
 	case "application/x-www-form-urlencoded":
 		ctx.parseBodyX_WWW_FORM_URLENCODED()
 
