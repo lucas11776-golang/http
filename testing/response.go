@@ -1,11 +1,15 @@
 package testing
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/orm"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -187,6 +191,196 @@ func (ctx *Response) AssertSession(key string, value string) *Response {
 			value,
 			ctx.Response.Session.Get(key),
 		)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertSessionErrorsHas(keys []string) *Response {
+	for _, key := range keys {
+		if ctx.Response.Session.Error(key) == "" {
+			ctx.testing.Fatalf("Expected session errors to have (%s)", key)
+		}
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertSessionError(key string, value string) *Response {
+	if err := ctx.Response.Session.Error(key); err != value {
+		ctx.testing.Fatalf("Expected session error to be (%s) but got (%s)", value, err)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertSessionErrors(errs map[string]string) *Response {
+	for k, v := range errs {
+		ctx.AssertSessionError(k, v)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) parseResponseJsonErrorsBody() (*http.JsonErrorResponse, error) {
+	if contentType := ctx.Response.GetHeader("content-type"); contentType != "application/json" {
+		return nil, fmt.Errorf("Response content type is not application/json but is %s", contentType)
+	}
+
+	if code := ctx.Response.StatusCode; code < int(http.HTTP_RESPONSE_BAD_REQUEST) {
+		return nil, fmt.Errorf("Response status code is not error code status %d", code)
+	}
+
+	body, err := io.ReadAll(ctx.Response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var errs http.JsonErrorResponse
+
+	if err := json.Unmarshal(body, &errs); err != nil {
+		return nil, err
+	}
+
+	ctx.Response.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	return &errs, nil
+}
+
+// Comment
+func (ctx *Response) AssertJsonErrorsHas(keys []string) *Response {
+	errs, err := ctx.parseResponseJsonErrorsBody()
+
+	if err != nil {
+		ctx.testing.Fatalf("Failed to read json response body - %v", err)
+
+		return ctx
+	}
+
+	for _, key := range keys {
+		if _, ok := errs.Errors[key]; !ok {
+			ctx.testing.Fatalf("Expected json errors to have (%s)", key)
+		}
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertJsonError(key string, value string) *Response {
+	errs, err := ctx.parseResponseJsonErrorsBody()
+
+	if err != nil {
+		ctx.testing.Fatalf("Failed to read json response body - %v", err)
+
+		return ctx
+	}
+
+	if err := errs.Errors[key]; err != value {
+		ctx.testing.Fatalf("Expected json error to be (%s) but got (%s)", value, err)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertJsonErrors(errors map[string]string) *Response {
+	for k, v := range errors {
+		ctx.AssertJsonError(k, v)
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) existsInDatabase(connection string, table string, values map[string]interface{}) (int64, error) {
+	db := orm.DB.Database(connection)
+
+	if db == nil {
+		return 0, fmt.Errorf("database connection %s does not exists", connection)
+	}
+
+	where := []interface{}{}
+
+	index := 0
+
+	for k, v := range values {
+		index += 1
+
+		if index%2 == 0 {
+			where = append(where, orm.AND)
+		}
+
+		where = append(where, &orm.Where{Key: k, Operator: orm.EQUALS, Value: v})
+	}
+
+	return db.Count(&orm.Statement{
+		Table: table,
+		Where: where,
+	})
+}
+
+// Comment
+func (ctx *Response) AssertDatabaseHas(connection string, table string, values map[string]interface{}) *Response {
+	count, err := ctx.existsInDatabase(connection, table, values)
+
+	if err != nil {
+		ctx.testing.Fatal(err)
+
+		return ctx
+	}
+
+	if count == 0 {
+		data, _ := json.Marshal(values)
+
+		ctx.testing.Fatalf("Record (%s) does not exists in database", string(data))
+
+		return ctx
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertDatabaseMissing(connection string, table string, values map[string]interface{}) *Response {
+	count, err := ctx.existsInDatabase(connection, table, values)
+
+	if err != nil {
+		ctx.testing.Fatal(err)
+
+		return ctx
+	}
+
+	if count != 0 {
+		data, _ := json.Marshal(values)
+
+		ctx.testing.Fatalf("Record (%s) exists in database", string(data))
+
+		return ctx
+	}
+
+	return ctx
+}
+
+// Comment
+func (ctx *Response) AssertDatabaseCount(connection string, table string, size int64) *Response {
+	count, err := ctx.existsInDatabase(connection, table, map[string]interface{}{})
+
+	if err != nil {
+		ctx.testing.Fatal(err)
+
+		return ctx
+	}
+
+	if count != size {
+		ctx.testing.Fatalf("Expected table to have (%d) records but got (%d)", size, count)
+
+		return ctx
 	}
 
 	return ctx

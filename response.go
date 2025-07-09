@@ -103,7 +103,6 @@ type Bag struct {
 	Redirect *RedirectBag
 }
 
-// TODO implement the read body response using ReadCloser interface
 type Response struct {
 	*http.Response
 	Writer  http.ResponseWriter
@@ -111,15 +110,6 @@ type Response struct {
 	Session SessionManager
 	Bag     *Bag
 	Ws      *Ws
-}
-
-type ResponseBodyReader struct {
-	io.Reader
-}
-
-// Comment
-func (ctx *ResponseBodyReader) Close() error {
-	return nil
 }
 
 type Writer struct {
@@ -153,7 +143,7 @@ func HttpResponse(protocol string, status Status, headers types.Headers, body []
 		StatusCode: int(status),
 		Status:     strings.Join([]string{strconv.Itoa(int(status)), StatusText(status)}, " "),
 		Header:     h.ToHeader(headers),
-		Body:       &ResponseBodyReader{Reader: bytes.NewReader(body)},
+		Body:       io.NopCloser(bytes.NewReader(body)),
 	}
 }
 
@@ -229,7 +219,7 @@ func (ctx *Response) WithErrors(errors SessionErrorsBag) *Response {
 
 // Comment
 func (ctx *Response) SetBody(body []byte) *Response {
-	ctx.Body = &ResponseBodyReader{Reader: bytes.NewReader(body)}
+	ctx.Body = io.NopCloser(bytes.NewReader(body))
 
 	return ctx
 }

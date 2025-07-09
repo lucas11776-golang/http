@@ -3,9 +3,12 @@ package testing
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/lucas11776-golang/http"
 	"github.com/lucas11776-golang/http/types"
+	"github.com/lucas11776-golang/orm"
+	"github.com/lucas11776-golang/orm/databases/sqlite"
 )
 
 // Comment
@@ -255,6 +258,334 @@ func TestResponseSession(t *testing.T) {
 	if res.testing.hasError() {
 		t.Fatalf("Expected assert session to not log error")
 	}
+
+	res.testcase.Cleanup()
+}
+
+func TestResponseSessionErrorsHas(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	req.request.Session = req.testCase.http.Get("session").(http.SessionsManager).Session(req.request)
+	res.Response.Session = req.request.Session
+
+	// Has Session errors
+	res.AssertSessionErrorsHas([]string{"first_name"})
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has session to log error")
+	}
+
+	res.testing.popError()
+
+	res.Response.Session.SetError("email", "The email is required")
+
+	res.AssertSessionErrorsHas([]string{"email"})
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has session to not log error")
+	}
+
+	res.testcase.Cleanup()
+}
+
+func TestResponseSessionError(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	req.request.Session = req.testCase.http.Get("session").(http.SessionsManager).Session(req.request)
+	res.Response.Session = req.request.Session
+
+	// Has Session error
+	res.AssertSessionError("email", "The email is required")
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has session to log error")
+	}
+
+	res.testing.popError()
+
+	res.Response.Session.SetError("first_name", "The first name is required")
+
+	res.AssertSessionError("first_name", "The first name is required")
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has session to not log error")
+	}
+
+	res.testcase.Cleanup()
+}
+
+func TestResponseJsonErrorsHas(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	res.Response.SetStatus(http.HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(http.JsonErrorResponse{
+		Message: "Form validation error",
+		Errors: http.SessionErrorsBag{
+			"email":    "The email is required",
+			"password": "The password is required",
+		},
+	})
+
+	// JSON error
+	res.AssertJsonErrorsHas([]string{"first_name"})
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has json error to log error")
+	}
+
+	res.testing.popError()
+
+	res.AssertJsonErrorsHas([]string{"email"})
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has json error to not log error")
+	}
+
+	res.testcase.Cleanup()
+}
+
+func TestResponseJsonError(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	res.Response.SetStatus(http.HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(http.JsonErrorResponse{
+		Message: "Form validation error",
+		Errors: http.SessionErrorsBag{
+			"email":    "The email is required",
+			"password": "The password is required",
+		},
+	})
+
+	// JSON error
+	res.AssertJsonError("first_name", "The first name is required")
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has json error to log error")
+	}
+
+	res.testing.popError()
+
+	res.AssertJsonError("password", "The password is required")
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has json error to not log error")
+	}
+
+	res.testcase.Cleanup()
+}
+
+func TestAssertDatabaseHas(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	type User struct {
+		Connection string    `json:"-" connection:"sqlite" table:"users"`
+		ID         int64     `json:"id" column:"id" type:"primary_key"`
+		CreatedAt  time.Time `json:"created_at" column:"created_at" type:"datetime_current"`
+		Email      string    `json:"email" column:"email" type:"string"`
+		Name       string    `json:"name" column:"name" type:"string"`
+	}
+
+	db := sqlite.Connect(":memory:")
+
+	orm.DB.Add("sqlite", db)
+
+	if err := db.Migration().Migrate(orm.Models{User{}}); err != nil {
+		t.Fatal(err)
+	}
+
+	user := &User{
+		Email: "jeo@doe.com",
+		Name:  "Jeo Deo",
+	}
+
+	_, err := db.Insert(&orm.Statement{
+		Table: "users",
+		Values: orm.Values{
+			"email": user.Email,
+			"name":  user.Name,
+		},
+		PrimaryKey: "id",
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res.AssertDatabaseHas("sqlite", "users", map[string]interface{}{
+		"email": "jane@doe.com",
+		"name":  "Jane Deo",
+	})
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has database to log error")
+	}
+
+	res.testing.popError()
+
+	res.AssertDatabaseHas("sqlite", "users", map[string]interface{}{
+		"email": user.Email,
+		"name":  user.Name,
+	})
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has database to not log error")
+	}
+
+	orm.DB.Remove("sqlite")
+
+	res.testcase.Cleanup()
+}
+
+func TestAssertDatabaseMissing(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	type User struct {
+		Connection string    `json:"-" connection:"sqlite" table:"users"`
+		ID         int64     `json:"id" column:"id" type:"primary_key"`
+		CreatedAt  time.Time `json:"created_at" column:"created_at" type:"datetime_current"`
+		Email      string    `json:"email" column:"email" type:"string"`
+		Name       string    `json:"name" column:"name" type:"string"`
+	}
+
+	db := sqlite.Connect(":memory:")
+
+	orm.DB.Add("sqlite", db)
+
+	if err := db.Migration().Migrate(orm.Models{User{}}); err != nil {
+		t.Fatal(err)
+	}
+
+	user := &User{
+		Email: "john@doe.com",
+		Name:  "John Deo",
+	}
+
+	_, err := db.Insert(&orm.Statement{
+		Table: "users",
+		Values: orm.Values{
+			"email": user.Email,
+			"name":  user.Name,
+		},
+		PrimaryKey: "id",
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res.AssertDatabaseMissing("sqlite", "users", map[string]interface{}{
+		"email": user.Email,
+		"name":  user.Name,
+	})
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has database to log error")
+	}
+
+	res.testing.popError()
+
+	res.AssertDatabaseMissing("sqlite", "users", map[string]interface{}{
+		"email": "jane@deo.com",
+		"name":  "Jane",
+	})
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has database to not log error")
+	}
+
+	orm.DB.Remove("sqlite")
+
+	res.testcase.Cleanup()
+}
+
+func TestAssertDatabaseCount(t *testing.T) {
+	req := NewRequest(NewTestCase(t, http.Server("127.0.0.1", 0), true))
+	r := http.NewResponse("HTTP/1.1", http.HTTP_RESPONSE_OK, make(types.Headers), []byte{})
+	res := NewResponse(req, r)
+
+	req.request.Response = res.Response
+	res.request.request = req.request
+
+	type User struct {
+		Connection string    `json:"-" connection:"sqlite" table:"users"`
+		ID         int64     `json:"id" column:"id" type:"primary_key"`
+		CreatedAt  time.Time `json:"created_at" column:"created_at" type:"datetime_current"`
+		Email      string    `json:"email" column:"email" type:"string"`
+		Name       string    `json:"name" column:"name" type:"string"`
+	}
+
+	db := sqlite.Connect(":memory:")
+
+	orm.DB.Add("sqlite", db)
+
+	if err := db.Migration().Migrate(orm.Models{User{}}); err != nil {
+		t.Fatal(err)
+	}
+
+	res.AssertDatabaseCount("sqlite", "users", 0)
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has database to log error")
+	}
+
+	res.testing.popError()
+
+	_, err := db.Insert(&orm.Statement{
+		Table: "users",
+		Values: orm.Values{
+			"email": "jeo@deo.com",
+			"name":  "Jeo Deo",
+		},
+		PrimaryKey: "id",
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res.AssertDatabaseCount("sqlite", "users", 0)
+
+	if !res.testing.hasError() {
+		t.Fatalf("Expected assert has database to log error")
+	}
+
+	res.testing.popError()
+
+	res.AssertDatabaseCount("sqlite", "users", 1)
+
+	if res.testing.hasError() {
+		t.Fatalf("Expected assert has database to not log error")
+	}
+
+	orm.DB.Remove("sqlite")
 
 	res.testcase.Cleanup()
 }

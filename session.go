@@ -22,7 +22,7 @@ type SessionOldBag map[string]string
 // TODO: temp session remove for better version.
 const (
 	ERROR_KEY_STORE_KEY = "__ERROR__SESSION__"
-	CSFR_NAME           = "__CSRF__SESSION__"
+	CSRF_NAME           = "__CSRF__SESSION__"
 	OLD_STORE_KEY       = "__OLD_SESSION__"
 	CSRF_INPUT_NAME     = "__CSRF__"
 )
@@ -112,12 +112,12 @@ func (ctx *Session) removeValues(key interface{}) *Session {
 }
 
 func (ctx *Session) newCsrf() *Session {
-	return ctx.setValues(CSFR_NAME, fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50)))
+	return ctx.setValues(CSRF_NAME, fmt.Sprintf("%d-%s", time.Now().Add(time.Minute*10).Unix(), strings.Random(50)))
 }
 
 // Comment
 func (ctx *Session) initCsrf() *Session {
-	csrf := ctx.getValues(CSFR_NAME)
+	csrf := ctx.getValues(CSRF_NAME)
 
 	if csrf == nil {
 		return ctx.newCsrf()
@@ -341,6 +341,7 @@ func (ctx *Session) Save() SessionManager {
 // Comment
 func (ctx *Session) SetError(key string, value string) SessionManager {
 	ctx.storeErrors[key] = value
+	ctx.errors[key] = value
 
 	ctx.save = true
 
@@ -379,7 +380,7 @@ func (ctx *Session) CsrfName() string {
 
 // Comment
 func (ctx *Session) CsrfToken() string {
-	csrf := ctx.getValues(CSFR_NAME)
+	csrf := ctx.getValues(CSRF_NAME)
 
 	if csrf == nil {
 		return ""
