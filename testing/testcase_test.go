@@ -18,9 +18,9 @@ func TestTestCaseRequest(t *testing.T) {
 
 	res := testcase.Request().Get("/")
 
-	res.AssertOk()
-	res.AssertHeader("content-type", "text/html")
-	res.AssertBody([]byte(body))
+	res.AssertOk().
+		AssertHeader("content-type", "text/html").
+		AssertBody([]byte(body))
 
 	testcase.Cleanup()
 }
