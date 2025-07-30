@@ -129,7 +129,7 @@ func (ctx *Required) Validate(validator *Validator, field string, value interfac
 		RequiredErrorMessage,
 		&TypeValidation{
 			Value: func() bool { return value.(string) != "" },
-			File:  func() bool { return value.(string) != "" },
+			File:  func() bool { return value != nil },
 		},
 		args...,
 	)

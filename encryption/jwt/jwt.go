@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,6 +43,10 @@ func JwtDecode[C interface{}](secret string, token string, claims C) (*C, error)
 
 	if err := json.Unmarshal(data, &claims); err != nil {
 		return nil, fmt.Errorf("error parsing token: %w", err)
+	}
+
+	if !jwtToken.Valid {
+		return nil, errors.New("invalid token")
 	}
 
 	return &claims, nil
