@@ -71,7 +71,7 @@ func FormRequest(rules validation.RulesBag) Middleware {
 		switch Method(req.Method) {
 		case METHOD_POST, METHOD_PATCH, METHOD_PUT, METHOD_DELETE:
 			if req.Validator = validation.Validation(req.Request, rules); !req.Validator.Validate() {
-				if strings.ToLower(req.ContentType()) == "application/json" || req.GetHeader("accept") == "application" {
+				if strings.ToLower(req.ContentType()) == "application/json" || req.GetHeader("accept") == "application/json" {
 					return res.SetStatus(HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(JsonErrorResponse{
 						Message: FormValidationErrorMessage,
 						Errors:  SessionErrorsBag(req.Validator.Errors()),
