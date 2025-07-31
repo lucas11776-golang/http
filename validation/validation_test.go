@@ -55,7 +55,7 @@ func TestValidation(t *testing.T) {
 		}
 
 		validator := Validation(request, RulesBag{
-			"email": Rules{&Required{}},
+			"email": Rules{&RequiredRule{}},
 		})
 
 		if validator.Validate() != false {

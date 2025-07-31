@@ -73,6 +73,9 @@ var (
 		Value: NullableFlag + "/",
 		File:  NullableFlag + "/",
 	}
+	FileErrorMessage *ErrorMessage = &ErrorMessage{
+		Value: "the %s is not a file",
+	}
 )
 
 // Comment
@@ -118,11 +121,11 @@ func CallRuleValidation(field string, value interface{}, errorMessage *ErrorMess
 	}
 }
 
-/********************************** Required **********************************/
-type Required struct{}
+/********************************** RequiredRule **********************************/
+type RequiredRule struct{}
 
 // Comment
-func (ctx *Required) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *RequiredRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -135,11 +138,11 @@ func (ctx *Required) Validate(validator *Validator, field string, value interfac
 	)
 }
 
-/********************************** Minimum **********************************/
-type Minimum struct{}
+/********************************** MinimumRule **********************************/
+type MinimumRule struct{}
 
 // Comment
-func (ctx *Minimum) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *MinimumRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -152,11 +155,11 @@ func (ctx *Minimum) Validate(validator *Validator, field string, value interface
 	)
 }
 
-/********************************** Maximum **********************************/
-type Maximum struct{}
+/********************************** MaximumRule **********************************/
+type MaximumRule struct{}
 
 // Comment
-func (ctx *Maximum) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *MaximumRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -169,11 +172,11 @@ func (ctx *Maximum) Validate(validator *Validator, field string, value interface
 	)
 }
 
-/********************************** Confirmed **********************************/
-type Confirmed struct{}
+/********************************** ConfirmedRule **********************************/
+type ConfirmedRule struct{}
 
 // Comment
-func (ctx *Confirmed) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *ConfirmedRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -186,11 +189,11 @@ func (ctx *Confirmed) Validate(validator *Validator, field string, value interfa
 	)
 }
 
-/********************************** Email **********************************/
-type Email struct{}
+/********************************** EmailRule **********************************/
+type EmailRule struct{}
 
 // Comment
-func (ctx *Email) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *EmailRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -205,11 +208,11 @@ func (ctx *Email) Validate(validator *Validator, field string, value interface{}
 	)
 }
 
-/********************************** Exists **********************************/
-type Exists struct{}
+/********************************** ExistsRule **********************************/
+type ExistsRule struct{}
 
 // Comment
-func (ctx *Exists) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *ExistsRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	if len(args) < 2 {
 		return errors.New("exists expect at least 2 arguments")
 	}
@@ -252,10 +255,10 @@ func (ctx *Exists) Validate(validator *Validator, field string, value interface{
 }
 
 /********************************** Exists **********************************/
-type Unique struct{}
+type UniqueRule struct{}
 
 // Comment
-func (ctx *Unique) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *UniqueRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	if len(args) < 2 {
 		return errors.New("exists expect at least 2 arguments")
 	}
@@ -298,10 +301,10 @@ func (ctx *Unique) Validate(validator *Validator, field string, value interface{
 }
 
 /********************************** Email **********************************/
-type Datetime struct{}
+type DatetimeRule struct{}
 
 // Comment
-func (ctx *Datetime) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *DatetimeRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -319,10 +322,10 @@ func (ctx *Datetime) Validate(validator *Validator, field string, value interfac
 }
 
 /********************************** Email **********************************/
-type Date struct{}
+type DateRule struct{}
 
 // Comment
-func (ctx *Date) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *DateRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -339,11 +342,11 @@ func (ctx *Date) Validate(validator *Validator, field string, value interface{},
 	)
 }
 
-/********************************** String **********************************/
-type String struct{}
+/********************************** StringRule **********************************/
+type StringRule struct{}
 
 // Comment
-func (ctx *String) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *StringRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -356,11 +359,11 @@ func (ctx *String) Validate(validator *Validator, field string, value interface{
 	)
 }
 
-/********************************** Integer **********************************/
-type Integer struct{}
+/********************************** IntegerRule **********************************/
+type IntegerRule struct{}
 
 // Comment
-func (ctx *Integer) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *IntegerRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -373,11 +376,11 @@ func (ctx *Integer) Validate(validator *Validator, field string, value interface
 	)
 }
 
-/********************************** Float **********************************/
-type Float struct{}
+/********************************** FloatRule **********************************/
+type FloatRule struct{}
 
 // Comment
-func (ctx *Float) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *FloatRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -391,10 +394,10 @@ func (ctx *Float) Validate(validator *Validator, field string, value interface{}
 }
 
 /********************************** Float **********************************/
-type Number struct{}
+type NumberRule struct{}
 
 // Comment
-func (ctx *Number) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *NumberRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -409,11 +412,11 @@ func (ctx *Number) Validate(validator *Validator, field string, value interface{
 	)
 }
 
-/********************************** Accepted **********************************/
-type Accepted struct{}
+/********************************** AcceptedRule **********************************/
+type AcceptedRule struct{}
 
 // Comment
-func (ctx *Accepted) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *AcceptedRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
 	return CallRuleValidation(
 		field,
 		value,
@@ -426,18 +429,41 @@ func (ctx *Accepted) Validate(validator *Validator, field string, value interfac
 	)
 }
 
-/********************************** Nullable **********************************/
-type Nullable struct{}
+/********************************** NullableRule **********************************/
+type NullableRule struct{}
 
 // Comment
-func (ctx *Nullable) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+func (ctx *NullableRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+
 	err := CallRuleValidation(
 		field,
 		value,
 		NullableErrorMessage,
 		&TypeValidation{
-			Value: func() bool { return value.(string) != "" },
-			File:  func() bool { return false },
+			Value: func() bool { return cast.ToString(value) != "" },
+			File:  func() bool { return value != nil },
+		},
+	)
+
+	if err != nil {
+		return errors.New(strings.Split(err.Error(), "/")[0])
+	}
+
+	return err
+}
+
+/********************************** FileRule **********************************/
+type FileRule struct{}
+
+// Comment
+func (ctx *FileRule) Validate(validator *Validator, field string, value interface{}, args ...string) error {
+	err := CallRuleValidation(
+		field,
+		value,
+		FileErrorMessage,
+		&TypeValidation{
+			Value: func() bool { return false },
+			File:  func() bool { return true },
 		},
 	)
 
@@ -450,21 +476,22 @@ func (ctx *Nullable) Validate(validator *Validator, field string, value interfac
 
 // Comment
 var rules = map[string]RuleValidation{
-	"required":  &Required{},
-	"min":       &Minimum{},
-	"max":       &Maximum{},
-	"confirmed": &Confirmed{},
-	"email":     &Email{},
-	"unique":    &Unique{},
-	"exists":    &Exists{},
-	"datetime":  &Datetime{},
-	"date":      &Date{},
-	"string":    &String{},
-	"integer":   &Integer{},
-	"float":     &Float{},
-	"number":    &Number{},
-	"accepted":  &Accepted{},
-	"nullable":  &Nullable{},
+	"required":  &RequiredRule{},
+	"min":       &MinimumRule{},
+	"max":       &MaximumRule{},
+	"confirmed": &ConfirmedRule{},
+	"email":     &EmailRule{},
+	"unique":    &UniqueRule{},
+	"exists":    &ExistsRule{},
+	"datetime":  &DatetimeRule{},
+	"date":      &DateRule{},
+	"string":    &StringRule{},
+	"integer":   &IntegerRule{},
+	"float":     &FloatRule{},
+	"number":    &NumberRule{},
+	"accepted":  &AcceptedRule{},
+	"nullable":  &NullableRule{},
+	"file":      &FileRule{},
 }
 
 // Comment
