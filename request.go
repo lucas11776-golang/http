@@ -71,20 +71,18 @@ func FormRequest(rules validation.RulesBag) Middleware {
 		switch Method(req.Method) {
 		case METHOD_POST, METHOD_PATCH, METHOD_PUT, METHOD_DELETE:
 			if req.Validator = validation.Validation(req.Request, rules); !req.Validator.Validate() {
-				switch strings.ToLower(req.ContentType()) {
-				case "application/json":
+				if strings.ToLower(req.ContentType()) == "application/json" || req.GetHeader("accept") == "application" {
 					return res.SetStatus(HTTP_RESPONSE_UNPROCESSABLE_CONTENT).Json(JsonErrorResponse{
 						Message: FormValidationErrorMessage,
 						Errors:  SessionErrorsBag(req.Validator.Errors()),
 					})
-
-				default:
-					if req.Session != nil {
-						req.Session.SetErrors(SessionErrorsBag(req.Validator.Errors()))
-					}
-
-					return res.Back()
 				}
+
+				if req.Session != nil {
+					req.Session.SetErrors(SessionErrorsBag(req.Validator.Errors()))
+				}
+
+				return res.Back()
 			}
 
 			return next()
