@@ -53,6 +53,11 @@ type RuleValidation interface {
 }
 
 // Comment
+func (ctx *File) Name() string {
+	return ctx.header.Filename
+}
+
+// Comment
 func (ctx *File) Mime() string {
 	return ctx.header.Header.Get("Content-Type")
 }
