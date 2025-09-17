@@ -103,7 +103,7 @@ func (ctx *Route) Call(value ...reflect.Value) *Response {
 }
 
 // Comment
-func parametersRouteMatch(routePath []string, requestPath []string) (found bool, arameters Parameters) {
+func parametersRouteMatch(routePath []string, requestPath []string) (found bool, parameters Parameters) {
 	regex, _ := regexp.Compile(ParameterRegex)
 	params := make(Parameters)
 

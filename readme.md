@@ -1,8 +1,6 @@
 # HTTP
 
-
 ## Getting Started
-
 
 ### Prerequisites
 

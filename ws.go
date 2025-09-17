@@ -118,6 +118,11 @@ func (ctx *Ws) WriteJson(v any) error {
 }
 
 // Comment
+func (ctx *Ws) Close(v any) error {
+	return ctx.conn.Close()
+}
+
+// Comment
 func (ctx *Ws) emitter(opcode frame.Opcode, data []byte) {
 	switch opcode {
 
