@@ -118,7 +118,7 @@ func (ctx *Ws) WriteJson(v any) error {
 }
 
 // Comment
-func (ctx *Ws) Close(v any) error {
+func (ctx *Ws) Close() error {
 	return ctx.conn.Close()
 }
 
