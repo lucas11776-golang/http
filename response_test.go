@@ -129,7 +129,7 @@ func TestResponse(t *testing.T) {
 		os.Setenv("APP_URL", "http://localhost:8080/")
 
 		uri := "authentication/register"
-		tBody := pages.Redirect(helper.Url(uri))
+		tBody := pages.RedirectPage(helper.Url(uri))
 		reply := InitResponse().SetStatus(HTTP_RESPONSE_OK).
 			SetHeader("content-type", "application/json").
 			Redirect(uri)
@@ -156,7 +156,7 @@ func TestResponse(t *testing.T) {
 		var err error
 
 		referer := "http://localhost:8080/authentication/login?redirect=dashboard"
-		tBody := pages.Redirect(referer)
+		tBody := pages.RedirectPage(referer)
 
 		rsp := InitResponse().SetStatus(HTTP_RESPONSE_OK).
 			SetHeaders(types.Headers{

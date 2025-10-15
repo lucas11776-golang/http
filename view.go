@@ -71,23 +71,23 @@ func (ctx *View) buildTemplate(view string, options *scriggo.BuildOptions) (*scr
 // Comment
 func viewDeclarationsWithHelpers(req *Request) native.Declarations {
 	return native.Declarations{
-		"url":           helper.Url,
-		"subdomain":     helper.Subdomain,
-		"format":        helper.Format,
-		"session":       SessionValue(req),
-		"has":           SessionHas(req),
-		"error":         SessionError(req),
-		"errors":        SessionErrors(req),
-		"csrfName":      SessionCsrfName(req),
-		"csrfToken":     SessionCsrfToken(req),
-		"old":           SessionOld(req),
-		"methodName":    func() string { return RequestFormMethodName },
-		"request":       func() *Request { return req },
-		"replace":       strings.ReplaceAll,
-		"truncate":      helper.Truncate,
-		"cast":          func() *helper.Cast { return &helper.Cast{} },
-		"queryToString": helper.QueryToString,
-		"current":       func() string { return helper.Url(req.Path()) }, // TODO: create url cast e.g url().Current(), url().To("login")...
+		"url":             helper.Url,
+		"subdomain":       helper.Subdomain,
+		"format":          helper.Format,
+		"session":         SessionValue(req),
+		"has":             SessionHas(req),
+		"error":           SessionError(req),
+		"errors":          SessionErrors(req),
+		"csrf_name":       SessionCsrfName(req),
+		"csrf_token":      SessionCsrfToken(req),
+		"old":             SessionOld(req),
+		"method_name":     func() string { return RequestFormMethodName },
+		"request":         func() *Request { return req },
+		"replace":         strings.ReplaceAll,
+		"truncate":        helper.Truncate,
+		"cast":            func() *helper.Cast { return &helper.Cast{} },
+		"query_to_string": helper.QueryToString,
+		"current":         func() string { return helper.Url(req.Path()) }, // TODO: create url cast e.g url().Current(), url().To("login")...
 	}
 }
 

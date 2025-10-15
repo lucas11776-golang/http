@@ -12,6 +12,17 @@ import (
 
 type Cast struct{}
 
+// Comment
+func GetUrl(to string) string {
+	parsed, err := url.Parse(to)
+
+	if err != nil || parsed.Host == "" {
+		return Url(to)
+	}
+
+	return to
+}
+
 // comment
 func Uri(path ...interface{}) string {
 	uri := []string{}

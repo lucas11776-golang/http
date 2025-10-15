@@ -182,9 +182,9 @@ func (ctx *Request) addJsonField(value interface{}, names []string) {
 // Comment
 func (ctx *Request) addJsonFields(structure map[string]interface{}, names []string) {
 	for k, v := range structure {
-		switch v.(type) {
+		switch v := v.(type) {
 		case map[string]interface{}:
-			ctx.addJsonFields(v.(map[string]interface{}), append(names, k))
+			ctx.addJsonFields(v, append(names, k))
 
 		default:
 			ctx.addJsonField(v, append(names, k))

@@ -250,14 +250,14 @@ func (ctx *Response) Json(v any) *Response {
 func (ctx *Response) Back() *Response {
 	ctx.Bag.Redirect = &RedirectBag{To: ctx.Request.Header.Get("Referer")}
 
-	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.Redirect(ctx.Bag.Redirect.To))
+	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.RedirectPage(ctx.Bag.Redirect.To))
 }
 
 // Comment
 func (ctx *Response) Redirect(path string) *Response {
 	ctx.Bag.Redirect = &RedirectBag{To: strings.Trim(path, "/")}
 
-	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.Redirect(ctx.Bag.Redirect.To))
+	return ctx.SetStatus(HTTP_RESPONSE_TEMPORARY_REDIRECT).Html(pages.RedirectPage(ctx.Bag.Redirect.To))
 }
 
 // Comment

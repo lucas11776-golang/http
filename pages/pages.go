@@ -1,29 +1,17 @@
 package pages
 
 import (
-	"net/url"
 	"strings"
 
 	"github.com/lucas11776-golang/http/utils/helper"
 )
 
 // Comment
-func getUrl(to string) string {
-	parsed, err := url.Parse(to)
-
-	if err != nil || parsed.Host == "" {
-		return helper.Url(to)
-	}
-
-	return to
-}
-
-// Comment
-func Redirect(to string) string {
+func RedirectPage(to string) string {
 	return strings.Join([]string{
 		`<!DOCTYPE html>`,
 		`<head>`,
-		`  <meta http-equiv="Refresh" content="0, url='` + getUrl(to) + `'">`,
+		`  <meta http-equiv="Refresh" content="0, url='` + helper.GetUrl(to) + `'">`,
 		`</head>`,
 		`<body>`,
 		`</body>`,
@@ -32,11 +20,19 @@ func Redirect(to string) string {
 }
 
 // Comment
-func ServerError() string {
+func ServerErrorPage() string {
 	return ""
 }
 
 // Comment
 func CsrfExpired() string {
-	return "<h1>Request token has expired refresh page</h1>"
+	return strings.Join([]string{
+		`<!DOCTYPE html>`,
+		`<head>`,
+		`</head>`,
+		`<body>`,
+		`	<h1>CSRF token has expired</h1>`,
+		`</body>`,
+		`</html>`,
+	}, "\r\n")
 }
